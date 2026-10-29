@@ -98,6 +98,8 @@ export const commands = {
       model: text,
       brand: text,
       variant: z.string().max(120).default(""),
+      storage: z.string().trim().max(60).optional(),
+      color: z.string().trim().max(60).optional(),
       category: z.enum(["phone", "accessory"]),
       condition: z.enum(["new", "used", "refurbished"]),
       imei: z
@@ -148,12 +150,22 @@ export const commands = {
     account,
     note,
   }),
-  expense: z.strictObject({
-    categoryId: id,
-    amount: money,
-    account,
-    note: text,
-  }),
+  expense: z
+    .strictObject({
+      categoryId: z.union([id, z.literal("custom")]),
+      expenseName: z.string().trim().max(180).optional(),
+      amount: money,
+      account,
+      note: text,
+    })
+    .superRefine((v, c) => {
+      if (v.categoryId === "custom" && !v.expenseName)
+        c.addIssue({
+          code: "custom",
+          path: ["expenseName"],
+          message: "EXPENSE_NAME_REQUIRED",
+        });
+    }),
   transfer: z.strictObject({ from: account, amount: money, note }),
   contribution: z.strictObject({ account, amount: money, note: text }),
   withdrawal: z.strictObject({ account, amount: money, note: text }),
@@ -191,6 +203,8 @@ export interface Unit {
   model: string;
   brand: string;
   variant: string;
+  storage: string;
+  color: string;
   category: string;
   condition: string;
   imei: string | null;
@@ -249,6 +263,69 @@ export interface Report {
   externalIn: string;
   externalOut: string;
   documents: Document[];
+  productProfit: ProductProfit[];
+  profitStatement: ProfitEntry[];
+  expenseBreakdown: ExpenseGroup[];
+  expenseStatement: ExpenseEntry[];
+  moneyStatement: MoneyEntry[];
+  purchases: string;
+}
+export interface ProductProfit {
+  brand: string;
+  model: string;
+  quantity: number;
+  purchaseCost: string;
+  sales: string;
+  grossProfit: string;
+}
+export interface ProfitEntry {
+  id: string;
+  number: string;
+  sourceNumber: string;
+  date: string;
+  actor: string;
+  brand: string;
+  model: string;
+  storage: string;
+  color: string;
+  variant: string;
+  serial: string;
+  quantity: number;
+  purchaseCost: string;
+  sales: string;
+  grossProfit: string;
+}
+export interface ExpenseGroup {
+  key: string;
+  bn: string;
+  en: string;
+  amount: string;
+}
+export interface ExpenseEntry {
+  id: string;
+  number: string;
+  sourceNumber: string;
+  date: string;
+  actor: string;
+  bn: string;
+  en: string;
+  note: string;
+  amount: string;
+}
+export interface MoneyEntry {
+  id: string;
+  number: string;
+  sourceNumber: string;
+  date: string;
+  actor: string;
+  kind: string;
+  note: string;
+  cashIn: string;
+  cashOut: string;
+  bankIn: string;
+  bankOut: string;
+  cashBalance: string;
+  bankBalance: string;
 }
 export interface State {
   user: User;
@@ -308,6 +385,8 @@ export const forms: Record<CommandKind, Field[]> = {
   purchase: [
     f("model"),
     f("brand"),
+    f("storage", "text", { optional: true }),
+    f("color", "text", { optional: true }),
     f("variant", "text", { optional: true }),
     f("category", "select", {
       options: ["phone", "accessory"],
@@ -355,6 +434,7 @@ export const forms: Record<CommandKind, Field[]> = {
   ],
   expense: [
     f("categoryId", "select", { source: "categories" }),
+    f("expenseName"),
     amount,
     a,
     f("note"),
@@ -440,7 +520,14 @@ export function choices(
   if (field.source === "categories")
     return state.categories
       .filter((c) => c.active)
-      .map((c) => ({ value: c.id, label: c[lang] }));
+      .map((c) => ({ value: c.id, label: c[lang] }))
+      .concat([
+        {
+          value: "custom",
+          label:
+            lang === "bn" ? "অন্যান্য / Custom খরচ" : "Other / custom expense",
+        },
+      ]);
   if (field.source === "staff")
     return state.staff.map((u) => ({ value: u.id, label: u.name }));
   const pk = (
@@ -483,5 +570,13 @@ export const pages = [
   "money",
   "staff",
   "reports",
+  "profit",
   "settings",
 ] as const;
+export function productDetails(unit: {
+  storage?: string;
+  color?: string;
+  variant?: string;
+}) {
+  return [unit.storage, unit.color, unit.variant].filter(Boolean).join(" · ");
+}

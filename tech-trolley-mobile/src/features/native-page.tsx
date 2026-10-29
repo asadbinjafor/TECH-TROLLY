@@ -7,7 +7,13 @@ import { File, Paths } from "expo-file-system";
 import * as Sharing from "expo-sharing";
 import * as SecureStore from "expo-secure-store";
 import { t, currency, dateLabel } from "@tech-trolley/i18n";
-import type { CommandKind, Report, Document } from "@tech-trolley/contracts";
+import {
+  productDetails,
+  type CommandKind,
+  type Report,
+  type Document,
+} from "@tech-trolley/contracts";
+import { NativeReportAnalysis } from "./native-report-analysis";
 import { useShop } from "../contexts/shop-context";
 import { Button, Txt, Panel, Input, Empty, useColors } from "../components/ui";
 import { api, tokenKey } from "../services/api";
@@ -20,7 +26,9 @@ export function NativePage({ navigation, route, section: initial }: any) {
     [tab, setTab] = useState("inStock"),
     [date, setDate] = useState(""),
     [showDate, setShowDate] = useState(false),
-    [period, setPeriod] = useState("today"),
+    [period, setPeriod] = useState(section === "profit" ? "month" : "today"),
+    [rangeFrom, setRangeFrom] = useState(""),
+    [rangeTo, setRangeTo] = useState(""),
     [report, setReport] = useState<Report | null>(null),
     [problem, setProblem] = useState(""),
     [busy, setBusy] = useState(false);
@@ -38,12 +46,21 @@ export function NativePage({ navigation, route, section: initial }: any) {
   );
   const query = new URLSearchParams({
     lang,
-    period: section === "daybook" ? "today" : period,
-    ...(section === "daybook" && date ? { date } : {}),
+    period: user?.role !== "OWNER" || section === "daybook" ? "today" : period,
+    ...(user?.role === "OWNER" && section === "daybook" && date
+      ? { date }
+      : {}),
+    ...(user?.role === "OWNER" && section !== "daybook" && period === "range"
+      ? {
+          from: rangeFrom || state?.today || "",
+          to: rangeTo || state?.today || "",
+        }
+      : {}),
   }).toString();
   useEffect(() => {
     let active = true;
-    if (state && ["reports", "daybook"].includes(section))
+    if (state && ["reports", "daybook", "profit"].includes(section)) {
+      setProblem("loading");
       void api
         .request<Report>("/reports?" + query)
         .then((r) => {
@@ -54,6 +71,7 @@ export function NativePage({ navigation, route, section: initial }: any) {
         .catch((e) => {
           if (active) setProblem(e.code);
         });
+    }
     return () => {
       active = false;
     };
@@ -256,6 +274,11 @@ export function NativePage({ navigation, route, section: initial }: any) {
         )}
         {section === "inventory" && (
           <>
+            {state.units.some((u) => u.variant && !u.storage && !u.color) && (
+              <Panel>
+                <Txt>{tr("legacyVariant")}</Txt>
+              </Panel>
+            )}
             <Input label={tr("search")} value={search} onChange={setSearch} />
             <View
               style={{
@@ -282,7 +305,7 @@ export function NativePage({ navigation, route, section: initial }: any) {
                       (tab === "inStock"
                         ? u.status === "IN_STOCK"
                         : u.status !== "IN_STOCK")) &&
-                    `${u.model} ${u.brand} ${u.imei} ${u.internal_id}`
+                    `${u.model} ${u.brand} ${productDetails(u)} ${u.imei} ${u.internal_id}`
                       .toLowerCase()
                       .includes(search.toLowerCase()),
                 )
@@ -294,7 +317,16 @@ export function NativePage({ navigation, route, section: initial }: any) {
                         {u.model}
                       </Txt>
                       <Txt style={{ fontSize: 12, color: c.muted }}>
-                        {u.brand} · {u.variant} · {u.internal_id}
+                        {u.brand} · {u.internal_id}
+                      </Txt>
+                      <Txt>
+                        {tr("storage")}: {u.storage || "—"}
+                      </Txt>
+                      <Txt>
+                        {tr("color")}: {u.color || "—"}
+                      </Txt>
+                      <Txt>
+                        {tr("variant")}: {u.variant || "—"}
                       </Txt>
                       <Txt style={{ fontSize: 13, marginVertical: 10 }}>
                         {u.imei || "—"}
@@ -401,9 +433,13 @@ export function NativePage({ navigation, route, section: initial }: any) {
             )}
           </>
         )}
-        {["daybook", "reports"].includes(section) && (
+        {["daybook", "reports", "profit"].includes(section) && (
           <>
-            {section === "daybook" ? (
+            {user?.role !== "OWNER" ? (
+              <Panel>
+                <Txt>{tr("monthlyNotice")}</Txt>
+              </Panel>
+            ) : section === "daybook" ? (
               <>
                 <View style={{ flexDirection: "row", gap: 8 }}>
                   <Button
@@ -449,11 +485,7 @@ export function NativePage({ navigation, route, section: initial }: any) {
               </>
             ) : (
               <View style={{ flexDirection: "row", gap: 7, flexWrap: "wrap" }}>
-                {[
-                  "today",
-                  "week",
-                  ...(user?.role === "OWNER" ? ["month"] : []),
-                ].map((p) => (
+                {["today", "week", "month", "range"].map((p) => (
                   <Button
                     key={p}
                     label={tr(p === "month" ? "monthReport" : p)}
@@ -463,7 +495,23 @@ export function NativePage({ navigation, route, section: initial }: any) {
                 ))}
               </View>
             )}
-            {r.available ? (
+            {user?.role === "OWNER" &&
+              section !== "daybook" &&
+              period === "range" && (
+                <Panel>
+                  <Input
+                    label={tr("startDate") + " (YYYY-MM-DD)"}
+                    value={rangeFrom || state.today}
+                    onChange={setRangeFrom}
+                  />
+                  <Input
+                    label={tr("endDate") + " (YYYY-MM-DD)"}
+                    value={rangeTo || state.today}
+                    onChange={setRangeTo}
+                  />
+                </Panel>
+              )}
+            {r.available && !problem ? (
               <>
                 <Txt
                   style={{ fontSize: 11, color: c.muted, marginVertical: 12 }}
@@ -479,48 +527,60 @@ export function NativePage({ navigation, route, section: initial }: any) {
                 >
                   {metric("revenue", r.revenue)}
                   {metric("cogs", r.cogs)}
+                  {metric("grossProfit", r.grossProfit)}
                   {metric("expenses", r.expense)}
                   {metric("netProfit", r.netProfit)}
+                  {metric("purchasesTotal", r.purchases || "0.00")}
                 </View>
-                <Panel>
-                  {[
-                    "openingCash",
-                    "cashIn",
-                    "cashOut",
-                    "closingCash",
-                    "openingBank",
-                    "bankIn",
-                    "bankOut",
-                    "closingBank",
-                    "grossProfit",
-                    "externalIn",
-                    "externalOut",
-                  ].map((k) => (
-                    <View
-                      key={k}
-                      style={{
-                        flexDirection: "row",
-                        justifyContent: "space-between",
-                        borderBottomWidth: 1,
-                        borderBottomColor: c.line,
-                        paddingVertical: 10,
-                        gap: 12,
-                      }}
-                    >
-                      <Txt style={{ fontSize: 12 }}>{tr(k)}</Txt>
-                      <Txt style={{ fontSize: 12 }}>{money((r as any)[k])}</Txt>
-                    </View>
-                  ))}
-                </Panel>
-                {docList(r.documents)}
+                {section !== "profit" && (
+                  <Panel>
+                    {[
+                      "openingCash",
+                      "cashIn",
+                      "cashOut",
+                      "closingCash",
+                      "openingBank",
+                      "bankIn",
+                      "bankOut",
+                      "closingBank",
+                      "grossProfit",
+                      "externalIn",
+                      "externalOut",
+                    ].map((k) => (
+                      <View
+                        key={k}
+                        style={{
+                          flexDirection: "row",
+                          justifyContent: "space-between",
+                          borderBottomWidth: 1,
+                          borderBottomColor: c.line,
+                          paddingVertical: 10,
+                          gap: 12,
+                        }}
+                      >
+                        <Txt style={{ fontSize: 12 }}>{tr(k)}</Txt>
+                        <Txt style={{ fontSize: 12 }}>
+                          {money((r as any)[k])}
+                        </Txt>
+                      </View>
+                    ))}
+                  </Panel>
+                )}
+                {section !== "profit" && docList(r.documents)}
+                <NativeReportAnalysis
+                  report={r}
+                  lang={lang}
+                  withMoney={section !== "profit"}
+                />
               </>
             ) : (
               <Panel>
-                <Txt>{tr("unavailable")}</Txt>
+                <Txt>{tr(problem || "unavailable")}</Txt>
               </Panel>
             )}
             <Button
               label={tr("download")}
+              disabled={!!problem}
               onPress={() => {
                 void (async () => {
                   try {
@@ -578,15 +638,20 @@ export function NativePage({ navigation, route, section: initial }: any) {
         )}
         {section === "more" && (
           <>
-            {["purchases", "transactions", "money", "staff", "reports"].map(
-              (s) => (
-                <Button
-                  key={s}
-                  label={tr(s)}
-                  onPress={() => navigation.navigate("Page", { section: s })}
-                />
-              ),
-            )}
+            {[
+              "purchases",
+              "transactions",
+              "money",
+              "staff",
+              "reports",
+              "profit",
+            ].map((s) => (
+              <Button
+                key={s}
+                label={tr(s)}
+                onPress={() => navigation.navigate("Page", { section: s })}
+              />
+            ))}
             <Button
               label={tr("settings")}
               onPress={() =>

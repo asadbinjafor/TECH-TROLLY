@@ -32,9 +32,10 @@ export class ShopController {
       for (const row of await em.query(
         "SELECT account,sum(amount) AS amount FROM journal_line GROUP BY account",
       ))
-        balances[row.account] = decimal(
-          row.account === "payable" ? -BigInt(row.amount) : row.amount,
-        );
+        if (req.user.role === "OWNER" || Object.hasOwn(balances, row.account))
+          balances[row.account] = decimal(
+            row.account === "payable" ? -BigInt(row.amount) : row.amount,
+          );
       const { sessionHash, ...user } = req.user;
       return {
         user,
@@ -48,7 +49,10 @@ export class ShopController {
           )
         ).map((u: any) => ({ ...u, cost: decimal(u.cost) })),
         documents: (
-          await em.query(`${documentsSql} ORDER BY d.created_at DESC,d.id`)
+          await em.query(
+            `${documentsSql} WHERE ($1::boolean OR d.business_date=$2::date) ORDER BY d.created_at DESC,d.id`,
+            [req.user.role === "OWNER", today],
+          )
         ).map(documentView),
         parties: await em.query(
           "SELECT * FROM party WHERE NOT is_walk_in ORDER BY name,id",
@@ -60,7 +64,8 @@ export class ShopController {
           "SELECT id,name,role FROM app_user WHERE role='STAFF' ORDER BY name",
         ),
         counts: await em.query(
-          "SELECT c.*,d.created_at,d.actor_name,d.business_date FROM cash_count c JOIN document d ON d.id=c.document_id ORDER BY d.created_at DESC",
+          "SELECT c.*,d.created_at,d.actor_name,d.business_date FROM cash_count c JOIN document d ON d.id=c.document_id WHERE ($1::boolean OR d.business_date=$2::date) ORDER BY d.created_at DESC",
+          [req.user.role === "OWNER", today],
         ),
         report: await this.reports.report(req.user, { period: "today" }, em),
       };

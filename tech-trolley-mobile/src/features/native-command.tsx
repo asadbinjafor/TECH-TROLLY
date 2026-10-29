@@ -30,7 +30,8 @@ export function NativeCommand({ navigation, route }: any) {
     [issues, setIssues] = useState<Record<string, string>>({});
   const storage = `tt-${user!.id}-draft-${kind}`,
     pendingKey = `tt-${user!.id}-pending-${kind}`,
-    tr = (k: string) => t(k, lang);
+    tr = (k: string) =>
+      t(kind === "expense" && k === "note" ? "expenseDetails" : k, lang);
   useEffect(() => {
     void (async () => {
       const [[, draft], [, p]] = await AsyncStorage.multiGet([
@@ -134,87 +135,91 @@ export function NativeCommand({ navigation, route }: any) {
           <Txt style={{ fontSize: 11, color: c.muted, marginBottom: 20 }}>
             {state.today} · Asia/Dhaka
           </Txt>
-          {forms[kind].map((f) => (
-            <View key={f.key}>
-              {f.type === "select" ? (
-                <View style={{ marginBottom: 14 }}>
-                  <Txt style={{ fontSize: 12 }}>{tr(f.label)}</Txt>
-                  <View
-                    style={{
-                      borderWidth: 1,
-                      borderColor: c.line,
-                      borderRadius: 8,
-                      backgroundColor: c.surface,
-                    }}
-                  >
-                    <Picker
-                      accessibilityLabel={tr(f.label)}
-                      selectedValue={values[f.key] || ""}
-                      enabled={!review && !pending}
-                      style={{ color: c.text }}
-                      onValueChange={(v) =>
-                        setValues((prev) => ({
-                          ...prev,
-                          [f.key]: String(v),
-                          ...(f.key === "unitId"
-                            ? { price: "", discount: "0", cash: "", bank: "" }
-                            : {}),
-                          ...(f.key === "customerId"
-                            ? customerInvoiceFields(
-                                state.parties.find((p) => p.id === String(v)),
-                              )
-                            : {}),
-                        }))
-                      }
+          {forms[kind]
+            .filter(
+              (f) => f.key !== "expenseName" || values.categoryId === "custom",
+            )
+            .map((f) => (
+              <View key={f.key}>
+                {f.type === "select" ? (
+                  <View style={{ marginBottom: 14 }}>
+                    <Txt style={{ fontSize: 12 }}>{tr(f.label)}</Txt>
+                    <View
+                      style={{
+                        borderWidth: 1,
+                        borderColor: c.line,
+                        borderRadius: 8,
+                        backgroundColor: c.surface,
+                      }}
                     >
-                      <Picker.Item
-                        label={
-                          f.key === "customerId" ? tr("walkIn") : tr("select")
+                      <Picker
+                        accessibilityLabel={tr(f.label)}
+                        selectedValue={values[f.key] || ""}
+                        enabled={!review && !pending}
+                        style={{ color: c.text }}
+                        onValueChange={(v) =>
+                          setValues((prev) => ({
+                            ...prev,
+                            [f.key]: String(v),
+                            ...(f.key === "unitId"
+                              ? { price: "", discount: "0", cash: "", bank: "" }
+                              : {}),
+                            ...(f.key === "customerId"
+                              ? customerInvoiceFields(
+                                  state.parties.find((p) => p.id === String(v)),
+                                )
+                              : {}),
+                          }))
                         }
-                        value=""
-                      />
-                      {choices(f, state, lang).map((o) => (
+                      >
                         <Picker.Item
-                          key={o.value}
-                          label={f.options ? tr(o.label) : o.label}
-                          value={o.value}
+                          label={
+                            f.key === "customerId" ? tr("walkIn") : tr("select")
+                          }
+                          value=""
                         />
-                      ))}
-                    </Picker>
+                        {choices(f, state, lang).map((o) => (
+                          <Picker.Item
+                            key={o.value}
+                            label={f.options ? tr(o.label) : o.label}
+                            value={o.value}
+                          />
+                        ))}
+                      </Picker>
+                    </View>
                   </View>
-                </View>
-              ) : review || pending ? (
-                <Panel>
-                  <Txt style={{ fontSize: 11, color: c.muted }}>
-                    {tr(f.label)}
+                ) : review || pending ? (
+                  <Panel>
+                    <Txt style={{ fontSize: 11, color: c.muted }}>
+                      {tr(f.label)}
+                    </Txt>
+                    <Txt>{values[f.key] || "—"}</Txt>
+                  </Panel>
+                ) : (
+                  <Input
+                    label={
+                      tr(f.label) + (f.optional ? " · " + tr("optional") : "")
+                    }
+                    value={values[f.key] || ""}
+                    onChange={(v) =>
+                      setValues((prev) => ({ ...prev, [f.key]: v }))
+                    }
+                    money={f.type === "money"}
+                    numeric={f.type === "number" || f.key === "imei"}
+                    secure={f.type === "password"}
+                  />
+                )}
+                {issues[f.key] && (
+                  <Txt style={{ color: "#b95050", fontSize: 11 }}>
+                    {tr(
+                      /^[A-Z_]+$/.test(issues[f.key])
+                        ? issues[f.key]
+                        : "VALIDATION_ERROR",
+                    )}
                   </Txt>
-                  <Txt>{values[f.key] || "—"}</Txt>
-                </Panel>
-              ) : (
-                <Input
-                  label={
-                    tr(f.label) + (f.optional ? " · " + tr("optional") : "")
-                  }
-                  value={values[f.key] || ""}
-                  onChange={(v) =>
-                    setValues((prev) => ({ ...prev, [f.key]: v }))
-                  }
-                  money={f.type === "money"}
-                  numeric={f.type === "number" || f.key === "imei"}
-                  secure={f.type === "password"}
-                />
-              )}
-              {issues[f.key] && (
-                <Txt style={{ color: "#b95050", fontSize: 11 }}>
-                  {tr(
-                    /^[A-Z_]+$/.test(issues[f.key])
-                      ? issues[f.key]
-                      : "VALIDATION_ERROR",
-                  )}
-                </Txt>
-              )}
-            </View>
-          ))}
+                )}
+              </View>
+            ))}
           {preview && (
             <Panel>
               {Object.entries(preview).map(
@@ -245,7 +250,7 @@ export function NativeCommand({ navigation, route }: any) {
               <Txt>{tr("review")}</Txt>
             </Panel>
           )}
-          {pending && (
+          {pending && !busy && (
             <Panel>
               <Txt>{tr("uncertain")}</Txt>
               <Txt style={{ fontSize: 10 }}>{pending.key}</Txt>

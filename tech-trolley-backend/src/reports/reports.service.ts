@@ -1,6 +1,7 @@
 import type { EntityManager } from "typeorm";
 import { Injectable } from "@nestjs/common";
-import { decimal, z, type User } from "@tech-trolley/contracts";
+import { decimal, z, type User, type Report } from "@tech-trolley/contracts";
+import { reportDetails } from "./report-details";
 import { db } from "../database/database";
 import { fail } from "../common/errors";
 import { documentsSql, documentView } from "../accounts/posting.service";
@@ -12,7 +13,15 @@ export function shift(date: string, days: number) {
 export const periodSchema = z
   .object({
     lang: z.enum(["bn", "en"]).default("en"),
-    period: z.enum(["today", "week", "month"]).default("today"),
+    period: z.enum(["today", "week", "month", "range"]).default("today"),
+    from: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/)
+      .optional(),
+    to: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/)
+      .optional(),
     date: z
       .string()
       .regex(/^\d{4}-\d{2}-\d{2}$/)
@@ -21,26 +30,42 @@ export const periodSchema = z
   .strict();
 @Injectable()
 export class ReportsService {
-  async report(user: User, input: unknown, em: EntityManager = db.manager) {
+  async report(
+    user: User,
+    input: unknown,
+    em?: EntityManager,
+  ): Promise<Report> {
+    if (!em)
+      return db.transaction("REPEATABLE READ", (tx) =>
+        this.report(user, input, tx),
+      );
     const v = periodSchema.parse(input);
-    if (v.period === "month" && user.role !== "OWNER") fail("FORBIDDEN", 403);
     const [{ today }] = await em.query(
       "SELECT to_char(now() AT TIME ZONE 'Asia/Dhaka','YYYY-MM-DD') AS today",
     );
     if (v.date && v.period !== "today") fail("VALIDATION_ERROR");
-    const to = v.date || today;
-    if (
-      !Number.isFinite(new Date(`${to}T00:00:00Z`).valueOf()) ||
-      new Date(`${to}T00:00:00Z`).toISOString().slice(0, 10) !== to ||
-      to > today
-    )
+    if (v.period === "range" ? !v.from || !v.to : v.from || v.to)
       fail("VALIDATION_ERROR");
+    const validDate = (d: string) =>
+      Number.isFinite(new Date(`${d}T00:00:00Z`).valueOf()) &&
+      new Date(`${d}T00:00:00Z`).toISOString().slice(0, 10) === d &&
+      d <= today;
+    const to = v.period === "range" ? v.to! : v.date || today;
     const from =
-      v.period === "week"
-        ? shift(today, -6)
-        : v.period === "month"
-          ? today.slice(0, 8) + "01"
-          : to;
+      v.period === "range"
+        ? v.from!
+        : v.period === "week"
+          ? shift(today, -6)
+          : v.period === "month"
+            ? today.slice(0, 8) + "01"
+            : to;
+    if (!validDate(from) || !validDate(to) || from > to)
+      fail("VALIDATION_ERROR");
+    if (
+      user.role !== "OWNER" &&
+      (v.period !== "today" || from !== today || to !== today)
+    )
+      fail("STAFF_TODAY_ONLY", 403);
     const [shop] = await em.query("SELECT opening_date FROM shop WHERE id=1");
     const sums = await em.query(
       `SELECT l.account,COALESCE(sum(l.amount) FILTER(WHERE d.business_date<$1::date OR (d.business_date BETWEEN $1::date AND $2::date AND d.kind='opening')),0) AS opening,COALESCE(sum(l.amount) FILTER(WHERE d.business_date BETWEEN $1::date AND $2::date),0) AS activity,COALESCE(sum(l.amount) FILTER(WHERE d.business_date<=$2::date),0) AS closing,COALESCE(sum(l.amount) FILTER(WHERE d.business_date BETWEEN $1::date AND $2::date AND l.amount>0 AND d.kind<>'opening'),0) AS inflow,COALESCE(-sum(l.amount) FILTER(WHERE d.business_date BETWEEN $1::date AND $2::date AND l.amount<0 AND d.kind<>'opening'),0) AS outflow FROM journal_line l JOIN document d ON d.id=l.document_id GROUP BY l.account`,
@@ -69,7 +94,25 @@ export class ReportsService {
             : shop.opening_date,
         ).slice(0, 10)
       : null;
+    const details = reportDetails(
+      await em.query(
+        `SELECT d.id,d.number,d.kind,d.actor_name,to_char(d.business_date,'YYYY-MM-DD') AS date,d.snapshot->>'note' AS note,
+      COALESCE(o.kind,d.kind) AS source_kind,COALESCE(o.number,d.number) AS source_number,COALESCE(o.snapshot,d.snapshot) AS source_snapshot,COALESCE(o.total,d.total) AS source_total,
+      COALESCE(sum(l.amount) FILTER(WHERE l.account='revenue'),0) AS revenue,
+      COALESCE(sum(l.amount) FILTER(WHERE l.account='cogs'),0) AS cogs,
+      COALESCE(sum(l.amount) FILTER(WHERE l.account='expense'),0) AS expense,
+      COALESCE(sum(l.amount) FILTER(WHERE l.account='cash'),0) AS cash,
+      COALESCE(sum(l.amount) FILTER(WHERE l.account='bank'),0) AS bank
+      FROM document d LEFT JOIN document o ON o.id=d.reversal_of LEFT JOIN journal_line l ON l.document_id=d.id
+      WHERE d.business_date BETWEEN $1::date AND $2::date
+      GROUP BY d.id,o.id ORDER BY d.created_at,d.id`,
+        [from, to],
+      ),
+      get("cash", "opening"),
+      get("bank", "opening"),
+    );
     return {
+      ...details,
       from,
       to,
       available: !!openingDate && to >= openingDate,

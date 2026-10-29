@@ -330,7 +330,7 @@ test("isolated PostgreSQL acceptance, authorization, accounting and retry safety
         assert.equal(
           (await api("get", "/reports?period=week", undefined, staffToken))
             .status,
-          200,
+          403,
         );
         assert.equal(
           (
@@ -876,6 +876,374 @@ test("isolated PostgreSQL acceptance, authorization, accounting and retry safety
           staffId,
           staff.user.name,
         ]);
+      },
+    );
+    await t.test(
+      "model profit, separate product details, custom expenses and statement balances reconcile",
+      async () => {
+        const staff = await login("staff@example.test", "reset-staff-password");
+        const postUnit = async (
+          imei: string,
+          cost: string,
+          procurement: string,
+          treatment: string,
+          storage: string,
+        ) => {
+          const result = await cmd(
+            "purchase",
+            {
+              ...buy(imei, cost, cost, procurement),
+              brand: "QA",
+              model: "Profit QA Alpha",
+              storage,
+              color: "Blue",
+              variant: "US",
+              treatment,
+            },
+            randomUUID(),
+            staff.token,
+          );
+          const u = (
+            await api("get", "/shop/state", undefined, staff.token)
+          ).body.units.find((u: any) => u.purchase_id === result.id);
+          assert.equal(u.storage, storage);
+          assert.equal(u.color, "Blue");
+          assert.equal(u.variant, "US");
+          return u;
+        };
+        const first = await postUnit(
+          "000000000000201",
+          "123.45",
+          "6.55",
+          "capitalize",
+          "256 GB",
+        );
+        assert.equal(first.cost, "130.00");
+        const second = await postUnit(
+          "000000000000202",
+          "70",
+          "5",
+          "expense",
+          "128 GB",
+        );
+        const issued = await cmd(
+          "sale",
+          {
+            unitId: first.id,
+            price: "200",
+            discount: "10",
+            cash: "150",
+            bank: "0",
+            customerId: customer,
+            note: "",
+          },
+          randomUUID(),
+          staff.token,
+        );
+        const secondSale = await cmd(
+          "sale",
+          {
+            unitId: second.id,
+            price: "100",
+            discount: "0",
+            cash: "100",
+            bank: "0",
+            customerId: null,
+            note: "",
+          },
+          randomUUID(),
+          staff.token,
+        );
+        const memo = (
+          await api(
+            "get",
+            `/documents/${issued.id}/receipt`,
+            undefined,
+            staff.token,
+          )
+        ).body;
+        assert.equal(memo.unit.storage, "256 GB");
+        assert.equal(memo.unit.color, "Blue");
+        assert.equal(memo.unit.variant, "US");
+        const missing = await api(
+          "post",
+          "/commands/expense",
+          {
+            categoryId: "custom",
+            amount: "30",
+            account: "cash",
+            note: "Repair counter",
+          },
+          staff.token,
+        ).set("Idempotency-Key", randomUUID());
+        assert.equal(missing.status, 400);
+        const expense = await cmd(
+          "expense",
+          {
+            categoryId: "custom",
+            expenseName: "Shop repairs",
+            amount: "30",
+            account: "cash",
+            note: "Replaced counter drawer",
+          },
+          randomUUID(),
+          staff.token,
+        );
+        let r = (await api("get", "/reports?period=today")).body;
+        let model = r.productProfit.find(
+          (p: any) => p.model === "Profit QA Alpha",
+        );
+        assert.deepEqual(model, {
+          brand: "QA",
+          model: "Profit QA Alpha",
+          quantity: 2,
+          purchaseCost: "200.00",
+          sales: "290.00",
+          grossProfit: "90.00",
+        });
+        assert.equal(
+          r.expenseBreakdown.find((e: any) => e.en === "Shop repairs").amount,
+          "30.00",
+        );
+        assert.equal(
+          r.expenseStatement.find((e: any) => e.id === expense.id).note,
+          "Replaced counter drawer",
+        );
+        await cmd(
+          "collection",
+          {
+            documentId: issued.id,
+            amount: "10",
+            account: "cash",
+            note: "Later payment",
+          },
+          randomUUID(),
+          staff.token,
+        );
+        assert.deepEqual(
+          (await api("get", "/reports?period=today")).body.productProfit.find(
+            (p: any) => p.model === "Profit QA Alpha",
+          ),
+          model,
+        );
+        await cmd(
+          "reversal",
+          { documentId: secondSale.id, note: "Same-day correction" },
+          randomUUID(),
+          staff.token,
+        );
+        await cmd(
+          "reversal",
+          { documentId: expense.id, note: "Correct custom expense" },
+          randomUUID(),
+          staff.token,
+        );
+        r = (await api("get", "/reports?period=today")).body;
+        model = r.productProfit.find((p: any) => p.model === "Profit QA Alpha");
+        assert.deepEqual(model, {
+          brand: "QA",
+          model: "Profit QA Alpha",
+          quantity: 1,
+          purchaseCost: "130.00",
+          sales: "190.00",
+          grossProfit: "60.00",
+        });
+        const cents = (v: string) => BigInt(v.replace(".", ""));
+        assert.equal(
+          r.productProfit.reduce(
+            (n: bigint, p: any) => n + cents(p.grossProfit),
+            0n,
+          ),
+          cents(r.grossProfit),
+        );
+        assert.equal(
+          r.expenseBreakdown.reduce(
+            (n: bigint, e: any) => n + cents(e.amount),
+            0n,
+          ),
+          cents(r.expense),
+        );
+        assert.equal(r.moneyStatement.at(-1).cashBalance, r.closingCash);
+        assert.equal(r.moneyStatement.at(-1).bankBalance, r.closingBank);
+        const csv = await api(
+          "get",
+          "/reports/export?period=today&lang=en",
+          undefined,
+          staff.token,
+        );
+        assert.equal(csv.status, 200);
+        for (const text of [
+          "Profit by model",
+          "Product profit statement",
+          "Expenses by category",
+          "Cash & bank statement",
+          "Shop repairs",
+          "Replaced counter drawer",
+          "256 GB",
+          "Blue",
+        ])
+          assert.ok(csv.text.includes(text), text);
+      },
+    );
+    await t.test(
+      "inclusive ranges and cross-day corrections preserve history while Staff only sees today",
+      async () => {
+        const today = (await api("get", "/shop/state")).body.today;
+        const { shift } = require("../dist/reports/reports.service");
+        const yesterday = shift(today, -1),
+          oldId = randomUUID();
+        await db.transaction(async (em: any) => {
+          await em.query(
+            "INSERT INTO document(id,number,kind,actor_id,actor_name,created_at,business_date,total,original_due,snapshot) VALUES($1,$2,'sale',$3,'Historical seller',$4,$5,7500,2500,$6)",
+            [
+              oldId,
+              "OLD-" + oldId,
+              owner.user.id,
+              yesterday + "T06:00:00Z",
+              yesterday,
+              {
+                brand: "QA",
+                model: "Historical QA Model",
+                storage: "64 GB",
+                color: "Black",
+                variant: "Legacy",
+                price: "75.00",
+                discount: "0.00",
+                cash: "50.00",
+                bank: "0.00",
+                cogs: "50.00",
+                internalId: "HIST-01",
+                box: "unspecified",
+                battery: null,
+              },
+            ],
+          );
+          await em.query(
+            "INSERT INTO journal_line(document_id,account,amount) VALUES($1,'cash',5000),($1,'receivable',2500),($1,'revenue',-7500),($1,'cogs',5000),($1,'inventory',-5000)",
+            [oldId],
+          );
+        });
+        const staff = await login("staff@example.test", "reset-staff-password");
+        const state = (await api("get", "/shop/state", undefined, staff.token))
+          .body;
+        assert.ok(state.documents.every((d: any) => d.business_date === today));
+        assert.ok(!state.documents.some((d: any) => d.id === oldId));
+        assert.ok(!("revenue" in state.balances));
+        assert.ok(
+          state.units.some(
+            (u: any) => u.storage === "256 GB" && u.cost === "130.00",
+          ),
+        );
+        for (const query of [
+          "period=week",
+          "period=month",
+          `period=today&date=${yesterday}`,
+          `period=range&from=${today}&to=${today}`,
+        ]) {
+          assert.equal(
+            (await api("get", "/reports?" + query, undefined, staff.token))
+              .status,
+            403,
+          );
+          assert.equal(
+            (
+              await api(
+                "get",
+                "/reports/export?" + query,
+                undefined,
+                staff.token,
+              )
+            ).status,
+            403,
+          );
+        }
+        assert.equal(
+          (
+            await api(
+              "get",
+              `/documents/${oldId}/receipt`,
+              undefined,
+              staff.token,
+            )
+          ).status,
+          404,
+        );
+        for (const [kind, data] of [
+          ["reversal", { documentId: oldId, note: "Forbidden old correction" }],
+          [
+            "collection",
+            {
+              documentId: oldId,
+              amount: "1",
+              account: "cash",
+              note: "Old collection",
+            },
+          ],
+        ])
+          assert.equal(
+            (
+              await api("post", "/commands/" + kind, data, staff.token).set(
+                "Idempotency-Key",
+                randomUUID(),
+              )
+            ).status,
+            403,
+          );
+        const before = (
+          await api(
+            "get",
+            `/reports?period=range&from=${yesterday}&to=${yesterday}`,
+          )
+        ).body;
+        assert.equal(
+          before.productProfit.find(
+            (p: any) => p.model === "Historical QA Model",
+          ).grossProfit,
+          "25.00",
+        );
+        await cmd("reversal", {
+          documentId: oldId,
+          note: "Owner corrects prior date",
+        });
+        const after = (
+          await api("get", `/reports?period=today&date=${yesterday}`)
+        ).body;
+        assert.equal(
+          after.productProfit.find(
+            (p: any) => p.model === "Historical QA Model",
+          ).grossProfit,
+          "25.00",
+        );
+        const now = (await api("get", "/reports?period=today")).body;
+        const corrected = now.productProfit.find(
+          (p: any) => p.model === "Historical QA Model",
+        );
+        assert.equal(corrected.quantity, -1);
+        assert.equal(corrected.purchaseCost, "-50.00");
+        assert.equal(corrected.sales, "-75.00");
+        assert.equal(corrected.grossProfit, "-25.00");
+        const both = (
+          await api(
+            "get",
+            `/reports?period=range&from=${yesterday}&to=${today}`,
+          )
+        ).body;
+        assert.equal(both.from, yesterday);
+        assert.equal(both.to, today);
+        assert.equal(
+          both.productProfit.find((p: any) => p.model === "Historical QA Model")
+            .grossProfit,
+          "0.00",
+        );
+        assert.equal(both.moneyStatement.at(-1).cashBalance, both.closingCash);
+        for (const query of [
+          `period=range&from=${today}&to=${yesterday}`,
+          "period=range&from=2026-02-30&to=" + today,
+          `period=range&from=${today}`,
+          `period=range&from=${today}&to=${shift(today, 1)}`,
+          `period=week&from=${today}&to=${today}`,
+        ])
+          assert.equal((await api("get", "/reports?" + query)).status, 400);
       },
     );
     await t.test(

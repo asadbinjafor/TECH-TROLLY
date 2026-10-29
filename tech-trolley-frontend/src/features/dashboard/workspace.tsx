@@ -28,6 +28,7 @@ import {
   pages,
   minor,
   decimal,
+  productDetails,
   type CommandKind,
   type Document,
   type Report,
@@ -39,6 +40,7 @@ import { Login } from "@/features/auth/login";
 import { CommandForm } from "@/features/transactions/command-form";
 import { Administration } from "@/features/settings/administration";
 import { Invoice } from "@/features/transactions/invoice";
+import { ReportAnalysis } from "./report-analysis";
 const icons = [
   LayoutDashboard,
   CalendarDays,
@@ -48,6 +50,7 @@ const icons = [
   Wallet,
   Users,
   ChartNoAxesCombined,
+  Coins,
   Settings,
 ];
 export function Workspace({ section }: { section: string }) {
@@ -69,7 +72,9 @@ export function Workspace({ section }: { section: string }) {
     [stockTab, setStockTab] = useState("inStock"),
     [menu, setMenu] = useState(false),
     [date, setDate] = useState(""),
-    [period, setPeriod] = useState("today"),
+    [period, setPeriod] = useState(section === "profit" ? "month" : "today"),
+    [rangeFrom, setRangeFrom] = useState(""),
+    [rangeTo, setRangeTo] = useState(""),
     [report, setReport] = useState<Report | null>(null),
     [reportError, setReportError] = useState(""),
     [receipt, setReceipt] = useState<any>(null),
@@ -77,11 +82,19 @@ export function Workspace({ section }: { section: string }) {
     [toast, setToast] = useState("");
   const reportQuery = new URLSearchParams({
     lang,
-    period: section === "daybook" ? "today" : period,
-    ...(section === "daybook" && date ? { date } : {}),
+    period: user?.role !== "OWNER" || section === "daybook" ? "today" : period,
+    ...(user?.role === "OWNER" && section === "daybook" && date
+      ? { date }
+      : {}),
+    ...(user?.role === "OWNER" && section !== "daybook" && period === "range"
+      ? {
+          from: rangeFrom || state?.today || "",
+          to: rangeTo || state?.today || "",
+        }
+      : {}),
   }).toString();
   useEffect(() => {
-    if (!state || !["reports", "daybook"].includes(section)) return;
+    if (!state || !["reports", "daybook", "profit"].includes(section)) return;
     let active = true;
     setReportError("loading");
     void api
@@ -466,57 +479,59 @@ export function Workspace({ section }: { section: string }) {
               </section>
               <div className="overview-lower">
                 <div>{table(docs.slice(0, 6))}</div>
-                <section className="panel sales-chart">
-                  <h2>
-                    {lang === "bn"
-                      ? "বিক্রির গত ৭ দিন"
-                      : "Sales over the last 7 days"}
-                  </h2>
-                  <div className="chart">
-                    {Array.from({ length: 7 }, (_, i) => {
-                      const d = new Date(state.today + "T12:00:00Z");
-                      d.setUTCDate(d.getUTCDate() - 6 + i);
-                      const ds = d.toISOString().slice(0, 10),
-                        sum = state.documents
-                          .filter(
-                            (x) =>
-                              x.business_date === ds &&
-                              x.kind === "sale" &&
-                              !x.reversed_by,
-                          )
-                          .reduce((n, x) => n + minor(x.total), 0n);
-                      const max = state.documents
-                        .filter((x) => x.kind === "sale")
-                        .reduce(
-                          (n, x) => (minor(x.total) > n ? minor(x.total) : n),
-                          1n,
-                        );
-                      return (
-                        <div
-                          className="chart-day"
-                          key={ds}
-                          title={`${ds}: ${decimal(sum)}`}
-                        >
+                {user.role === "OWNER" && (
+                  <section className="panel sales-chart">
+                    <h2>
+                      {lang === "bn"
+                        ? "বিক্রির গত ৭ দিন"
+                        : "Sales over the last 7 days"}
+                    </h2>
+                    <div className="chart">
+                      {Array.from({ length: 7 }, (_, i) => {
+                        const d = new Date(state.today + "T12:00:00Z");
+                        d.setUTCDate(d.getUTCDate() - 6 + i);
+                        const ds = d.toISOString().slice(0, 10),
+                          sum = state.documents
+                            .filter(
+                              (x) =>
+                                x.business_date === ds &&
+                                x.kind === "sale" &&
+                                !x.reversed_by,
+                            )
+                            .reduce((n, x) => n + minor(x.total), 0n);
+                        const max = state.documents
+                          .filter((x) => x.kind === "sale")
+                          .reduce(
+                            (n, x) => (minor(x.total) > n ? minor(x.total) : n),
+                            1n,
+                          );
+                        return (
                           <div
-                            className="bar"
-                            style={{
-                              height:
-                                sum > 0n
-                                  ? `${Math.max(3, Number((sum * 100n) / max))}%`
-                                  : "2px",
-                            }}
-                          />
-                          <small>
-                            {d.toLocaleDateString(
-                              lang === "bn" ? "bn-BD" : "en-GB",
-                              { weekday: "short", timeZone: "Asia/Dhaka" },
-                            )}
-                          </small>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </section>
+                            className="chart-day"
+                            key={ds}
+                            title={`${ds}: ${decimal(sum)}`}
+                          >
+                            <div
+                              className="bar"
+                              style={{
+                                height:
+                                  sum > 0n
+                                    ? `${Math.max(3, Number((sum * 100n) / max))}%`
+                                    : "2px",
+                              }}
+                            />
+                            <small>
+                              {d.toLocaleDateString(
+                                lang === "bn" ? "bn-BD" : "en-GB",
+                                { weekday: "short", timeZone: "Asia/Dhaka" },
+                              )}
+                            </small>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </section>
+                )}
               </div>
               <div className="dues-grid">
                 {card("receivable", state.balances.receivable)}
@@ -526,6 +541,9 @@ export function Workspace({ section }: { section: string }) {
           )}
           {section === "inventory" && (
             <>
+              {state.units.some((u) => u.variant && !u.storage && !u.color) && (
+                <p className="notice">{tr("legacyVariant")}</p>
+              )}
               <div className="section-tools">
                 <div className="tabs">
                   {["inStock", "stockOut", "all"].map((k) => (
@@ -548,6 +566,9 @@ export function Workspace({ section }: { section: string }) {
                         <tr>
                           {[
                             "model",
+                            "storage",
+                            "color",
+                            "variant",
                             "imei",
                             "cost",
                             "status",
@@ -566,7 +587,7 @@ export function Workspace({ section }: { section: string }) {
                                 (stockTab === "inStock"
                                   ? u.status === "IN_STOCK"
                                   : u.status !== "IN_STOCK")) &&
-                              `${u.model} ${u.brand} ${u.imei} ${u.internal_id}`
+                              `${u.model} ${u.brand} ${productDetails(u)} ${u.imei} ${u.internal_id}`
                                 .toLowerCase()
                                 .includes(search.toLowerCase()),
                           )
@@ -579,8 +600,17 @@ export function Workspace({ section }: { section: string }) {
                                 <td>
                                   <b>{u.model}</b>
                                   <small>
-                                    {u.brand} · {u.variant} · {u.internal_id}
+                                    {u.brand} · {u.internal_id}
                                   </small>
+                                </td>
+                                <td data-label={tr("storage")}>
+                                  {u.storage || "—"}
+                                </td>
+                                <td data-label={tr("color")}>
+                                  {u.color || "—"}
+                                </td>
+                                <td data-label={tr("variant")}>
+                                  {u.variant || "—"}
                                 </td>
                                 <td className="mono">
                                   {u.imei || "—"}
@@ -709,10 +739,12 @@ export function Workspace({ section }: { section: string }) {
               )}
             </>
           )}
-          {["daybook", "reports"].includes(section) && (
+          {["daybook", "reports", "profit"].includes(section) && (
             <>
               <div className="section-tools">
-                {section === "daybook" ? (
+                {user.role !== "OWNER" ? (
+                  <p className="notice">{tr("monthlyNotice")}</p>
+                ) : section === "daybook" ? (
                   <div className="date-controls">
                     <button
                       className="icon-button"
@@ -742,11 +774,7 @@ export function Workspace({ section }: { section: string }) {
                   </div>
                 ) : (
                   <div className="tabs">
-                    {[
-                      "today",
-                      "week",
-                      ...(user.role === "OWNER" ? ["month"] : []),
-                    ].map((p) => (
+                    {["today", "week", "month", "range"].map((p) => (
                       <button
                         className={period === p ? "active" : ""}
                         key={p}
@@ -759,6 +787,7 @@ export function Workspace({ section }: { section: string }) {
                 )}
                 <button
                   className="button"
+                  disabled={!!reportError}
                   onClick={async () => {
                     try {
                       const url = apiBase + "/reports/export?" + reportQuery;
@@ -778,6 +807,31 @@ export function Workspace({ section }: { section: string }) {
                   {tr("download")}
                 </button>
               </div>
+              {user.role === "OWNER" &&
+                section !== "daybook" &&
+                period === "range" && (
+                  <div className="date-range-controls">
+                    <label>
+                      {tr("startDate")}
+                      <input
+                        type="date"
+                        max={rangeTo || state.today}
+                        value={rangeFrom || state.today}
+                        onChange={(e) => setRangeFrom(e.target.value)}
+                      />
+                    </label>
+                    <label>
+                      {tr("endDate")}
+                      <input
+                        type="date"
+                        min={rangeFrom || state.today}
+                        max={state.today}
+                        value={rangeTo || state.today}
+                        onChange={(e) => setRangeTo(e.target.value)}
+                      />
+                    </label>
+                  </div>
+                )}
               {reportError ? (
                 <p role="alert" className="error">
                   {tr(reportError)}
@@ -790,33 +844,42 @@ export function Workspace({ section }: { section: string }) {
                     {dateLabel(r.from, lang)}
                     {r.from !== r.to && " — " + dateLabel(r.to, lang)}
                   </div>
-                  <div className="metrics-grid">
+                  <div className="metrics-grid three">
                     {card("revenue", r.revenue)}
                     {card("cogs", r.cogs)}
+                    {card("grossProfit", r.grossProfit, "profit")}
                     {card("expenses", r.expense)}
                     {card("netProfit", r.netProfit, "profit")}
+                    {card("purchasesTotal", r.purchases || "0.00")}
                   </div>
-                  <section className="panel ledger-panels">
-                    {[
-                      "openingCash",
-                      "cashIn",
-                      "cashOut",
-                      "closingCash",
-                      "openingBank",
-                      "bankIn",
-                      "bankOut",
-                      "closingBank",
-                      "grossProfit",
-                      "externalIn",
-                      "externalOut",
-                    ].map((k) => (
-                      <div className="pnl-row" key={k}>
-                        <span>{tr(k)}</span>
-                        <b>{money((r as any)[k])}</b>
-                      </div>
-                    ))}
-                  </section>
-                  {table(r.documents, "daybook")}
+                  {section !== "profit" && (
+                    <section className="panel ledger-panels">
+                      {[
+                        "openingCash",
+                        "cashIn",
+                        "cashOut",
+                        "closingCash",
+                        "openingBank",
+                        "bankIn",
+                        "bankOut",
+                        "closingBank",
+                        "grossProfit",
+                        "externalIn",
+                        "externalOut",
+                      ].map((k) => (
+                        <div className="pnl-row" key={k}>
+                          <span>{tr(k)}</span>
+                          <b>{money((r as any)[k])}</b>
+                        </div>
+                      ))}
+                    </section>
+                  )}
+                  {section !== "profit" && table(r.documents, "daybook")}
+                  <ReportAnalysis
+                    report={r}
+                    lang={lang}
+                    withMoney={section !== "profit"}
+                  />
                 </>
               )}
               {section === "daybook" && state.counts.length > 0 && (

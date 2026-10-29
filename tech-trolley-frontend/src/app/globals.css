@@ -209,6 +209,16 @@ form label {
   z-index: 30;
   padding: 30px 14px 16px;
 }
+.sidebar > nav {
+  min-height: 0;
+  overflow-y: auto;
+  flex: 1;
+}
+.sidebar > .brand,
+.sidebar > .nav-label,
+.sidebar-bottom {
+  flex-shrink: 0;
+}
 .brand {
   display: flex;
   align-items: center;
@@ -1249,6 +1259,29 @@ td b {
   .table-scroll td .mono {
     word-break: break-all;
   }
+}
+.report-analysis {
+  display: grid;
+  gap: 20px;
+  margin: 20px 0;
+}
+.report-detail h2 {
+  margin-bottom: 16px;
+}
+.report-detail .table-scroll {
+  max-height: 560px;
+  overflow: auto;
+}
+.date-range-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin: 12px 0 20px;
+}
+.date-range-controls label {
+  display: grid;
+  gap: 6px;
+  min-width: 180px;
 }
 @media print {
   .app {

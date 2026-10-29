@@ -1,5 +1,11 @@
 # Progress and release handover
 
+## Stock/profit/Staff audit follow-up — 2026-10-30
+
+Implemented the Owner's separate Storage/Color/Variant request and the confirmed Staff today-only / Owner all-date policy. Added Profit & expenses, model and individual sale profit, expense categories/reasons, custom expenses, inclusive custom date ranges, and expanded CSV with chronological cash/bank running balances. See [audit and accounting/access decisions](profit-stock-audit.md). Migration 006 adds optional stock detail columns without rewriting legacy variant text, posted documents or journal entries.
+
+Local verification: complete shared/API/web build and workspace typecheck, 16 isolated PostgreSQL tests, four hosting/invoice tests and Android/iOS exports pass. Browser checks cover Owner range download, Staff purchase form/visible stock costs, Staff custom-expense posting, updated Staff download, and Bengali mobile layout. Live release evidence follows after deployment.
+
 ## Optional password-change policy — 2026-10-30
 
 At the Owner's explicit request, mandatory password changes are disabled. Migration `004_optional_password_change.sql` changes the new-account default and clears existing flags without changing password hashes, roles, identities, sessions or business data. It was applied to the new live Supabase project with the normal checksummed migration runner and verified against before/after credentials, roles and business-record counts. A real initial-Owner login through the permanent Vercel origin now returns `must_change=false`; `/auth/me` and `/shop/state` both return HTTP 200. Only the verification session was logged out.

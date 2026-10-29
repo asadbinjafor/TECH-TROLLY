@@ -11,6 +11,7 @@ import { Button, Txt, Panel, useColors } from "../components/ui";
 import { api } from "../services/api";
 import { renderInvoiceHtml } from "@tech-trolley/invoice";
 import type { Receipt } from "@tech-trolley/contracts";
+import { productDetails } from "@tech-trolley/contracts";
 export function NativeReceipt({ route }: any) {
   const { lang } = useShop(),
     c = useColors(),
@@ -119,7 +120,7 @@ export function NativeReceipt({ route }: any) {
               <Txt style={{ fontWeight: "600" }}>
                 {receipt.unit.brand} {receipt.unit.model}
               </Txt>
-              <Txt>{receipt.unit.variant}</Txt>
+              <Txt>{productDetails(receipt.unit)}</Txt>
               <Txt>{receipt.unit.imei || receipt.unit.internalId}</Txt>
               <Txt>
                 {tr(receipt.unit.box)} ·{" "}

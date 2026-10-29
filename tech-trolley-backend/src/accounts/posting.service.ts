@@ -178,6 +178,8 @@ export class PostingService {
               model: u.model,
               brand: u.brand,
               variant: u.variant,
+              storage: u.storage,
+              color: u.color,
               imei: u.imei,
               internalId: u.internal_id,
               battery: u.battery,
@@ -212,6 +214,11 @@ export class PostingService {
               data.documentId,
             ]);
             if (!target || target.kind !== expected) fail("NOT_FOUND", 404);
+            if (
+              actor.role === "STAFF" &&
+              documentView(target).business_date !== date
+            )
+              fail("STAFF_TODAY_ONLY", 403);
             total = amount();
             if (target.reversed_by || total > BigInt(target.due))
               fail("DUE_EXCEEDED", 409);
@@ -234,10 +241,13 @@ export class PostingService {
             );
             allocations.push({ target: target.id, amount: total });
           } else if (kind === "expense") {
-            const [category] = await tx.query(
-              "SELECT * FROM expense_category WHERE id=$1 AND active",
-              [data.categoryId],
-            );
+            const [category] =
+              data.categoryId === "custom"
+                ? [{ bn: data.expenseName, en: data.expenseName }]
+                : await tx.query(
+                    "SELECT * FROM expense_category WHERE id=$1 AND active",
+                    [data.categoryId],
+                  );
             if (!category) fail("CATEGORY_INACTIVE");
             snapshot.categoryLabels = { bn: category.bn, en: category.en };
             total = amount();
@@ -303,6 +313,11 @@ export class PostingService {
               data.documentId,
             ]);
             if (!target) fail("NOT_FOUND", 404);
+            if (
+              actor.role === "STAFF" &&
+              documentView(target).business_date !== date
+            )
+              fail("STAFF_TODAY_ONLY", 403);
             if (
               target.reversed_by ||
               ["opening", "reversal", "cashCount"].includes(target.kind)
@@ -407,7 +422,7 @@ export class PostingService {
               "SELECT nextval('unit_number') AS seq",
             );
             await tx.query(
-              `INSERT INTO inventory_unit(id,internal_id,model,brand,variant,category,condition,imei,battery,box,cost,status,purchase_id) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'IN_STOCK',$12)`,
+              `INSERT INTO inventory_unit(id,internal_id,model,brand,variant,category,condition,imei,battery,box,cost,status,purchase_id,storage,color) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'IN_STOCK',$12,$13,$14)`,
               [
                 unitId,
                 `ST-${String(unitNumber).padStart(6, "0")}`,
@@ -421,6 +436,8 @@ export class PostingService {
                 data.box,
                 String(minor(snapshot.acquisitionCost)),
                 id,
+                data.storage || "",
+                data.color || "",
               ],
             );
             await tx.query(

@@ -3,6 +3,7 @@ import {
   decimal,
   minor,
   invoiceShop,
+  productDetails,
   type Language,
   type Receipt,
 } from "@tech-trolley/contracts";
@@ -200,7 +201,7 @@ ${r.reversed ? `<div class="tt-invoice__notice">${esc(t("reversed", lang))}</div
 <div class="tt-invoice__header"><img class="tt-invoice__logo" src="${esc(assets.logo || "/tech-trolley-logo.png")}" alt="Tech Trolley logo"><div><h1 class="tt-invoice__brand">${esc(r.shop.name).replace(/ /g, "<br>")}</h1><p class="tt-invoice__tagline">TECHNOLOGY | TRUST | TOMORROW</p></div><div><div class="tt-invoice__badge">${esc(label("invoice"))}</div><div class="tt-invoice__qr" aria-label="Shop Facebook QR code">${qrSvg}</div></div></div>
 <div class="tt-invoice__meta"><div>${esc(label("number"))}: <strong>${esc(r.number)}</strong></div><div>${esc(label("date"))}: <strong>${esc(date)}</strong></div></div>
 <div class="tt-invoice__customer">${field(label("name"), r.customer || label("walkIn"))}${field(label("address"), r.address)}${field(label("contact"), r.phone)}</div>
-<table class="tt-invoice__items"><thead><tr><th>${esc(label("item"))}</th><th>${esc(label("quantity"))}</th><th>${esc(label("price"))}</th></tr></thead><tbody><tr><td><span class="tt-invoice__product">${esc([r.unit.brand, r.unit.model].filter(Boolean).join(" "))}</span><span>${esc(r.unit.variant)}</span><span class="tt-invoice__variant">${esc(t(r.unit.box, lang))}${r.unit.battery === null ? "" : " · " + esc(t("battery", lang)) + ": " + esc(r.unit.battery) + "%"}</span></td><td>1</td><td>${esc(cash(r.price))}</td></tr>${Array.from({ length: 3 }, () => '<tr class="tt-invoice__blank" aria-hidden="true"><td>&nbsp;</td><td></td><td></td></tr>').join("")}</tbody></table>
+<table class="tt-invoice__items"><thead><tr><th>${esc(label("item"))}</th><th>${esc(label("quantity"))}</th><th>${esc(label("price"))}</th></tr></thead><tbody><tr><td><span class="tt-invoice__product">${esc([r.unit.brand, r.unit.model].filter(Boolean).join(" "))}</span><span>${esc(productDetails(r.unit))}</span><span class="tt-invoice__variant">${esc(t(r.unit.box, lang))}${r.unit.battery === null ? "" : " · " + esc(t("battery", lang)) + ": " + esc(r.unit.battery) + "%"}</span></td><td>1</td><td>${esc(cash(r.price))}</td></tr>${Array.from({ length: 3 }, () => '<tr class="tt-invoice__blank" aria-hidden="true"><td>&nbsp;</td><td></td><td></td></tr>').join("")}</tbody></table>
 <div class="tt-invoice__bottom"><div><p class="tt-invoice__serial-label">${r.unit.imei ? "IMEI" : "SERIAL / INTERNAL NO"}</p><div class="tt-invoice__serial">${Array.from(
     serial,
   )

@@ -10,11 +10,12 @@ export class DocumentsController {
   @Get(":id/receipt") async receipt(
     @Param("id") id: string,
     @Query("lang") lang: string,
+    @Req() req: any,
   ) {
     z.uuid().parse(id);
     const [raw] = await db.query(
-      `${documentsSql} WHERE d.id=$1 AND d.kind='sale'`,
-      [id],
+      `${documentsSql} WHERE d.id=$1 AND d.kind='sale' AND ($2::boolean OR d.business_date=(now() AT TIME ZONE 'Asia/Dhaka')::date)`,
+      [id, req.user.role === "OWNER"],
     );
     if (!raw) fail("NOT_FOUND", 404);
     const d = documentView(raw),
@@ -40,6 +41,8 @@ export class DocumentsController {
         model: s.model,
         brand: s.brand,
         variant: s.variant,
+        storage: s.storage || "",
+        color: s.color || "",
         imei: s.imei,
         internalId: s.internalId,
         battery: s.battery,

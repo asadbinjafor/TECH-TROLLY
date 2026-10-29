@@ -41,6 +41,8 @@ export interface Receipt {
     model: string;
     brand: string;
     variant: string;
+    storage?: string;
+    color?: string;
     imei: string | null;
     internalId: string;
     battery: number | null;

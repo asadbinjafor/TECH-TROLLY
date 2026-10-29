@@ -164,107 +164,120 @@ export function CommandForm({
           }}
         >
           <div className="form-grid">
-            {forms[kind].map((field) => (
-              <label
-                key={field.key}
-                className={
-                  field.key === "note" || field.key === "customerAddress"
-                    ? "wide"
-                    : ""
-                }
-              >
-                {t(field.label, lang)}
-                {field.optional &&
-                  !(field.key === "imei" && values.category === "phone") && (
-                    <small className="muted"> · {t("optional", lang)}</small>
+            {forms[kind]
+              .filter(
+                (field) =>
+                  field.key !== "expenseName" || values.categoryId === "custom",
+              )
+              .map((field) => (
+                <label
+                  key={field.key}
+                  className={
+                    field.key === "note" || field.key === "customerAddress"
+                      ? "wide"
+                      : ""
+                  }
+                >
+                  {t(
+                    kind === "expense" && field.key === "note"
+                      ? "expenseDetails"
+                      : field.label,
+                    lang,
                   )}
-                {field.type === "select" ? (
-                  <select
-                    value={values[field.key] || ""}
-                    required={
-                      !field.optional ||
-                      (field.key === "imei" && values.category === "phone")
-                    }
-                    disabled={!!pending || review}
-                    onChange={(e) =>
-                      setValues((v) => ({
-                        ...v,
-                        [field.key]: e.target.value,
-                        ...(field.key === "unitId"
-                          ? { price: "", discount: "0", cash: "", bank: "" }
-                          : {}),
-                        ...(field.key === "customerId"
-                          ? customerInvoiceFields(
-                              state.parties.find(
-                                (p) => p.id === e.target.value,
-                              ),
-                            )
-                          : {}),
-                      }))
-                    }
-                  >
-                    <option value="">
-                      {field.key === "customerId"
-                        ? t("walkIn", lang)
-                        : t("select", lang)}
-                    </option>
-                    {choices(field, state, lang).map((o) => (
-                      <option key={o.value} value={o.value}>
-                        {field.options ? t(o.label, lang) : o.label}
-                      </option>
-                    ))}
-                  </select>
-                ) : (
-                  <input
-                    value={values[field.key] || ""}
-                    name={field.key}
-                    required={
-                      !field.optional ||
-                      (field.key === "imei" && values.category === "phone")
-                    }
-                    disabled={!!pending || review}
-                    type={
-                      field.type === "password"
-                        ? "password"
-                        : field.type === "month"
-                          ? "month"
-                          : "text"
-                    }
-                    inputMode={
-                      field.type === "money"
-                        ? "decimal"
-                        : field.key === "customerPhone"
-                          ? "tel"
-                          : field.type === "number" || field.key === "imei"
-                            ? "numeric"
-                            : undefined
-                    }
-                    maxLength={
-                      field.key === "imei"
-                        ? 15
-                        : field.key === "customerPhone"
-                          ? 30
-                          : field.type === "money"
-                            ? 15
-                            : 300
-                    }
-                    onChange={(e) =>
-                      setValues((v) => ({ ...v, [field.key]: e.target.value }))
-                    }
-                  />
-                )}
-                {issues[field.key] && (
-                  <small className="error">
-                    {t(
-                      /^[A-Z_]+$/.test(issues[field.key])
-                        ? issues[field.key]
-                        : "VALIDATION_ERROR",
-                      lang,
+                  {field.optional &&
+                    !(field.key === "imei" && values.category === "phone") && (
+                      <small className="muted"> · {t("optional", lang)}</small>
                     )}
-                  </small>
-                )}
-              </label>
-            ))}
+                  {field.type === "select" ? (
+                    <select
+                      value={values[field.key] || ""}
+                      required={
+                        !field.optional ||
+                        (field.key === "imei" && values.category === "phone")
+                      }
+                      disabled={!!pending || review}
+                      onChange={(e) =>
+                        setValues((v) => ({
+                          ...v,
+                          [field.key]: e.target.value,
+                          ...(field.key === "unitId"
+                            ? { price: "", discount: "0", cash: "", bank: "" }
+                            : {}),
+                          ...(field.key === "customerId"
+                            ? customerInvoiceFields(
+                                state.parties.find(
+                                  (p) => p.id === e.target.value,
+                                ),
+                              )
+                            : {}),
+                        }))
+                      }
+                    >
+                      <option value="">
+                        {field.key === "customerId"
+                          ? t("walkIn", lang)
+                          : t("select", lang)}
+                      </option>
+                      {choices(field, state, lang).map((o) => (
+                        <option key={o.value} value={o.value}>
+                          {field.options ? t(o.label, lang) : o.label}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      value={values[field.key] || ""}
+                      name={field.key}
+                      required={
+                        !field.optional ||
+                        (field.key === "imei" && values.category === "phone")
+                      }
+                      disabled={!!pending || review}
+                      type={
+                        field.type === "password"
+                          ? "password"
+                          : field.type === "month"
+                            ? "month"
+                            : "text"
+                      }
+                      inputMode={
+                        field.type === "money"
+                          ? "decimal"
+                          : field.key === "customerPhone"
+                            ? "tel"
+                            : field.type === "number" || field.key === "imei"
+                              ? "numeric"
+                              : undefined
+                      }
+                      maxLength={
+                        field.key === "imei"
+                          ? 15
+                          : field.key === "customerPhone"
+                            ? 30
+                            : field.type === "money"
+                              ? 15
+                              : 300
+                      }
+                      onChange={(e) =>
+                        setValues((v) => ({
+                          ...v,
+                          [field.key]: e.target.value,
+                        }))
+                      }
+                    />
+                  )}
+                  {issues[field.key] && (
+                    <small className="error">
+                      {t(
+                        /^[A-Z_]+$/.test(issues[field.key])
+                          ? issues[field.key]
+                          : "VALIDATION_ERROR",
+                        lang,
+                      )}
+                    </small>
+                  )}
+                </label>
+              ))}
           </div>
           {preview && (
             <div className="review-strip">
@@ -287,7 +300,7 @@ export function CommandForm({
             </div>
           )}
           {review && <p className="notice">{t("review", lang)}</p>}
-          {pending && (
+          {pending && !busy && (
             <div className="notice">
               <p>{t("uncertain", lang)}</p>
               <code>{pending.key}</code>

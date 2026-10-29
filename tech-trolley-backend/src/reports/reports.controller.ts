@@ -6,7 +6,8 @@ import { ReportsService, periodSchema } from "./reports.service";
 import { t } from "@tech-trolley/i18n";
 const csv = (v: unknown) => {
   let s = String(v ?? "");
-  if (/^[\s]*[=+\-@\t\r]/.test(s)) s = "'" + s;
+  if (/^[\s]*[=+\-@\t\r]/.test(s) && !/^-?\d+(\.\d{1,2})?$/.test(s))
+    s = "'" + s;
   return '"' + s.replace(/"/g, '""') + '"';
 };
 @Controller("reports")
@@ -26,6 +27,7 @@ export class ReportsController {
     const r = await this.reports.report(req.user, query);
     const { lang } = periodSchema.parse(query);
     const rows = [
+      ["Tech Trolley", r.from, r.to],
       [
         t("number", lang),
         t("kind", lang),
@@ -51,6 +53,7 @@ export class ReportsController {
         "grossProfit",
         "expense",
         "netProfit",
+        "purchases",
         "openingCash",
         "closingCash",
         "openingBank",
@@ -62,8 +65,113 @@ export class ReportsController {
         "externalIn",
         "externalOut",
       ].map((key) => [
-        t(key === "expense" ? "expenses" : key, lang),
+        t(
+          key === "expense"
+            ? "expenses"
+            : key === "purchases"
+              ? "purchasesTotal"
+              : key,
+          lang,
+        ),
         (r as any)[key],
+      ]),
+      [],
+      [t("productProfit", lang)],
+      ["model", "quantity", "purchaseCost", "sales", "grossProfit"].map((k) =>
+        t(k, lang),
+      ),
+      ...r.productProfit.map((p) => [
+        [p.brand, p.model].join(" "),
+        p.quantity,
+        p.purchaseCost,
+        p.sales,
+        p.grossProfit,
+      ]),
+      [],
+      [t("profitStatement", lang)],
+      [
+        "date",
+        "number",
+        "sourceNumber",
+        "brand",
+        "model",
+        "storage",
+        "color",
+        "variant",
+        "imei",
+        "actor",
+        "quantity",
+        "purchaseCost",
+        "sales",
+        "grossProfit",
+      ].map((k) => t(k, lang)),
+      ...r.profitStatement.map((p) => [
+        p.date,
+        p.number,
+        p.sourceNumber,
+        p.brand,
+        p.model,
+        p.storage,
+        p.color,
+        p.variant,
+        "'" + p.serial,
+        p.actor,
+        p.quantity,
+        p.purchaseCost,
+        p.sales,
+        p.grossProfit,
+      ]),
+      [],
+      [t("expenseBreakdown", lang)],
+      [t("categoryId", lang), t("amount", lang) + " BDT"],
+      ...r.expenseBreakdown.map((e) => [e[lang], e.amount]),
+      [],
+      [t("expenseStatement", lang)],
+      [
+        "date",
+        "number",
+        "sourceNumber",
+        "categoryId",
+        "expenseDetails",
+        "actor",
+        "amount",
+      ].map((k) => t(k, lang)),
+      ...r.expenseStatement.map((e) => [
+        e.date,
+        e.number,
+        e.sourceNumber,
+        e[lang],
+        e.note,
+        e.actor,
+        e.amount,
+      ]),
+      [],
+      [t("moneyStatement", lang)],
+      [
+        "date",
+        "number",
+        "kind",
+        "actor",
+        "note",
+        "cashIn",
+        "cashOut",
+        "closingCash",
+        "bankIn",
+        "bankOut",
+        "closingBank",
+      ].map((k) => t(k, lang)),
+      ...r.moneyStatement.map((e) => [
+        e.date,
+        e.number,
+        t(e.kind, lang),
+        e.actor,
+        e.note,
+        e.cashIn,
+        e.cashOut,
+        e.cashBalance,
+        e.bankIn,
+        e.bankOut,
+        e.bankBalance,
       ]),
     ];
     res.setHeader("Content-Type", "text/csv; charset=utf-8");
