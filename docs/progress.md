@@ -8,7 +8,9 @@ Browser requests now default to /api through a thin Next route proxy to server-o
 
 Render build: npm ci --include=dev && npm run build:api. Start: npm run start:render (versioned migration → idempotent bootstrap → API). No reset or automatic sample data. The optional paid pre-deploy path is documented. Supabase Session pooler port 5432, verified TLS/custom CA and a five-connection pool are covered. Migration 003 enables RLS and revokes Supabase Data API-role privileges only for app-owned objects. Existing application history/passwords are preserved.
 
-Verification: provider JSON schemas validated for both manifests; web/API builds and workspace typecheck pass; 2 hosting tests pass; backend suite 12 tests pass including repeat release without bootstrap secrets and untrusted-role RLS denial. No real provider connection, database migration against Supabase, or public deploy was performed. The historical handover below remains the baseline; the selected providers and web proxy above supersede its hosting-selection/default API notes.
+Verification: provider JSON schemas validated for both manifests; web/API builds and workspace typecheck pass; 2 hosting tests pass; backend suite 13 tests pass including repeat release without bootstrap secrets, untrusted-role RLS denial, and a real Nest login/CSV/logout flow through the web proxy. Implemented and pushed in [97587ff](https://github.com/asadbinjafor/TECH-TROLLY/commit/97587ff2f596b795042d6df9f7094acc0c1887ee). No real provider connection, database migration against Supabase, or public deploy was performed. The historical handover below remains the baseline; the selected providers and web proxy above supersede its hosting-selection/default API notes.
+
+[Managed-hosting CI run 40941893627](https://github.com/asadbinjafor/TECH-TROLLY/actions/runs/40941893627) passed on 97587ff: clean install, full builds/typechecks, hosting tests, PostgreSQL tests, Android/iOS bundles and Expo Doctor. Final follow-up changes only correct the recorded test count and add these verification links.
 
 ---
 
