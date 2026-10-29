@@ -4,7 +4,9 @@
 
 Implemented the Owner's separate Storage/Color/Variant request and the confirmed Staff today-only / Owner all-date policy. Added Profit & expenses, model and individual sale profit, expense categories/reasons, custom expenses, inclusive custom date ranges, and expanded CSV with chronological cash/bank running balances. See [audit and accounting/access decisions](profit-stock-audit.md). Migration 006 adds optional stock detail columns without rewriting legacy variant text, posted documents or journal entries.
 
-Local verification: complete shared/API/web build and workspace typecheck, 16 isolated PostgreSQL tests, four hosting/invoice tests and Android/iOS exports pass. Browser checks cover Owner range download, Staff purchase form/visible stock costs, Staff custom-expense posting, updated Staff download, and Bengali mobile layout. Live release evidence follows after deployment.
+Local verification: complete shared/API/web build and workspace typecheck, 16 isolated PostgreSQL tests, four hosting/invoice tests and Android/iOS exports pass. Browser checks cover Owner range download, Staff purchase form/visible stock costs, Staff custom-expense posting, updated Staff download, and Bengali mobile layout. The disposable browser database and its helper servers were removed after verification.
+
+Released [2dfab6e](https://github.com/asadbinjafor/TECH-TROLLY/commit/2dfab6eb55901d384460e874dfa18cb069aa0f0f). [CI run 40959112790](https://github.com/asadbinjafor/TECH-TROLLY/actions/runs/40959112790) passed; Vercel deployment `8gcQHwMy6dn6u6Grgcy6Q3c9v8Um` succeeded and Render deployment `dep-dbhrorsipgvc73dinttg` reports Deploy succeeded / Live. Normal startup applied migration 006. Read-only Supabase checks confirm storage/color columns and retained stock RLS. Public health endpoints, canonical Owner login/dashboard, inclusive range reports and Bengali expanded CSV return successfully. The live Profit page returns HTTP 200. No synthetic production users, stock, sales or expenses were created.
 
 ## Optional password-change policy — 2026-10-30
 
