@@ -7,7 +7,6 @@
     "icon": "./assets/icon.png",
     "scheme": "techtrolley",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
     "ios": {
       "bundleIdentifier": "com.techtrolley.shop",
       "buildNumber": "1",
@@ -24,9 +23,7 @@
         "backgroundColor": "#222529"
       },
       "permissions": [],
-      "blockedPermissions": [
-        "android.permission.RECORD_AUDIO"
-      ]
+      "blockedPermissions": ["android.permission.RECORD_AUDIO"]
     },
     "plugins": [
       "expo-secure-store",
@@ -34,9 +31,7 @@
       [
         "expo-font",
         {
-          "fonts": [
-            "./assets/NotoSansBengali.ttf"
-          ]
+          "fonts": ["./assets/NotoSansBengali.ttf"]
         }
       ],
       [
@@ -51,6 +46,7 @@
     ],
     "extra": {
       "apiUrlConfigured": false
-    }
+    },
+    "platforms": ["ios", "android"]
   }
 }

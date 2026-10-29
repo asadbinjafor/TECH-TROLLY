@@ -1,38 +1,651 @@
-import React,{useCallback,useEffect,useState} from 'react';
-import { ScrollView,View,RefreshControl,Platform } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useFocusEffect } from '@react-navigation/native';
-import DateTimePicker from '@react-native-community/datetimepicker';
-import { File,Paths } from 'expo-file-system';
-import * as Sharing from 'expo-sharing';
-import * as SecureStore from 'expo-secure-store';
-import { t,currency,dateLabel } from '@tech-trolley/i18n';
-import type { CommandKind,Report,Document } from '@tech-trolley/contracts';
-import { useShop } from '../contexts/shop-context';
-import { Button,Txt,Panel,Input,Empty,useColors } from '../components/ui';
-import { api,tokenKey } from '../services/api';
-export function NativePage({navigation,route,section:initial}:any){const section=route?.params?.section||initial||'overview';const {state,user,lang,dark,setDark,setLang,error,refresh,logout}=useShop(),c=useColors(),[search,setSearch]=useState(''),[tab,setTab]=useState('inStock'),[date,setDate]=useState(''),[showDate,setShowDate]=useState(false),[period,setPeriod]=useState('today'),[report,setReport]=useState<Report|null>(null),[problem,setProblem]=useState(''),[busy,setBusy]=useState(false);
- const tr=(k:string)=>t(k,lang),money=(v:string)=>currency(v,lang);const command=(kind:CommandKind)=>navigation.navigate('Command',{kind});
- useFocusEffect(useCallback(()=>{if(section==='sell'){navigation.navigate('Home');navigation.getParent()?.navigate('Command',{kind:'sale'});}},[section,navigation]));
- const query=new URLSearchParams({period:section==='daybook'?'today':period,...(section==='daybook'&&date?{date}:{})}).toString();
- useEffect(()=>{if(state&&['reports','daybook'].includes(section))void api.request<Report>('/reports?'+query).then(r=>{setReport(r);setProblem('');}).catch(e=>setProblem(e.code));},[section,query,state]);
- if(!state)return <SafeAreaView style={{flex:1,backgroundColor:c.bg,padding:20}}><Txt>{tr(error||'loading')}</Txt><Button label={tr('retry')} onPress={()=>void refresh()}/></SafeAreaView>;
- const r=section==='overview'?state.report:report||state.report;
- const actions=(kinds:CommandKind[])=>kinds.map(k=><Button key={k} label={tr(k)} onPress={()=>command(k)}/>);
- const metric=(key:string,value:string)=> <View key={key} style={{width:'48%'}}><Panel><Txt style={{fontSize:11,color:c.muted}}>{tr(key)}</Txt><Txt style={{fontSize:22,fontWeight:'600',marginTop:12,lineHeight:32,color:key==='netProfit'?'#208768':c.text}}>{money(value)}</Txt></Panel></View>;
- const docList=(docs:Document[])=>docs.length?docs.filter(d=>JSON.stringify(d).toLowerCase().includes(search.toLowerCase())).map(d=><Panel key={d.id}><View style={{flexDirection:'row',justifyContent:'space-between',gap:12}}><Txt style={{fontWeight:'600'}}>{d.number}</Txt><Txt style={{fontSize:11,color:c.muted}}>{tr(d.kind)}</Txt></View><Txt style={{marginVertical:6}}>{String(d.snapshot.model||d.snapshot.partyName||d.snapshot.staffName||d.snapshot.note||'')}</Txt><Txt style={{fontSize:11,color:c.muted}}>{d.business_date} · {d.actor_name}</Txt><Txt style={{fontSize:20,marginTop:12,lineHeight:30}}>{money(d.total)}</Txt>{Number(d.due)>0&&<Txt style={{fontSize:12,color:'#b95050'}}>{tr('due')}: {money(d.due)}</Txt>}{d.reversed_by&&<Txt>{tr('reversed')}</Txt>}{d.kind==='sale'&&<Button label={tr('receipt')} onPress={()=>navigation.navigate('Receipt',{id:d.id})}/>}</Panel>):<Empty/>;
- return <SafeAreaView style={{flex:1,backgroundColor:c.bg}} edges={['left','right',...(initial?['top' as const]:[])]}><ScrollView contentContainerStyle={{padding:18,paddingBottom:30}} refreshControl={<RefreshControl refreshing={busy} onRefresh={()=>{setBusy(true);void refresh().finally(()=>setBusy(false));}} tintColor="#e9ba4b"/>} keyboardShouldPersistTaps="handled"><View style={{flexDirection:'row',justifyContent:'space-between',alignItems:'center',marginBottom:18}}><View><Txt style={{fontSize:23,fontWeight:'700',lineHeight:36}}>{tr(section==='more'?'workspace':section)}</Txt><Txt style={{fontSize:10,color:c.muted}}>{dateLabel(state.today,lang)}</Txt></View><Button label="+" primary onPress={()=>command('sale')}/></View>{(error||problem)&&<Panel><Txt accessibilityRole="alert" style={{color:'#b95050'}}>{tr(error?'offline':problem)}</Txt><Button label={tr('retry')} onPress={()=>void refresh()}/></Panel>}
- {!state.shop.opened_at&&<Panel><Txt>{tr('openingNotice')}</Txt>{user?.role==='OWNER'&&<Button label={tr('opening')} primary onPress={()=>command('opening')}/>}</Panel>}
- {section==='overview'&&<><View style={{backgroundColor:'#24272b',padding:24,borderRadius:17,marginBottom:16}}><Txt style={{color:'#c8c8c3',fontSize:12}}>{tr('cash')}</Txt><Txt style={{color:'#e9ba4b',fontSize:36,fontWeight:'600',lineHeight:55,marginTop:15}}>{money(state.balances.cash)}</Txt><Txt style={{color:'#c8c8c3',fontSize:11,marginTop:15}}>{tr('cashIn')} +{money(r.cashIn)} · {tr('cashOut')} −{money(r.cashOut)}</Txt></View><Panel><Txt style={{color:c.muted,fontSize:12}}>{tr('bank')}</Txt><Txt style={{fontSize:30,lineHeight:45,marginTop:12}}>{money(state.balances.bank)}</Txt><Button label={tr('transfer')} onPress={()=>command('transfer')}/></Panel><View style={{flexDirection:'row',flexWrap:'wrap',justifyContent:'space-between'}}>{metric('revenue',r.revenue)}{metric('netProfit',r.netProfit)}{metric('expenses',r.expense)}{metric('stockCost',state.balances.inventory)}</View><Txt style={{fontWeight:'600',marginBottom:10}}>{tr('quick')}</Txt>{actions(['purchase','expense','collection','cashCount'])}<Txt style={{fontWeight:'600',marginVertical:15}}>{tr('recent')}</Txt>{docList(state.documents.slice(0,5))}</>}
- {section==='inventory'&&<><Input label={tr('search')} value={search} onChange={setSearch}/><View style={{flexDirection:'row',gap:7,flexWrap:'wrap',marginBottom:14}}>{['inStock','stockOut','all'].map(k=><Button key={k} label={tr(k)} primary={tab===k} onPress={()=>setTab(k)}/>)}</View>{state.units.length?state.units.filter(u=>(tab==='all'||(tab==='inStock'?u.status==='IN_STOCK':u.status!=='IN_STOCK'))&&`${u.model} ${u.brand} ${u.imei} ${u.internal_id}`.toLowerCase().includes(search.toLowerCase())).map(u=>{const sale=state.documents.find(d=>d.id===u.sale_id);return <Panel key={u.id}><Txt style={{fontSize:18,fontWeight:'600'}}>{u.model}</Txt><Txt style={{fontSize:12,color:c.muted}}>{u.brand} · {u.variant} · {u.internal_id}</Txt><Txt style={{fontSize:13,marginVertical:10}}>{u.imei||'—'}</Txt><Txt>{tr('cost')}: {money(u.cost)}</Txt><Txt>{tr(u.status)} · {u.battery===null?'—':u.battery+'%'} · {tr(u.box)}</Txt>{sale&&<><Txt>{tr('price')}: {money(sale.total)} · {sale.business_date} · {sale.actor_name}</Txt><Button label={tr('receipt')} onPress={()=>navigation.navigate('Receipt',{id:sale.id})}/></>}{u.status==='IN_STOCK'&&<Button label={tr('sale')} primary onPress={()=>navigation.navigate('Command',{kind:'sale',unitId:u.id})}/>}</Panel>;}):<Empty/>}</>}
- {section==='purchases'&&<>{actions(['purchase'])}{docList(state.documents.filter(d=>d.kind==='purchase'))}</>}
- {section==='transactions'&&<><Input label={tr('search')} value={search} onChange={setSearch}/>{actions(['expense','reversal'])}{docList(state.documents)}</>}
- {section==='money'&&<><View style={{flexDirection:'row',flexWrap:'wrap',justifyContent:'space-between'}}>{['cash','bank','receivable','payable'].map(k=>metric(k,state.balances[k]))}</View>{actions(['collection','supplierPayment','transfer','contribution','withdrawal','loan','loanRepayment'])}<Button label={tr('createParty')} onPress={()=>navigation.navigate('Administration',{mode:'parties'})}/>{docList(state.documents.filter(d=>Number(d.due)>0))}</>}
- {section==='staff'&&<>{actions(['advance','advanceRepayment','salary'])}{state.staff.map(s=><Panel key={s.id}><Txt>{s.name}</Txt><Txt>{tr(s.role)}</Txt></Panel>)}{docList(state.documents.filter(d=>['advance','advanceRepayment','salary'].includes(d.kind)))}</>}
- {['daybook','reports'].includes(section)&&<>{section==='daybook'?<><View style={{flexDirection:'row',gap:8}}><Button label="‹" onPress={()=>{const d=new Date((date||state.today)+'T12:00:00Z');d.setUTCDate(d.getUTCDate()-1);setDate(d.toISOString().slice(0,10));}}/><View style={{flex:1}}><Button label={date||state.today} onPress={()=>setShowDate(true)}/></View><Button label="›" disabled={(date||state.today)>=state.today} onPress={()=>{const d=new Date(date+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+1);setDate(d.toISOString().slice(0,10));}}/></View><Button label={tr('today')} onPress={()=>setDate('')}/>{showDate&&<DateTimePicker value={new Date((date||state.today)+'T12:00:00')} maximumDate={new Date(state.today+'T23:59:59')} mode="date" display={Platform.OS==='ios'?'inline':'default'} onChange={(_,d)=>{setShowDate(false);if(d)setDate(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`);}}/>}</>:<View style={{flexDirection:'row',gap:7,flexWrap:'wrap'}}>{['today','week',...(user?.role==='OWNER'?['month']:[])].map(p=><Button key={p} label={tr(p==='month'?'monthReport':p)} primary={p===period} onPress={()=>setPeriod(p)}/>)}</View>}
- {r.available?<><Txt style={{fontSize:11,color:c.muted,marginVertical:12}}>{r.from} — {r.to}</Txt><View style={{flexDirection:'row',flexWrap:'wrap',justifyContent:'space-between'}}>{metric('revenue',r.revenue)}{metric('cogs',r.cogs)}{metric('expenses',r.expense)}{metric('netProfit',r.netProfit)}</View><Panel>{['openingCash','cashIn','cashOut','closingCash','openingBank','bankIn','bankOut','closingBank','grossProfit','externalIn','externalOut'].map(k=><View key={k} style={{flexDirection:'row',justifyContent:'space-between',borderBottomWidth:1,borderBottomColor:c.line,paddingVertical:10,gap:12}}><Txt style={{fontSize:12}}>{tr(k)}</Txt><Txt style={{fontSize:12}}>{money((r as any)[k])}</Txt></View>)}</Panel>{docList(r.documents)}</>:<Panel><Txt>{tr('unavailable')}</Txt></Panel>}
- <Button label={tr('download')} onPress={()=>{void(async()=>{try{const token=await SecureStore.getItemAsync(tokenKey);const file=await File.downloadFileAsync(`${process.env.EXPO_PUBLIC_API_URL||'http://localhost:3000'}/reports/export?${query}`,new File(Paths.cache,`trolley-${r.from}-${r.to}-${Date.now()}.csv`),{headers:{Authorization:`Bearer ${token}`}});if(await Sharing.isAvailableAsync())await Sharing.shareAsync(file.uri,{mimeType:'text/csv'});}catch(e:any){setProblem(e.code||'NETWORK_ERROR');}})();}}/>
- {section==='daybook'&&state.counts.filter((count:any)=>String(count.business_date).slice(0,10)===(date||state.today)).map((count:any)=><Panel key={count.document_id}><Txt>{tr('cashCount')} · {count.actor_name}</Txt><Txt>{tr('expected')}: {money((Number(count.expected)/100).toFixed(2))}</Txt><Txt>{tr('counted')}: {money((Number(count.counted)/100).toFixed(2))}</Txt><Txt>{tr('difference')}: {money((Number(count.difference)/100).toFixed(2))}</Txt>{count.needs_review&&<Txt style={{color:'#b95050'}}>{tr('needsReview')}</Txt>}</Panel>)}</>}
- {section==='more'&&<>{['purchases','transactions','money','staff','reports'].map(s=><Button key={s} label={tr(s)} onPress={()=>navigation.navigate('Page',{section:s})}/>)}<Button label={tr('settings')} onPress={()=>navigation.navigate('Administration',{mode:'settings'})}/><Button label={tr('categories')} onPress={()=>navigation.navigate('Administration',{mode:'categories'})}/><Button label={tr('createParty')} onPress={()=>navigation.navigate('Administration',{mode:'parties'})}/>{user?.role==='OWNER'&&<Button label={tr('users')} onPress={()=>navigation.navigate('Administration',{mode:'users'})}/>}<Button label={tr('changePassword')} onPress={()=>navigation.navigate('Administration',{mode:'password'})}/><Button label={lang==='bn'?'English':'বাংলা'} onPress={()=>setLang(lang==='bn'?'en':'bn')}/><Button label={tr(dark?'light':'dark')} onPress={()=>setDark(!dark)}/><Button label={tr('logout')} onPress={()=>void logout().catch((e:any)=>setProblem(e.code))}/></>}
- <Txt style={{fontSize:10,color:c.muted,textAlign:'center',marginTop:25}}>{tr('connected')} · Tech Trolley</Txt></ScrollView></SafeAreaView>;
+import React, { useCallback, useEffect, useState } from "react";
+import { ScrollView, View, RefreshControl, Platform } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { useFocusEffect } from "@react-navigation/native";
+import DateTimePicker from "@react-native-community/datetimepicker";
+import { File, Paths } from "expo-file-system";
+import * as Sharing from "expo-sharing";
+import * as SecureStore from "expo-secure-store";
+import { t, currency, dateLabel } from "@tech-trolley/i18n";
+import type { CommandKind, Report, Document } from "@tech-trolley/contracts";
+import { useShop } from "../contexts/shop-context";
+import { Button, Txt, Panel, Input, Empty, useColors } from "../components/ui";
+import { api, tokenKey } from "../services/api";
+export function NativePage({ navigation, route, section: initial }: any) {
+  const section = route?.params?.section || initial || "overview";
+  const { state, user, lang, dark, setDark, setLang, error, refresh, logout } =
+      useShop(),
+    c = useColors(),
+    [search, setSearch] = useState(""),
+    [tab, setTab] = useState("inStock"),
+    [date, setDate] = useState(""),
+    [showDate, setShowDate] = useState(false),
+    [period, setPeriod] = useState("today"),
+    [report, setReport] = useState<Report | null>(null),
+    [problem, setProblem] = useState(""),
+    [busy, setBusy] = useState(false);
+  const tr = (k: string) => t(k, lang),
+    money = (v: string) => currency(v, lang);
+  const command = (kind: CommandKind) =>
+    navigation.navigate("Command", { kind });
+  useFocusEffect(
+    useCallback(() => {
+      if (section === "sell") {
+        navigation.navigate("Home");
+        navigation.getParent()?.navigate("Command", { kind: "sale" });
+      }
+    }, [section, navigation]),
+  );
+  const query = new URLSearchParams({
+    lang,
+    period: section === "daybook" ? "today" : period,
+    ...(section === "daybook" && date ? { date } : {}),
+  }).toString();
+  useEffect(() => {
+    let active = true;
+    if (state && ["reports", "daybook"].includes(section))
+      void api
+        .request<Report>("/reports?" + query)
+        .then((r) => {
+          if (!active) return;
+          setReport(r);
+          setProblem("");
+        })
+        .catch((e) => {
+          if (active) setProblem(e.code);
+        });
+    return () => {
+      active = false;
+    };
+  }, [section, query, state]);
+  if (!state)
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: c.bg, padding: 20 }}>
+        <Txt>{tr(error || "loading")}</Txt>
+        <Button label={tr("retry")} onPress={() => void refresh()} />
+      </SafeAreaView>
+    );
+  const r = section === "overview" ? state.report : report || state.report;
+  const actions = (kinds: CommandKind[]) =>
+    kinds.map((k) => (
+      <Button key={k} label={tr(k)} onPress={() => command(k)} />
+    ));
+  const metric = (key: string, value: string) => (
+    <View key={key} style={{ width: "48%" }}>
+      <Panel>
+        <Txt style={{ fontSize: 11, color: c.muted }}>{tr(key)}</Txt>
+        <Txt
+          style={{
+            fontSize: 22,
+            fontWeight: "600",
+            marginTop: 12,
+            lineHeight: 32,
+            color: key === "netProfit" ? "#208768" : c.text,
+          }}
+        >
+          {money(value)}
+        </Txt>
+      </Panel>
+    </View>
+  );
+  const docList = (docs: Document[]) =>
+    docs.length ? (
+      docs
+        .filter((d) =>
+          JSON.stringify(d).toLowerCase().includes(search.toLowerCase()),
+        )
+        .map((d) => (
+          <Panel key={d.id}>
+            <View
+              style={{
+                flexDirection: "row",
+                justifyContent: "space-between",
+                gap: 12,
+              }}
+            >
+              <Txt style={{ fontWeight: "600" }}>{d.number}</Txt>
+              <Txt style={{ fontSize: 11, color: c.muted }}>{tr(d.kind)}</Txt>
+            </View>
+            <Txt style={{ marginVertical: 6 }}>
+              {String(
+                d.snapshot.model ||
+                  d.snapshot.partyName ||
+                  d.snapshot.staffName ||
+                  d.snapshot.note ||
+                  "",
+              )}
+            </Txt>
+            <Txt style={{ fontSize: 11, color: c.muted }}>
+              {d.business_date} · {d.actor_name}
+            </Txt>
+            <Txt style={{ fontSize: 20, marginTop: 12, lineHeight: 30 }}>
+              {money(d.total)}
+            </Txt>
+            {Number(d.due) > 0 && (
+              <Txt style={{ fontSize: 12, color: "#b95050" }}>
+                {tr("due")}: {money(d.due)}
+              </Txt>
+            )}
+            {d.reversed_by && <Txt>{tr("reversed")}</Txt>}
+            {d.kind === "sale" && (
+              <Button
+                label={tr("receipt")}
+                onPress={() => navigation.navigate("Receipt", { id: d.id })}
+              />
+            )}
+          </Panel>
+        ))
+    ) : (
+      <Empty />
+    );
+  return (
+    <SafeAreaView
+      style={{ flex: 1, backgroundColor: c.bg }}
+      edges={["left", "right", ...(initial ? ["top" as const] : [])]}
+    >
+      <ScrollView
+        contentContainerStyle={{ padding: 18, paddingBottom: 30 }}
+        refreshControl={
+          <RefreshControl
+            refreshing={busy}
+            onRefresh={() => {
+              setBusy(true);
+              void refresh().finally(() => setBusy(false));
+            }}
+            tintColor="#e9ba4b"
+          />
+        }
+        keyboardShouldPersistTaps="handled"
+      >
+        <View
+          style={{
+            flexDirection: "row",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: 18,
+          }}
+        >
+          <View>
+            <Txt style={{ fontSize: 23, fontWeight: "700", lineHeight: 36 }}>
+              {tr(section === "more" ? "workspace" : section)}
+            </Txt>
+            <Txt style={{ fontSize: 10, color: c.muted }}>
+              {dateLabel(state.today, lang)}
+            </Txt>
+          </View>
+          <Button label="+" primary onPress={() => command("sale")} />
+        </View>
+        {(error || problem) && (
+          <Panel>
+            <Txt accessibilityRole="alert" style={{ color: "#b95050" }}>
+              {tr(error ? "offline" : problem)}
+            </Txt>
+            <Button label={tr("retry")} onPress={() => void refresh()} />
+          </Panel>
+        )}
+        {!state.shop.opened_at && (
+          <Panel>
+            <Txt>{tr("openingNotice")}</Txt>
+            {user?.role === "OWNER" && (
+              <Button
+                label={tr("opening")}
+                primary
+                onPress={() => command("opening")}
+              />
+            )}
+          </Panel>
+        )}
+        {section === "overview" && (
+          <>
+            <View
+              style={{
+                backgroundColor: "#24272b",
+                padding: 24,
+                borderRadius: 17,
+                marginBottom: 16,
+              }}
+            >
+              <Txt style={{ color: "#c8c8c3", fontSize: 12 }}>{tr("cash")}</Txt>
+              <Txt
+                style={{
+                  color: "#e9ba4b",
+                  fontSize: 36,
+                  fontWeight: "600",
+                  lineHeight: 55,
+                  marginTop: 15,
+                }}
+              >
+                {money(state.balances.cash)}
+              </Txt>
+              <Txt style={{ color: "#c8c8c3", fontSize: 11, marginTop: 15 }}>
+                {tr("cashIn")} +{money(r.cashIn)} · {tr("cashOut")} −
+                {money(r.cashOut)}
+              </Txt>
+            </View>
+            <Panel>
+              <Txt style={{ color: c.muted, fontSize: 12 }}>{tr("bank")}</Txt>
+              <Txt style={{ fontSize: 30, lineHeight: 45, marginTop: 12 }}>
+                {money(state.balances.bank)}
+              </Txt>
+              <Button
+                label={tr("transfer")}
+                onPress={() => command("transfer")}
+              />
+            </Panel>
+            <View
+              style={{
+                flexDirection: "row",
+                flexWrap: "wrap",
+                justifyContent: "space-between",
+              }}
+            >
+              {metric("revenue", r.revenue)}
+              {metric("netProfit", r.netProfit)}
+              {metric("expenses", r.expense)}
+              {metric("stockCost", state.balances.inventory)}
+            </View>
+            <Txt style={{ fontWeight: "600", marginBottom: 10 }}>
+              {tr("quick")}
+            </Txt>
+            {actions(["purchase", "expense", "collection", "cashCount"])}
+            <Txt style={{ fontWeight: "600", marginVertical: 15 }}>
+              {tr("recent")}
+            </Txt>
+            {docList(state.documents.slice(0, 5))}
+          </>
+        )}
+        {section === "inventory" && (
+          <>
+            <Input label={tr("search")} value={search} onChange={setSearch} />
+            <View
+              style={{
+                flexDirection: "row",
+                gap: 7,
+                flexWrap: "wrap",
+                marginBottom: 14,
+              }}
+            >
+              {["inStock", "stockOut", "all"].map((k) => (
+                <Button
+                  key={k}
+                  label={tr(k)}
+                  primary={tab === k}
+                  onPress={() => setTab(k)}
+                />
+              ))}
+            </View>
+            {state.units.length ? (
+              state.units
+                .filter(
+                  (u) =>
+                    (tab === "all" ||
+                      (tab === "inStock"
+                        ? u.status === "IN_STOCK"
+                        : u.status !== "IN_STOCK")) &&
+                    `${u.model} ${u.brand} ${u.imei} ${u.internal_id}`
+                      .toLowerCase()
+                      .includes(search.toLowerCase()),
+                )
+                .map((u) => {
+                  const sale = state.documents.find((d) => d.id === u.sale_id);
+                  return (
+                    <Panel key={u.id}>
+                      <Txt style={{ fontSize: 18, fontWeight: "600" }}>
+                        {u.model}
+                      </Txt>
+                      <Txt style={{ fontSize: 12, color: c.muted }}>
+                        {u.brand} · {u.variant} · {u.internal_id}
+                      </Txt>
+                      <Txt style={{ fontSize: 13, marginVertical: 10 }}>
+                        {u.imei || "—"}
+                      </Txt>
+                      <Txt>
+                        {tr("cost")}: {money(u.cost)}
+                      </Txt>
+                      <Txt>
+                        {tr(u.status)} ·{" "}
+                        {u.battery === null ? "—" : u.battery + "%"} ·{" "}
+                        {tr(u.box)}
+                      </Txt>
+                      {sale && (
+                        <>
+                          <Txt>
+                            {tr("price")}: {money(sale.total)} ·{" "}
+                            {sale.business_date} · {sale.actor_name}
+                          </Txt>
+                          <Button
+                            label={tr("receipt")}
+                            onPress={() =>
+                              navigation.navigate("Receipt", { id: sale.id })
+                            }
+                          />
+                        </>
+                      )}
+                      {u.status === "IN_STOCK" && (
+                        <Button
+                          label={tr("sale")}
+                          primary
+                          onPress={() =>
+                            navigation.navigate("Command", {
+                              kind: "sale",
+                              unitId: u.id,
+                            })
+                          }
+                        />
+                      )}
+                    </Panel>
+                  );
+                })
+            ) : (
+              <Empty />
+            )}
+          </>
+        )}
+        {section === "purchases" && (
+          <>
+            {actions(["purchase"])}
+            {docList(state.documents.filter((d) => d.kind === "purchase"))}
+          </>
+        )}
+        {section === "transactions" && (
+          <>
+            <Input label={tr("search")} value={search} onChange={setSearch} />
+            {actions(["expense", "reversal"])}
+            {docList(state.documents)}
+          </>
+        )}
+        {section === "money" && (
+          <>
+            <View
+              style={{
+                flexDirection: "row",
+                flexWrap: "wrap",
+                justifyContent: "space-between",
+              }}
+            >
+              {["cash", "bank", "receivable", "payable"].map((k) =>
+                metric(k, state.balances[k]),
+              )}
+            </View>
+            {actions([
+              "collection",
+              "supplierPayment",
+              "transfer",
+              "contribution",
+              "withdrawal",
+              "loan",
+              "loanRepayment",
+            ])}
+            <Button
+              label={tr("createParty")}
+              onPress={() =>
+                navigation.navigate("Administration", { mode: "parties" })
+              }
+            />
+            {docList(state.documents.filter((d) => Number(d.due) > 0))}
+          </>
+        )}
+        {section === "staff" && (
+          <>
+            {actions(["advance", "advanceRepayment", "salary"])}
+            {state.staff.map((s) => (
+              <Panel key={s.id}>
+                <Txt>{s.name}</Txt>
+                <Txt>{tr(s.role)}</Txt>
+              </Panel>
+            ))}
+            {docList(
+              state.documents.filter((d) =>
+                ["advance", "advanceRepayment", "salary"].includes(d.kind),
+              ),
+            )}
+          </>
+        )}
+        {["daybook", "reports"].includes(section) && (
+          <>
+            {section === "daybook" ? (
+              <>
+                <View style={{ flexDirection: "row", gap: 8 }}>
+                  <Button
+                    label="‹"
+                    onPress={() => {
+                      const d = new Date((date || state.today) + "T12:00:00Z");
+                      d.setUTCDate(d.getUTCDate() - 1);
+                      setDate(d.toISOString().slice(0, 10));
+                    }}
+                  />
+                  <View style={{ flex: 1 }}>
+                    <Button
+                      label={date || state.today}
+                      onPress={() => setShowDate(true)}
+                    />
+                  </View>
+                  <Button
+                    label="›"
+                    disabled={(date || state.today) >= state.today}
+                    onPress={() => {
+                      const d = new Date(date + "T12:00:00Z");
+                      d.setUTCDate(d.getUTCDate() + 1);
+                      setDate(d.toISOString().slice(0, 10));
+                    }}
+                  />
+                </View>
+                <Button label={tr("today")} onPress={() => setDate("")} />
+                {showDate && (
+                  <DateTimePicker
+                    value={new Date((date || state.today) + "T12:00:00")}
+                    maximumDate={new Date(state.today + "T23:59:59")}
+                    mode="date"
+                    display={Platform.OS === "ios" ? "inline" : "default"}
+                    onChange={(_, d) => {
+                      setShowDate(false);
+                      if (d)
+                        setDate(
+                          `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`,
+                        );
+                    }}
+                  />
+                )}
+              </>
+            ) : (
+              <View style={{ flexDirection: "row", gap: 7, flexWrap: "wrap" }}>
+                {[
+                  "today",
+                  "week",
+                  ...(user?.role === "OWNER" ? ["month"] : []),
+                ].map((p) => (
+                  <Button
+                    key={p}
+                    label={tr(p === "month" ? "monthReport" : p)}
+                    primary={p === period}
+                    onPress={() => setPeriod(p)}
+                  />
+                ))}
+              </View>
+            )}
+            {r.available ? (
+              <>
+                <Txt
+                  style={{ fontSize: 11, color: c.muted, marginVertical: 12 }}
+                >
+                  {r.from} — {r.to}
+                </Txt>
+                <View
+                  style={{
+                    flexDirection: "row",
+                    flexWrap: "wrap",
+                    justifyContent: "space-between",
+                  }}
+                >
+                  {metric("revenue", r.revenue)}
+                  {metric("cogs", r.cogs)}
+                  {metric("expenses", r.expense)}
+                  {metric("netProfit", r.netProfit)}
+                </View>
+                <Panel>
+                  {[
+                    "openingCash",
+                    "cashIn",
+                    "cashOut",
+                    "closingCash",
+                    "openingBank",
+                    "bankIn",
+                    "bankOut",
+                    "closingBank",
+                    "grossProfit",
+                    "externalIn",
+                    "externalOut",
+                  ].map((k) => (
+                    <View
+                      key={k}
+                      style={{
+                        flexDirection: "row",
+                        justifyContent: "space-between",
+                        borderBottomWidth: 1,
+                        borderBottomColor: c.line,
+                        paddingVertical: 10,
+                        gap: 12,
+                      }}
+                    >
+                      <Txt style={{ fontSize: 12 }}>{tr(k)}</Txt>
+                      <Txt style={{ fontSize: 12 }}>{money((r as any)[k])}</Txt>
+                    </View>
+                  ))}
+                </Panel>
+                {docList(r.documents)}
+              </>
+            ) : (
+              <Panel>
+                <Txt>{tr("unavailable")}</Txt>
+              </Panel>
+            )}
+            <Button
+              label={tr("download")}
+              onPress={() => {
+                void (async () => {
+                  try {
+                    const token = await SecureStore.getItemAsync(tokenKey);
+                    const file = await File.downloadFileAsync(
+                      `${process.env.EXPO_PUBLIC_API_URL || "http://localhost:3000"}/reports/export?${query}`,
+                      new File(
+                        Paths.cache,
+                        `trolley-${r.from}-${r.to}-${Date.now()}.csv`,
+                      ),
+                      { headers: { Authorization: `Bearer ${token}` } },
+                    );
+                    if (await Sharing.isAvailableAsync())
+                      await Sharing.shareAsync(file.uri, {
+                        mimeType: "text/csv",
+                      });
+                  } catch (e: any) {
+                    setProblem(e.code || "NETWORK_ERROR");
+                  }
+                })();
+              }}
+            />
+            {section === "daybook" &&
+              state.counts
+                .filter(
+                  (count: any) =>
+                    String(count.business_date).slice(0, 10) ===
+                    (date || state.today),
+                )
+                .map((count: any) => (
+                  <Panel key={count.document_id}>
+                    <Txt>
+                      {tr("cashCount")} · {count.actor_name}
+                    </Txt>
+                    <Txt>
+                      {tr("expected")}:{" "}
+                      {money((Number(count.expected) / 100).toFixed(2))}
+                    </Txt>
+                    <Txt>
+                      {tr("counted")}:{" "}
+                      {money((Number(count.counted) / 100).toFixed(2))}
+                    </Txt>
+                    <Txt>
+                      {tr("difference")}:{" "}
+                      {money((Number(count.difference) / 100).toFixed(2))}
+                    </Txt>
+                    {count.needs_review && (
+                      <Txt style={{ color: "#b95050" }}>
+                        {tr("needsReview")}
+                      </Txt>
+                    )}
+                  </Panel>
+                ))}
+          </>
+        )}
+        {section === "more" && (
+          <>
+            {["purchases", "transactions", "money", "staff", "reports"].map(
+              (s) => (
+                <Button
+                  key={s}
+                  label={tr(s)}
+                  onPress={() => navigation.navigate("Page", { section: s })}
+                />
+              ),
+            )}
+            <Button
+              label={tr("settings")}
+              onPress={() =>
+                navigation.navigate("Administration", { mode: "settings" })
+              }
+            />
+            <Button
+              label={tr("categories")}
+              onPress={() =>
+                navigation.navigate("Administration", { mode: "categories" })
+              }
+            />
+            <Button
+              label={tr("createParty")}
+              onPress={() =>
+                navigation.navigate("Administration", { mode: "parties" })
+              }
+            />
+            {user?.role === "OWNER" && (
+              <Button
+                label={tr("users")}
+                onPress={() =>
+                  navigation.navigate("Administration", { mode: "users" })
+                }
+              />
+            )}
+            <Button
+              label={tr("changePassword")}
+              onPress={() =>
+                navigation.navigate("Administration", { mode: "password" })
+              }
+            />
+            <Button
+              label={lang === "bn" ? "English" : "বাংলা"}
+              onPress={() => setLang(lang === "bn" ? "en" : "bn")}
+            />
+            <Button
+              label={tr(dark ? "light" : "dark")}
+              onPress={() => setDark(!dark)}
+            />
+            <Button
+              label={tr("logout")}
+              onPress={() =>
+                void logout().catch((e: any) => setProblem(e.code))
+              }
+            />
+          </>
+        )}
+        <Txt
+          style={{
+            fontSize: 10,
+            color: c.muted,
+            textAlign: "center",
+            marginTop: 25,
+          }}
+        >
+          {tr("connected")} · Tech Trolley
+        </Txt>
+      </ScrollView>
+    </SafeAreaView>
+  );
 }

@@ -1,0 +1,79 @@
+services:
+  db:
+    image: postgres:18-bookworm
+    environment:
+      POSTGRES_DB: trolley
+      POSTGRES_USER: trolley
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?required}
+    volumes:
+      - postgres:/var/lib/postgresql
+    healthcheck:
+      test: [CMD-SHELL, pg_isready -U trolley -d trolley]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+  api:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile.api
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: ${DATABASE_URL:?required}
+      DATABASE_SSL: "false"
+      WEB_ORIGIN: ${PUBLIC_ORIGIN:?required}
+      BOOTSTRAP_OWNER_EMAIL: ${BOOTSTRAP_OWNER_EMAIL:-}
+      BOOTSTRAP_OWNER_PASSWORD: ${BOOTSTRAP_OWNER_PASSWORD:-}
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          CMD,
+          node,
+          -e,
+          "fetch('http://127.0.0.1:3000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+  web:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile.web
+      args:
+        NEXT_PUBLIC_API_URL: /api
+    restart: unless-stopped
+  edge:
+    image: caddy:2-alpine
+    environment:
+      PUBLIC_HOST: ${PUBLIC_HOST:?required}
+    ports: ["80:80", "443:443"]
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy:/data
+      - caddy_config:/config
+    depends_on: [web, api]
+    restart: unless-stopped
+  backup:
+    image: postgres:18-bookworm
+    environment:
+      PGHOST: db
+      PGUSER: trolley
+      PGDATABASE: trolley
+      PGPASSWORD: ${POSTGRES_PASSWORD:?required}
+    volumes:
+      - backups:/backups
+      - ./backup.sh:/usr/local/bin/trolley-backup:ro
+    command: [sh, /usr/local/bin/trolley-backup]
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+volumes:
+  postgres:
+  backups:
+  caddy:
+  caddy_config:

@@ -18,3 +18,4 @@ coverage/
 *.p12
 *.mobileprovision
 test-results/
+backups/

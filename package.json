@@ -20,8 +20,17 @@
     "db:bootstrap": "npm run bootstrap -w @tech-trolley/backend"
   },
   "devDependencies": {
-    "typescript": "~6.0.3",
     "@types/node": "^24.0.0",
-    "tsx": "^4.21.0"
+    "prettier": "^3.9.10",
+    "tsx": "^4.21.0",
+    "typescript": "~6.0.3"
+  },
+  "overrides": {
+    "@nestjs/platform-express": {
+      "multer": "2.5.0"
+    },
+    "@nestjs/swagger": {
+      "js-yaml": "5.5.0"
+    }
   }
 }

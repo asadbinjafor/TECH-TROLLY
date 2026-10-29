@@ -1,10 +1,159 @@
-import React from 'react';
-import { Pressable,Text,View,TextInput,StyleSheet } from 'react-native';
-import { useShop } from '../contexts/shop-context';
-import { t } from '@tech-trolley/i18n';
-export function useColors(){const {dark}=useShop();return dark?{bg:'#17191d',surface:'#23262b',text:'#f4f1e9',muted:'#a3a6ae',line:'#393c42',pale:'#35301e'}:{bg:'#f5f6f8',surface:'#fff',text:'#23262b',muted:'#777d86',line:'#e7e8eb',pale:'#fbf4df'};}
-export function Txt({children,style,...rest}:React.ComponentProps<typeof Text>){const c=useColors();return <Text {...rest} style={[{fontFamily:'Shop',color:c.text,fontSize:14,lineHeight:22},style]}>{children}</Text>;}
-export function Button({label,onPress,primary=false,disabled=false}:{label:string;onPress:()=>void;primary?:boolean;disabled?:boolean}){const c=useColors();return <Pressable accessibilityRole="button" accessibilityLabel={label} accessibilityState={{disabled}} disabled={disabled} onPress={onPress} style={({pressed})=>({paddingHorizontal:16,paddingVertical:12,borderRadius:10,borderWidth:1,borderColor:primary?'#e9ba4b':c.line,backgroundColor:primary?'#e9ba4b':c.surface,opacity:disabled?.45:pressed?.7:1,minHeight:48,justifyContent:'center',alignItems:'center',marginVertical:4})}><Txt style={{fontSize:13,fontWeight:'600',color:primary?'#332a12':c.text}}>{label}</Txt></Pressable>;}
-export function Input({label,value,onChange,secure=false,numeric=false,money=false}:{label:string;value:string;onChange:(v:string)=>void;secure?:boolean;numeric?:boolean;money?:boolean}){const c=useColors();return <View style={{marginBottom:15}}><Txt style={{fontSize:12,marginBottom:6}}>{label}</Txt><TextInput accessibilityLabel={label} value={value} onChangeText={onChange} secureTextEntry={secure} keyboardType={money?'decimal-pad':numeric?'number-pad':'default'} autoCapitalize="none" autoCorrect={false} textContentType={secure?'password':'none'} style={{fontFamily:'Shop',fontSize:15,color:c.text,backgroundColor:c.surface,paddingHorizontal:12,paddingVertical:12,borderWidth:1,borderColor:c.line,borderRadius:8,minHeight:48}}/></View>;}
-export function Panel({children}:{children:React.ReactNode}){const c=useColors();return <View style={{padding:18,backgroundColor:c.surface,borderRadius:14,borderWidth:1,borderColor:c.line,marginBottom:16}}>{children}</View>;}
-export function Empty(){const {lang}=useShop();return <View style={{padding:35,alignItems:'center'}}><Txt style={{fontSize:17,marginBottom:5}}>{t('empty',lang)}</Txt><Txt style={{fontSize:12}}>{t('emptyHelp',lang)}</Txt></View>;}
+import React from "react";
+import { Pressable, Text, View, TextInput, StyleSheet } from "react-native";
+import { useShop } from "../contexts/shop-context";
+import { t } from "@tech-trolley/i18n";
+export function useColors() {
+  const { dark } = useShop();
+  return dark
+    ? {
+        bg: "#17191d",
+        surface: "#23262b",
+        text: "#f4f1e9",
+        muted: "#a3a6ae",
+        line: "#393c42",
+        pale: "#35301e",
+      }
+    : {
+        bg: "#f5f6f8",
+        surface: "#fff",
+        text: "#23262b",
+        muted: "#777d86",
+        line: "#e7e8eb",
+        pale: "#fbf4df",
+      };
+}
+export function Txt({
+  children,
+  style,
+  ...rest
+}: React.ComponentProps<typeof Text>) {
+  const c = useColors();
+  return (
+    <Text
+      {...rest}
+      style={[
+        { fontFamily: "Shop", color: c.text, fontSize: 14, lineHeight: 22 },
+        style,
+      ]}
+    >
+      {children}
+    </Text>
+  );
+}
+export function Button({
+  label,
+  onPress,
+  primary = false,
+  disabled = false,
+}: {
+  label: string;
+  onPress: () => void;
+  primary?: boolean;
+  disabled?: boolean;
+}) {
+  const c = useColors();
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ disabled }}
+      disabled={disabled}
+      onPress={onPress}
+      style={({ pressed }) => ({
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        borderRadius: 10,
+        borderWidth: 1,
+        borderColor: primary ? "#e9ba4b" : c.line,
+        backgroundColor: primary ? "#e9ba4b" : c.surface,
+        opacity: disabled ? 0.45 : pressed ? 0.7 : 1,
+        minHeight: 48,
+        justifyContent: "center",
+        alignItems: "center",
+        marginVertical: 4,
+      })}
+    >
+      <Txt
+        style={{
+          fontSize: 13,
+          fontWeight: "600",
+          color: primary ? "#332a12" : c.text,
+        }}
+      >
+        {label}
+      </Txt>
+    </Pressable>
+  );
+}
+export function Input({
+  label,
+  value,
+  onChange,
+  secure = false,
+  numeric = false,
+  money = false,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  secure?: boolean;
+  numeric?: boolean;
+  money?: boolean;
+}) {
+  const c = useColors();
+  return (
+    <View style={{ marginBottom: 15 }}>
+      <Txt style={{ fontSize: 12, marginBottom: 6 }}>{label}</Txt>
+      <TextInput
+        accessibilityLabel={label}
+        value={value}
+        onChangeText={onChange}
+        secureTextEntry={secure}
+        keyboardType={
+          money ? "decimal-pad" : numeric ? "number-pad" : "default"
+        }
+        autoCapitalize="none"
+        autoCorrect={false}
+        textContentType={secure ? "password" : "none"}
+        style={{
+          fontFamily: "Shop",
+          fontSize: 15,
+          color: c.text,
+          backgroundColor: c.surface,
+          paddingHorizontal: 12,
+          paddingVertical: 12,
+          borderWidth: 1,
+          borderColor: c.line,
+          borderRadius: 8,
+          minHeight: 48,
+        }}
+      />
+    </View>
+  );
+}
+export function Panel({ children }: { children: React.ReactNode }) {
+  const c = useColors();
+  return (
+    <View
+      style={{
+        padding: 18,
+        backgroundColor: c.surface,
+        borderRadius: 14,
+        borderWidth: 1,
+        borderColor: c.line,
+        marginBottom: 16,
+      }}
+    >
+      {children}
+    </View>
+  );
+}
+export function Empty() {
+  const { lang } = useShop();
+  return (
+    <View style={{ padding: 35, alignItems: "center" }}>
+      <Txt style={{ fontSize: 17, marginBottom: 5 }}>{t("empty", lang)}</Txt>
+      <Txt style={{ fontSize: 12 }}>{t("emptyHelp", lang)}</Txt>
+    </View>
+  );
+}

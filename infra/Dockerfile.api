@@ -1,0 +1,16 @@
+FROM node:24-bookworm-slim AS build
+WORKDIR /app
+COPY . .
+RUN npm ci && npm run build:shared && npm run build -w @tech-trolley/backend
+RUN npm ci --omit=dev --workspace @tech-trolley/backend --workspace @tech-trolley/contracts --workspace @tech-trolley/i18n
+FROM node:24-bookworm-slim
+ENV NODE_ENV=production
+WORKDIR /app
+COPY --from=build --chown=node:node /app/node_modules ./node_modules
+COPY --from=build --chown=node:node /app/packages/contracts ./packages/contracts
+COPY --from=build --chown=node:node /app/packages/i18n ./packages/i18n
+COPY --from=build --chown=node:node /app/tech-trolley-backend ./tech-trolley-backend
+USER node
+WORKDIR /app/tech-trolley-backend
+EXPOSE 3000
+CMD ["node","dist/main.js"]

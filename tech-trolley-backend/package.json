@@ -17,10 +17,13 @@
     "@nestjs/platform-express": "^11.2.8",
     "@nestjs/swagger": "^11.4.6",
     "@tech-trolley/contracts": "1.0.0",
+    "@tech-trolley/i18n": "^1.0.0",
     "bcrypt": "^6.0.0",
     "cookie-parser": "^1.4.7",
     "dotenv": "^17.2.0",
     "helmet": "^8.1.0",
+    "js-yaml": "^5.5.0",
+    "multer": "^2.5.0",
     "pg": "^8.22.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",
@@ -31,7 +34,7 @@
     "@types/cookie-parser": "^1.4.9",
     "@types/express": "^5.0.0",
     "@types/pg": "^8.15.0",
-    "supertest": "^7.1.0",
-    "@types/supertest": "^6.0.0"
+    "@types/supertest": "^6.0.0",
+    "supertest": "^7.1.0"
   }
 }

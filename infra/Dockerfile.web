@@ -1,0 +1,15 @@
+FROM node:24-bookworm-slim AS build
+WORKDIR /app
+COPY . .
+ARG NEXT_PUBLIC_API_URL=/api
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+RUN npm ci && npm run build:shared && npm run build -w @tech-trolley/frontend
+FROM node:24-bookworm-slim
+ENV NODE_ENV=production PORT=3001 HOSTNAME=0.0.0.0
+WORKDIR /app
+COPY --from=build --chown=node:node /app/tech-trolley-frontend/.next/standalone ./
+COPY --from=build --chown=node:node /app/tech-trolley-frontend/.next/static ./tech-trolley-frontend/.next/static
+COPY --from=build --chown=node:node /app/tech-trolley-frontend/public ./tech-trolley-frontend/public
+USER node
+EXPOSE 3001
+CMD ["node","tech-trolley-frontend/server.js"]
