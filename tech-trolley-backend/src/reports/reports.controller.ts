@@ -1,3 +1,4 @@
+import { Inject } from "@nestjs/common";
 import { Controller, Get, Query, Req, Res, UseGuards } from "@nestjs/common";
 import type { Response } from "express";
 import { AuthGuard } from "../auth/auth.guard";
@@ -11,7 +12,9 @@ const csv = (v: unknown) => {
 @Controller("reports")
 @UseGuards(AuthGuard)
 export class ReportsController {
-  constructor(private readonly reports: ReportsService) {}
+  constructor(
+    @Inject(ReportsService) private readonly reports: ReportsService,
+  ) {}
   @Get() report(@Req() req: any, @Query() query: unknown) {
     return this.reports.report(req.user, query);
   }

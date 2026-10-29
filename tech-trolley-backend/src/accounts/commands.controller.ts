@@ -1,3 +1,4 @@
+import { Inject } from "@nestjs/common";
 import {
   Body,
   Controller,
@@ -16,7 +17,9 @@ import { PostingService } from "./posting.service";
 @Controller("commands")
 @UseGuards(AuthGuard)
 export class CommandsController {
-  constructor(private readonly posting: PostingService) {}
+  constructor(
+    @Inject(PostingService) private readonly posting: PostingService,
+  ) {}
   @Get("status/:key") status(@Param("key") key: string, @Req() req: any) {
     return this.posting.status(req.user, key);
   }

@@ -1,3 +1,4 @@
+import { Inject } from "@nestjs/common";
 import { Body, Controller, Get, Patch, Req, UseGuards } from "@nestjs/common";
 import { decimal, shopSchema } from "@tech-trolley/contracts";
 import { AuthGuard } from "../auth/auth.guard";
@@ -8,7 +9,9 @@ import { ReportsService } from "../reports/reports.service";
 @Controller("shop")
 @UseGuards(AuthGuard)
 export class ShopController {
-  constructor(private readonly reports: ReportsService) {}
+  constructor(
+    @Inject(ReportsService) private readonly reports: ReportsService,
+  ) {}
   @Get("state") async state(@Req() req: any) {
     return db.transaction("REPEATABLE READ", async (em) => {
       const [shop] = await em.query(

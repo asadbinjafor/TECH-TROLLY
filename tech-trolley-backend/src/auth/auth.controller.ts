@@ -1,3 +1,4 @@
+import { Inject } from "@nestjs/common";
 import {
   Body,
   Controller,
@@ -23,7 +24,7 @@ const cookieOptions = {
 @ApiTags("Authentication")
 @Controller("auth")
 export class AuthController {
-  constructor(private readonly auth: AuthService) {}
+  constructor(@Inject(AuthService) private readonly auth: AuthService) {}
   @Post("login")
   @ApiBody({
     schema: {

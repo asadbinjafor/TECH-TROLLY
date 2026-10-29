@@ -13,6 +13,8 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     );
   return {
     ...config,
+    name: config.name || "Tech Trolley",
+    slug: config.slug || "tech-trolley",
     extra: { ...config.extra, apiUrlConfigured: !!url },
   };
 };
