@@ -1,5 +1,39 @@
 export type Language = "bn" | "en";
 const words: Record<string, [string, string]> = {
+  startupTitle: ["Opening your shop", "আপনার দোকানের অ্যাপ খুলছে"],
+  startupWaking: ["Getting the server ready", "সার্ভার প্রস্তুত হচ্ছে"],
+  startupAccount: ["Preparing your workspace", "আপনার হিসাব প্রস্তুত হচ্ছে"],
+  startupHelp: [
+    "Connecting securely to your shop. Your workspace will open automatically.",
+    "দোকানের সঙ্গে নিরাপদ সংযোগ হচ্ছে। প্রস্তুত হলে নিজে থেকেই খুলবে।",
+  ],
+  startupWaitHelp: [
+    "After some time away, the server may need a little time to start. Keep this page open; connection checks are continuing.",
+    "অনেকক্ষণ ব্যবহার না হলে সার্ভার চালু হতে কিছুটা সময় লাগতে পারে। পাতাটি খোলা রাখুন—সংযোগের চেষ্টা চলছে।",
+  ],
+  startupOffline: ["You are offline", "ইন্টারনেট সংযোগ নেই"],
+  startupOfflineHelp: [
+    "Reconnect to the internet. The app will try again when you are online.",
+    "ইন্টারনেট সংযোগ দিন। সংযোগ ফিরলে অ্যাপ আবার চেষ্টা করবে।",
+  ],
+  startupUnavailable: [
+    "Connection is taking longer",
+    "সংযোগ হতে বেশি সময় লাগছে",
+  ],
+  startupUnavailableHelp: [
+    "We could not connect yet. Check your internet and try again. If it continues, ask the Owner to check hosting status.",
+    "এখনও সংযোগ পাওয়া যায়নি। ইন্টারনেট দেখে আবার চেষ্টা করুন। সমস্যা থাকলে মালিককে hosting-এর অবস্থা দেখতে বলুন।",
+  ],
+  startupProgress: ["Connecting to your shop", "দোকানের সঙ্গে সংযোগ হচ্ছে"],
+  startupElapsed: ["Waiting", "অপেক্ষা"],
+  startupSeconds: ["seconds", "সেকেন্ড"],
+  startupSite: ["Website opened", "সাইট খোলা হয়েছে"],
+  startupServer: ["Server and database connection", "সার্ভার ও ডাটাবেস সংযোগ"],
+  startupSession: ["Login and shop workspace", "লগইন ও দোকানের হিসাব"],
+  startupSafe: [
+    "Your saved records stay in place while the app connects.",
+    "সংযোগের অপেক্ষায় আপনার সংরক্ষিত হিসাব অক্ষত থাকে।",
+  ],
   cashReceived: ["Cash received", "ক্যাশে পেয়েছেন"],
   bankReceived: ["Bank received", "ব্যাংকে পেয়েছেন"],
   cashAccount: ["Cash", "ক্যাশ"],

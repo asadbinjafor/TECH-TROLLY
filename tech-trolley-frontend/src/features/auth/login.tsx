@@ -46,6 +46,7 @@ export function Login() {
             setError("");
             const f = new FormData(e.currentTarget);
             try {
+              await api.ready({ isOnline: () => navigator.onLine });
               if (user?.must_change) {
                 await api.request("/auth/password", "POST", {
                   currentPassword: f.get("currentPassword"),
@@ -103,6 +104,12 @@ export function Login() {
           {(error || networkError) && (
             <p role="alert" className="error">
               {t(error || networkError, lang)}
+            </p>
+          )}
+          {busy && (
+            <p className="notice connection-notice" role="status">
+              <span className="spinner" />
+              {t("startupWaitHelp", lang)}
             </p>
           )}
           <button className="button primary full" disabled={busy}>

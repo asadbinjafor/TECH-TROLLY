@@ -81,14 +81,23 @@ export async function proxyApi(
       body: ["GET", "HEAD"].includes(method)
         ? undefined
         : await request.arrayBuffer(),
-      signal: AbortSignal.timeout(options.timeoutMs ?? 20000),
+      signal: AbortSignal.any([
+        request.signal,
+        AbortSignal.timeout(
+          options.timeoutMs ?? (path[0] === "health" ? 6000 : 20000),
+        ),
+      ]),
     });
     if (response.status >= 300 && response.status < 400)
       return error("UPSTREAM_UNAVAILABLE", 502);
-    if (
-      response.status >= 400 &&
-      !response.headers.get("content-type")?.includes("application/json")
-    )
+    const contentType = response.headers.get("content-type") || "";
+    const csvExport =
+      response.ok &&
+      path.length === 2 &&
+      path[0] === "reports" &&
+      path[1] === "export" &&
+      contentType.includes("text/csv");
+    if (!contentType.includes("application/json") && !csvExport)
       return error(
         ["GET", "HEAD"].includes(method)
           ? "UPSTREAM_UNAVAILABLE"

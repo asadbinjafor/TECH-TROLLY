@@ -37,6 +37,7 @@ import { t, currency, dateLabel } from "@tech-trolley/i18n";
 import { useShop } from "@/contexts/shop-context";
 import { api, apiBase } from "@/services/api";
 import { Login } from "@/features/auth/login";
+import { StartupScreen } from "@/features/auth/startup-screen";
 import { CommandForm } from "@/features/transactions/command-form";
 import { Administration } from "@/features/settings/administration";
 import { Invoice } from "@/features/transactions/invoice";
@@ -63,6 +64,7 @@ export function Workspace({ section }: { section: string }) {
       setDark,
       error,
       loading,
+      connection,
       refresh,
       logout,
     } = useShop(),
@@ -118,22 +120,22 @@ export function Workspace({ section }: { section: string }) {
       return () => clearTimeout(timer);
     }
   }, [toast]);
-  if (loading)
+  if (loading || (!state && connection !== "ready"))
     return (
-      <main className="center">
-        <span className="spinner" />
-        {t("loading", lang)}
-      </main>
+      <StartupScreen
+        phase={connection}
+        lang={lang}
+        onRetry={() => void refresh()}
+      />
     );
   if (!user || user.must_change) return <Login />;
   if (!state)
     return (
-      <main className="center">
-        <p role="alert">{t(error || "NETWORK_ERROR", lang)}</p>
-        <button className="button" onClick={() => void refresh()}>
-          {t("retry", lang)}
-        </button>
-      </main>
+      <StartupScreen
+        phase={connection === "ready" ? "unavailable" : connection}
+        lang={lang}
+        onRetry={() => void refresh()}
+      />
     );
   const r = section === "overview" ? state.report : report || state.report;
   const money = (v: string) => currency(v, lang),
@@ -386,7 +388,24 @@ export function Workspace({ section }: { section: string }) {
               </button>
             </div>
           </div>
-          {error && (
+          {connection !== "ready" && (
+            <div className="notice connection-notice" role="status">
+              <span className="spinner" />
+              {tr(
+                connection === "offline"
+                  ? "startupOfflineHelp"
+                  : connection === "unavailable"
+                    ? "startupUnavailableHelp"
+                    : "startupWaitHelp",
+              )}
+              {(connection === "unavailable" || connection === "offline") && (
+                <button className="text-button" onClick={() => void refresh()}>
+                  {tr("retry")}
+                </button>
+              )}
+            </div>
+          )}
+          {error && connection === "ready" && (
             <div role="alert" className="notice error">
               {tr("offline")}{" "}
               <button className="text-button" onClick={() => void refresh()}>

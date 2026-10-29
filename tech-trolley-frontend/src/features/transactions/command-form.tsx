@@ -23,7 +23,7 @@ export function CommandForm({
   onClose: () => void;
   onSaved: (id: string, kind: CommandKind) => void;
 }) {
-  const { state, lang, user, refresh } = useShop();
+  const { state, lang, user, refresh, connection } = useShop();
   const storage = `tt-${user!.id}-draft-${kind}`,
     pendingKey = `tt-${user!.id}-pending-${kind}`;
   const [values, setValues] = useState<Record<string, string>>(() => {
@@ -79,6 +79,10 @@ export function CommandForm({
     onSaved(id, kind);
   };
   const submit = async () => {
+    if (connection !== "ready") {
+      setError("UPSTREAM_UNAVAILABLE");
+      return;
+    }
     setBusy(true);
     setError("");
     setIssues({});
@@ -340,7 +344,10 @@ export function CommandForm({
             >
               {t("cancel", lang)}
             </button>
-            <button className="button primary" disabled={busy}>
+            <button
+              className="button primary"
+              disabled={busy || connection !== "ready"}
+            >
               {t(
                 busy ? "saving" : review || pending ? "confirm" : "review",
                 lang,

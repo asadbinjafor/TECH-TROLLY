@@ -1,5 +1,13 @@
 # Progress and release handover
 
+## Startup recovery and deployment guide — 2026-10-30
+
+The user requested clearer cold-start behavior and a manual deployment tutorial while retaining Codex deployment after updates. Added [Bengali manual instructions](manual-deployment-bn.md) and recorded the continuing deployment preference in AGENTS.md.
+
+Identified the Render Free startup window versus 20-second proxy / 25-second client deadlines. Web routes now prerender public startup HTML independently of the API. An animated bilingual startup screen shows real elapsed time and connection steps while abortable read-only database-health probes retry for at most 120 seconds with increasing delays. Successful readiness automatically advances to session/dashboard loading. Offline, persistent failure and manual Retry are explicit; online/return events can reconnect. Financial writes remain single-attempt with existing persisted submission keys. Provider HTML is normalized safely, including a misleading HTTP 200 loading page. Hidden tabs do not renew sessions indefinitely, and failed startup does not restart an endless background attempt.
+
+Verification: nine transport/readiness/invoice tests, all 16 isolated PostgreSQL/backend checks, full builds and workspace typechecks pass. All public sections are static build outputs. An isolated no-database browser fixture held health unavailable for 45 seconds: the app automatically showed login after readiness at 48 seconds, with zero writes. A terminal failure made one probe and stayed stopped for over 111 seconds; manual Retry then opened login when health became ready. Bengali 390px layout and animation were visually checked. No production service was deliberately suspended to simulate sleep. Release verification is recorded after deployment.
+
 ## Stock/profit/Staff audit follow-up — 2026-10-30
 
 Implemented the Owner's separate Storage/Color/Variant request and the confirmed Staff today-only / Owner all-date policy. Added Profit & expenses, model and individual sale profit, expense categories/reasons, custom expenses, inclusive custom date ranges, and expanded CSV with chronological cash/bank running balances. See [audit and accounting/access decisions](profit-stock-audit.md). Migration 006 adds optional stock detail columns without rewriting legacy variant text, posted documents or journal entries.

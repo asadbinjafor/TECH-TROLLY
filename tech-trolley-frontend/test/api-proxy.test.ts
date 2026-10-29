@@ -19,7 +19,9 @@ test("same-origin proxy preserves cookies, command keys, CSV and uncertain resul
       return;
     }
     if (req.url?.includes("html=1")) {
-      res.writeHead(503, { "Content-Type": "text/html" });
+      res.writeHead(req.url.includes("ok=1") ? 200 : 503, {
+        "Content-Type": "text/html",
+      });
       res.end("<html>Starting</html>");
       return;
     }
@@ -133,6 +135,13 @@ test("same-origin proxy preserves cookies, command keys, CSV and uncertain resul
       options,
     );
     assert.equal((await unavailable.json()).code, "SUBMISSION_UNCERTAIN");
+    const providerPage = await proxyApi(
+      new Request("https://shop.example/api/health?html=1&ok=1"),
+      ["health"],
+      options,
+    );
+    assert.equal(providerPage.status, 502);
+    assert.equal((await providerPage.json()).code, "UPSTREAM_UNAVAILABLE");
     const uncertain = await proxyApi(
       new Request("https://shop.example/api/commands/expense?slow=1", {
         method: "POST",

@@ -164,10 +164,12 @@ Custom domain যোগ করলে Render-এর `WEB_ORIGIN`-এ exact origin
 | Certificate/TLS chain error | সঠিক project certificate base64 দিন; `DATABASE_SSL=true` রাখুন |
 | `DATABASE_URL_INVALID` | পূর্ণ PostgreSQL connection string দিন; HTTPS project URL বা অসম্পূর্ণ placeholder নয় |
 | Render Live, কিন্তু web API unavailable | Render `/health` আগে যাচাই করুন; Vercel upstream URL এবং redeploy যাচাই করুন |
-| প্রথম request ধীর/timeout | Free Render service idle-এর পরে চালু হতে সময় নেয়। `/health` খুলে প্রস্তুত হওয়া পর্যন্ত অপেক্ষা করুন; তারপর retry |
+| প্রথম request ধীর/timeout | Startup screen খোলা রাখুন; server/database প্রস্তুত হলে app নিজে থেকে খুলবে। দুই মিনিটেও না হলে Retry, internet ও Supabase/Render status যাচাই করুন |
 | Supabase SQL Editor-এ table আছে, Supabase Auth users নেই | স্বাভাবিক—এই app-এর account table `app_user`; Supabase Auth ব্যবহার করা হয়নি |
 
-Free Render service ১৫ মিনিট idle থাকলে spin down হতে পারে; ফের চালু হতে প্রায় এক মিনিট লাগতে পারে। এই সময় proxy/clients unavailable বা uncertain submission দেখাতে পারে। Financial entry হলে একই key-এর status/retry ব্যবহার করুন, নতুন duplicate entry দেবেন না। [Render Free limitations](https://render.com/docs/free#spinning-down-on-idle)।
+Free Render service ১৫ মিনিট idle থাকলে spin down হতে পারে; ফের চালু হতে প্রায় এক মিনিট লাগতে পারে। Website এখন static startup screen দেখিয়ে database-backed health-এর জন্য bounded retry করে; তৈরি হলে login/dashboard খোলে। Financial POST automatic replay হয় না। কোনো financial response হারালে একই key-এর status/retry ব্যবহার করুন। [Render Free limitations](https://render.com/docs/free#spinning-down-on-idle)।
+
+দৈনন্দিন update, Vercel auto deployment, Render manual deployment এবং paused Supabase restore-এর সহজ ধাপ: [নিজে deployment শেখার নির্দেশনা](manual-deployment-bn.md)।
 
 ## Backup, update ও native app
 
