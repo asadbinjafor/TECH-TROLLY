@@ -1,0 +1,25 @@
+{
+  "name": "@tech-trolley/frontend",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -p 3001",
+    "build": "next build",
+    "start": "next start -p 3001",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "next": "16.4.3",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "@tech-trolley/contracts": "1.0.0",
+    "@tech-trolley/api-client": "1.0.0",
+    "@tech-trolley/i18n": "1.0.0",
+    "@tech-trolley/design-tokens": "1.0.0",
+    "lucide-react": "^1.42.0"
+  },
+  "devDependencies": {
+    "@types/react": "~19.3.0",
+    "@types/react-dom": "^19.0.0"
+  }
+}

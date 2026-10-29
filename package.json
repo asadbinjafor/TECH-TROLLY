@@ -1,0 +1,27 @@
+{
+  "name": "tech-trolley-workspace",
+  "private": true,
+  "version": "1.0.0",
+  "workspaces": [
+    "tech-trolley-backend",
+    "tech-trolley-frontend",
+    "tech-trolley-mobile",
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=24 <25"
+  },
+  "scripts": {
+    "build:shared": "npm run build --workspaces --if-present --include-workspace-root=false -w @tech-trolley/contracts -w @tech-trolley/i18n -w @tech-trolley/design-tokens -w @tech-trolley/api-client",
+    "build": "npm run build:shared && npm run build -w @tech-trolley/backend && npm run build -w @tech-trolley/frontend",
+    "typecheck": "npm run build:shared && npm run typecheck --workspaces --if-present",
+    "test": "npm run build:shared && npm test -w @tech-trolley/backend",
+    "db:migrate": "npm run migrate -w @tech-trolley/backend",
+    "db:bootstrap": "npm run bootstrap -w @tech-trolley/backend"
+  },
+  "devDependencies": {
+    "typescript": "~6.0.3",
+    "@types/node": "^24.0.0",
+    "tsx": "^4.21.0"
+  }
+}

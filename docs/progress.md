@@ -12,3 +12,6 @@ Execution sequence:
 5. Builds, integration/browser checks, portable deployment/backup restore, release handover.
 
 No implementation, deployment, native device verification or production readiness is claimed at this initial checkpoint.
+
+Foundation checkpoint: exact-money shared schemas/client/localization, explicit TypeORM/PostgreSQL migration and bootstrap; login-only sessions; owner account administration; central balanced journal, inventory, dues, funding, salary, counts and corrections; web operating screens; native screens/navigation drafted.
+Verified: backend TypeScript build; 7 PostgreSQL acceptance test groups; Next.js typecheck and production build; native TypeScript check. Mobile bundle/doctor, browser QA, backup restore and release artifacts are next. No cloud deployment or signed native build yet.

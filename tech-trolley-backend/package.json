@@ -1,0 +1,37 @@
+{
+  "name": "@tech-trolley/backend",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "tsx watch src/main.ts",
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit",
+    "start": "node dist/main.js",
+    "migrate": "tsx src/database/migrate.ts",
+    "bootstrap": "tsx src/auth/bootstrap.ts",
+    "test": "tsx --test test/*.test.ts"
+  },
+  "dependencies": {
+    "@nestjs/common": "^11.2.8",
+    "@nestjs/core": "^11.2.8",
+    "@nestjs/platform-express": "^11.2.8",
+    "@nestjs/swagger": "^11.4.6",
+    "@tech-trolley/contracts": "1.0.0",
+    "bcrypt": "^6.0.0",
+    "cookie-parser": "^1.4.7",
+    "dotenv": "^17.2.0",
+    "helmet": "^8.1.0",
+    "pg": "^8.22.0",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.2",
+    "typeorm": "0.3.31"
+  },
+  "devDependencies": {
+    "@types/bcrypt": "^6.0.0",
+    "@types/cookie-parser": "^1.4.9",
+    "@types/express": "^5.0.0",
+    "@types/pg": "^8.15.0",
+    "supertest": "^7.1.0",
+    "@types/supertest": "^6.0.0"
+  }
+}
