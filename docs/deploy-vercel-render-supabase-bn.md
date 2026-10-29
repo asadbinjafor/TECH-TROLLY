@@ -1,5 +1,7 @@
 # Vercel + Render + Supabase deployment
 
+**বাস্তব deployment — ৩০ অক্টোবর ২০২৬:** [Web](https://tech-trolley-internal.vercel.app/) · [API health](https://tech-trolley-internal-api.onrender.com/health) · [Supabase project](https://supabase.com/dashboard/project/iejosjzhjjeykxknbxdw)। Vercel Hobby, Render Free এবং Supabase Free/Nano-তে নতুন project/service ব্যবহার করা হয়েছে। API ও web proxy health, initial Owner login, বাধ্যতামূলক password change, secure cookie এবং logout যাচাই হয়েছে। প্রথম login-এ নিজের password বদলান। সম্পূর্ণ execution evidence [progress.md](progress.md)-তে আছে। নিচের নির্দেশনা ভবিষ্যৎ redeploy ও নতুন environment-এর runbook; `YOUR_...` values শুধু উদাহরণ।
+
 এই repository এখন এই তিনটি service-এ deploy করার জন্য প্রস্তুত:
 
 | কাজ | Service |
@@ -175,4 +177,4 @@ Free Render service ১৫ মিনিট idle থাকলে spin down হত
 
 ## কী যাচাই করা হয়েছে
 
-Local web/API build ও typecheck, cookie/header/idempotency/CSV proxy tests, Supabase TLS configuration tests, real PostgreSQL migration/RLS ও পুনরায় release/bootstrap tests পাস করেছে। `render.yaml` এবং `vercel.json` live provider JSON schema দিয়ে validate হয়েছে। কোনো বাস্তব Vercel/Render/Supabase project account-এ deploy হয়নি; আপনার actual project URL/secrets ছাড়া সেটি নিশ্চিত করা সম্ভব নয়।
+Local web/API build ও typecheck, cookie/header/idempotency/CSV proxy tests, Supabase TLS configuration tests, real PostgreSQL migration/RLS ও পুনরায় release/bootstrap tests পাস করেছে। `render.yaml` এবং `vercel.json` live provider JSON schema দিয়ে validate হয়েছে। পরে উপরের actual provider account-গুলোতে deploy করে দুই health endpoint, verified database TLS, তিনটি migration, ১৭টি table-এর RLS/grant restriction, initial Owner login/password-change guard, secure cookie ও logout যাচাই করা হয়েছে। Production database-এ acceptance test বা sample business transaction চালানো হয়নি।
