@@ -67,7 +67,7 @@ test("isolated PostgreSQL acceptance, authorization, accounting and retry safety
       return r.body;
     };
     await t.test(
-      "fresh bootstrap, forced change, no public signup and persistent credentials",
+      "fresh bootstrap, optional password change, no public signup and persistent credentials",
       async () => {
         assert.equal(
           (await db.query("SELECT count(*) FROM app_user"))[0].count,
@@ -77,7 +77,8 @@ test("isolated PostgreSQL acceptance, authorization, accounting and retry safety
           (await db.query("SELECT count(*) FROM document"))[0].count,
           "0",
         );
-        assert.equal((await api("get", "/shop/state")).status, 403);
+        assert.equal(owner.user.must_change, false);
+        assert.equal((await api("get", "/shop/state")).status, 200);
         assert.equal(
           (await request(http).post("/auth/register").send({})).status,
           404,
@@ -669,6 +670,11 @@ test("isolated PostgreSQL acceptance, authorization, accounting and retry safety
         const changed = await login(
           "staff@example.test",
           "reset-staff-password",
+        );
+        assert.equal(changed.user.must_change, false);
+        assert.equal(
+          (await api("get", "/shop/state", undefined, changed.token)).status,
+          200,
         );
         await api("patch", "/users/" + staffId, { active: false });
         assert.equal(

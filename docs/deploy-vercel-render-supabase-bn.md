@@ -1,6 +1,6 @@
 # Vercel + Render + Supabase deployment
 
-**বাস্তব deployment — ৩০ অক্টোবর ২০২৬:** [Web](https://tech-trolley-internal.vercel.app/) · [API health](https://tech-trolley-internal-api.onrender.com/health) · [Supabase project](https://supabase.com/dashboard/project/iejosjzhjjeykxknbxdw)। Vercel Hobby, Render Free এবং Supabase Free/Nano-তে নতুন project/service ব্যবহার করা হয়েছে। API ও web proxy health, initial Owner login, বাধ্যতামূলক password change, secure cookie এবং logout যাচাই হয়েছে। প্রথম login-এ নিজের password বদলান। সম্পূর্ণ execution evidence [progress.md](progress.md)-তে আছে। নিচের নির্দেশনা ভবিষ্যৎ redeploy ও নতুন environment-এর runbook; `YOUR_...` values শুধু উদাহরণ।
+**বাস্তব deployment — ৩০ অক্টোবর ২০২৬:** [Web](https://tech-trolley-internal.vercel.app/) · [API health](https://tech-trolley-internal-api.onrender.com/health) · [Supabase project](https://supabase.com/dashboard/project/iejosjzhjjeykxknbxdw)। Vercel Hobby, Render Free এবং Supabase Free/Nano-তে নতুন project/service ব্যবহার করা হয়েছে। API ও web proxy health, initial Owner login, secure cookie এবং logout যাচাই হয়েছে। Owner-এর পরবর্তী অনুরোধে বাধ্যতামূলক password-change ধাপ বন্ধ করা হয়েছে; login-এর পরে dashboard আসে, Settings থেকে স্বেচ্ছায় password বদলানো যায়। সম্পূর্ণ execution evidence [progress.md](progress.md)-তে আছে। নিচের নির্দেশনা ভবিষ্যৎ redeploy ও নতুন environment-এর runbook; `YOUR_...` values শুধু উদাহরণ।
 
 এই repository এখন এই তিনটি service-এ deploy করার জন্য প্রস্তুত:
 
@@ -146,7 +146,7 @@ Custom domain যোগ করলে Render-এর `WEB_ORIGIN`-এ exact origin
 ## ৫. প্রথম login ও নিজের দোকানের setup
 
 1. Vercel production URL-এ brief-এর initial Owner credentials ব্যবহার করুন। User ID `owner` দিয়েও login করা যায়।
-2. প্রথম login-এ password change চাইবে। পরিবর্তন শেষে নতুন password দিয়ে login করুন।
+2. Login-এর পরে সরাসরি dashboard আসবে। চাইলে Settings থেকে নিজের password বদলাতে পারেন; পরিবর্তনের পরে নতুন password দিয়ে login করুন। Vercel-এর deployment-specific link-এর বদলে উপরের স্থায়ী Web link ব্যবহার করুন।
 3. নিজের সত্যিকারের shop address/contact Settings-এ দিন। Opening cash/bank বাস্তব তথ্য অনুযায়ী একবার save করুন; zero/zero-ও গ্রহণযোগ্য।
 4. দরকার হলে private User Management থেকে Owner/Staff account তৈরি করুন। Public signup নেই।
 5. নতুন production project-এ sample stock/লেনদেন import করা হবে না। নিজের প্রকৃত কাজ শুরু করুন; test data দেওয়ার জন্য আলাদা staging database রাখুন।

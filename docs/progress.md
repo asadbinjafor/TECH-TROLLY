@@ -1,5 +1,11 @@
 # Progress and release handover
 
+## Optional password-change policy — 2026-10-30
+
+At the Owner's explicit request, mandatory password changes are disabled. Migration `004_optional_password_change.sql` changes the new-account default and clears existing flags without changing password hashes, roles, identities, sessions or business data. It was applied to the new live Supabase project with the normal checksummed migration runner and verified against before/after credentials, roles and business-record counts. A real initial-Owner login through the permanent Vercel origin now returns `must_change=false`; `/auth/me` and `/shop/state` both return HTTP 200. Only the verification session was logged out.
+
+Owner password resets also return an account without a forced-change flag. Voluntary changes in Settings remain available. API build and all 13 isolated PostgreSQL/backend tests pass, including immediate dashboard access after initial login/reset, voluntary change/session revocation and the existing authorization/accounting checks. The origin error reported by the user came from a deployment-specific URL; exact Origin checks remain in place, and the permanent write origin stays https://tech-trolley-internal.vercel.app/. This section supersedes the forced-change requirement recorded in the initial deployment history below.
+
 ## Dashboard deployment execution — 2026-10-30
 
 User supplied the Vercel, Render and Supabase dashboards and requested deployment. The new Vercel Hobby project **tech-trolley-internal** deployed from `7cab280d52fde2e25c4119a56d308515ea2d28d7`, branch `codex/tech-trolley-production`, root `tech-trolley-frontend`. Production web: https://tech-trolley-internal.vercel.app/. The [connected production redeployment](https://vercel.com/asad-6810/tech-trolley-internal/HvWAbvBbrQVfZmayT6EYvLFoN9CQ) uses `NEXT_PUBLIC_API_URL=/api` and production-only `API_UPSTREAM_URL=https://tech-trolley-internal-api.onrender.com`. Web and `/api/health` return HTTP 200; the proxy health body is `{"status":"ok"}`. The same source commit's [CI run 40942292088](https://github.com/asadbinjafor/TECH-TROLLY/actions/runs/40942292088) passed.

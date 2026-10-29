@@ -1,5 +1,7 @@
 # Verification — 2026-10-30 (Asia/Dhaka)
 
+Owner-requested password-policy follow-up: API build and all 13 isolated PostgreSQL/backend tests pass with optional password changes. Initial login and Owner-reset credentials can immediately read the dashboard; voluntary password changes still revoke sessions. Migration 004 was applied through the normal runner to the new live Supabase project; existing credential hashes/roles/business records were compared before and after and preserved. Public Vercel login now returns `must_change=false` and dashboard HTTP 200. These results supersede the forced-change behavior in the historical baseline.
+
 Managed hosting follow-up: Vercel/Render/Supabase configuration is prepared; see the [বাংলা guide](deploy-vercel-render-supabase-bn.md). Provider JSON-schema validation passes for `render.yaml` and frontend `vercel.json`. `npm run build:api`, `npm run build:web` and workspace typecheck pass. `npm run test:hosting` passes 2 tests; the backend suite now passes 13 tests, including idempotent release, RLS denial for an untrusted SQL reader, and real Nest authentication/CSV/logout through the proxy. Supabase TLS validates certificates and supports the downloaded root CA. No actual Vercel/Render/Supabase project was deployed or connected during these checks. The table below records the earlier baseline.
 
 [Hosted CI verification](https://github.com/asadbinjafor/TECH-TROLLY/actions/runs/40941893627) passed for implementation commit 97587ff, including the new hosting tests and the complete existing verification workflow.
