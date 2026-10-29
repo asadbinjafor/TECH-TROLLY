@@ -9,25 +9,19 @@ import { t, currency, dateLabel } from "@tech-trolley/i18n";
 import { useShop } from "../contexts/shop-context";
 import { Button, Txt, Panel, useColors } from "../components/ui";
 import { api } from "../services/api";
-const esc = (s: unknown) =>
-  String(s ?? "").replace(
-    /[&<>"']/g,
-    (c) =>
-      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[
-        c
-      ]!,
-  );
+import { renderInvoiceHtml } from "@tech-trolley/invoice";
+import type { Receipt } from "@tech-trolley/contracts";
 export function NativeReceipt({ route }: any) {
   const { lang } = useShop(),
     c = useColors(),
-    [receipt, setReceipt] = useState<any>(null),
+    [receipt, setReceipt] = useState<Receipt | null>(null),
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false);
   const tr = (k: string) => t(k, lang),
     money = (v: string) => currency(v, lang);
   const load = () => {
     void api
-      .request("/documents/" + route.params.id + "/receipt")
+      .request<Receipt>("/documents/" + route.params.id + "/receipt")
       .then(setReceipt)
       .catch((e) => setError(e.code));
   };
@@ -36,8 +30,13 @@ export function NativeReceipt({ route }: any) {
     const asset = Asset.fromModule(require("../../assets/NotoSansBengali.ttf"));
     await asset.downloadAsync();
     const font = await new File(asset.localUri || asset.uri).base64();
-    const r = receipt;
-    return `<!doctype html><html lang="${lang}"><head><meta charset="utf-8"><style>@font-face{font-family:Shop;src:url(data:font/ttf;base64,${font})}body{font-family:Shop;font-size:12px;color:#222;width:280px;margin:25px auto}h1,h2,p{text-align:center}h1{font-size:22px}h2{font-size:15px}table{width:100%;border-collapse:collapse}td{padding:9px 0;border-bottom:1px solid #ddd}td:last-child{text-align:right}hr{border:0;border-top:1px dashed #aaa;margin:18px 0}</style></head><body><h1>${esc(r.shop.name)}</h1>${r.shop.address ? `<p>${esc(r.shop.address)}</p>` : ""}${r.shop.phone ? `<p>${esc(r.shop.phone)}</p>` : ""}<hr><h2>${esc(r.number)}</h2><p>${esc(dateLabel(r.createdAt, lang))}</p><p>${esc(r.customer || tr("walkIn"))}</p>${r.reversed ? `<p>${esc(tr("reversed"))}</p>` : ""}<hr><h2>${esc(r.unit.brand)} ${esc(r.unit.model)}</h2><p>${esc(r.unit.variant)}</p><p>${esc(r.unit.imei || r.unit.internalId)}</p><p>${esc(tr(r.unit.box))} ${r.unit.battery === null ? "" : esc(r.unit.battery) + "%"}</p><table>${["price", "discount", "total", "cash", "bank", "originalDue", "outstandingDue"].map((k) => `<tr><td>${esc(tr(k === "originalDue" || k === "outstandingDue" ? "due" : k))}${k === "originalDue" ? " · " + esc(r.date) : ""}</td><td>${esc(money(r[k]))}</td></tr>`).join("")}</table><hr><p>Technology · Trust · Tomorrow</p></body></html>`;
+    const logoAsset = Asset.fromModule(require("../../assets/icon.png"));
+    await logoAsset.downloadAsync();
+    const logo = await new File(logoAsset.localUri || logoAsset.uri).base64();
+    return renderInvoiceHtml(receipt!, lang, {
+      font: "data:font/ttf;base64," + font,
+      logo: "data:image/png;base64," + logo,
+    });
   };
   const print = async (share: boolean) => {
     setBusy(true);
@@ -46,8 +45,8 @@ export function NativeReceipt({ route }: any) {
       if (share) {
         const file = await Print.printToFileAsync({
           html: content,
-          width: 320,
-          height: 800,
+          width: 595,
+          height: 842,
           base64: false,
         });
         if (await Sharing.isAvailableAsync())
@@ -110,6 +109,12 @@ export function NativeReceipt({ route }: any) {
               <Txt style={{ textAlign: "center", marginVertical: 12 }}>
                 {receipt.customer || tr("walkIn")}
               </Txt>
+              <Txt style={{ textAlign: "center" }}>{receipt.phone}</Txt>
+              <Txt style={{ textAlign: "center" }}>{receipt.address}</Txt>
+              <Txt style={{ textAlign: "center", marginVertical: 12 }}>
+                {tr("soldBy")}: {receipt.seller?.name || "—"}
+                {receipt.seller?.role ? " · " + tr(receipt.seller.role) : ""}
+              </Txt>
               {receipt.reversed && <Txt>{tr("reversed")}</Txt>}
               <Txt style={{ fontWeight: "600" }}>
                 {receipt.unit.brand} {receipt.unit.model}
@@ -149,7 +154,18 @@ export function NativeReceipt({ route }: any) {
                     {k === "originalDue" ? " · " + receipt.date : ""}
                   </Txt>
                   <Txt style={{ fontSize: 12, fontWeight: "600" }}>
-                    {money(receipt[k])}
+                    {money(
+                      receipt[
+                        k as
+                          | "price"
+                          | "discount"
+                          | "total"
+                          | "cash"
+                          | "bank"
+                          | "originalDue"
+                          | "outstandingDue"
+                      ],
+                    )}
                   </Txt>
                 </View>
               ))}

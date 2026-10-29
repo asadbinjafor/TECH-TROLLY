@@ -1,5 +1,5 @@
 import { Controller, Get, Param, Query, Req, UseGuards } from "@nestjs/common";
-import { z } from "@tech-trolley/contracts";
+import { z, decimal, minor, invoiceShop } from "@tech-trolley/contracts";
 import { db } from "../database/database";
 import { AuthGuard } from "../auth/auth.guard";
 import { documentsSql, documentView } from "../accounts/posting.service";
@@ -23,13 +23,19 @@ export class DocumentsController {
       "SELECT name,address,phone FROM shop WHERE id=1",
     );
     return {
-      shop,
+      shop: s.invoiceShop || invoiceShop(shop),
       number: d.number,
       createdAt: d.created_at,
       date: d.business_date,
       reversed: !!d.reversed_by,
       customer: s.partyName || null,
       phone: s.partyPhone || null,
+      address: s.partyAddress || null,
+      seller: {
+        id: d.actor_id,
+        name: d.actor_name,
+        role: ["OWNER", "STAFF"].includes(s.actorRole) ? s.actorRole : null,
+      },
       unit: {
         model: s.model,
         brand: s.brand,
@@ -38,12 +44,15 @@ export class DocumentsController {
         internalId: s.internalId,
         battery: s.battery,
         box: s.box,
+        condition: s.condition || null,
+        category: s.category || null,
       },
       price: s.price,
       discount: s.discount,
       total: d.total,
       cash: s.cash,
       bank: s.bank,
+      paid: decimal(minor(s.cash) + minor(s.bank)),
       originalDue:
         (BigInt(raw.original_due) / 100n).toString() +
         "." +

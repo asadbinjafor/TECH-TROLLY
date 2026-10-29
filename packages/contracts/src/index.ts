@@ -1,6 +1,7 @@
 import { z } from "zod";
 export { z };
 export { ZodError } from "zod";
+export { invoiceShop, memoProfile, type Receipt } from "./invoice";
 export type Role = "OWNER" | "STAFF";
 export type Language = "bn" | "en";
 export interface User {
@@ -76,6 +77,7 @@ export const partySchema = z
   .object({
     name: text,
     phone: z.string().trim().max(30).default(""),
+    address: z.string().trim().max(300).default(""),
     kind: z.enum(["customer", "supplier", "person"]),
   })
   .strict();
@@ -134,6 +136,9 @@ export const commands = {
     cash: money,
     bank: money,
     customerId: id.nullable().default(null),
+    customerName: z.string().trim().max(180).optional(),
+    customerPhone: z.string().trim().max(30).optional(),
+    customerAddress: z.string().trim().max(300).optional(),
     note,
   }),
   collection: z.strictObject({ documentId: id, amount: money, account, note }),
@@ -215,6 +220,7 @@ export interface Party {
   id: string;
   name: string;
   phone: string;
+  address: string;
   kind: string;
 }
 export interface Category {
@@ -330,11 +336,14 @@ export const forms: Record<CommandKind, Field[]> = {
   ],
   sale: [
     f("unitId", "select", { source: "units" }),
+    f("customerId", "select", { source: "customers", optional: true }),
+    f("customerName", "text", { optional: true }),
+    f("customerPhone", "text", { optional: true }),
+    f("customerAddress", "text", { optional: true }),
     f("price", "money"),
     f("discount", "money", { default: "0" }),
     f("cash", "money", { label: "cashReceived" }),
     f("bank", "money", { label: "bankReceived" }),
-    f("customerId", "select", { source: "customers", optional: true }),
     n,
   ],
   collection: [f("documentId", "select", { source: "salesDue" }), amount, a, n],
@@ -382,6 +391,13 @@ export const forms: Record<CommandKind, Field[]> = {
   cashCount: [f("counted", "money"), n],
   reversal: [f("documentId", "select", { source: "documents" }), f("note")],
 };
+export function customerInvoiceFields(customer?: Party) {
+  return {
+    customerName: customer?.name || "",
+    customerPhone: customer?.phone || "",
+    customerAddress: customer?.address || "",
+  };
+}
 export function prepare(kind: CommandKind, raw: Record<string, string>) {
   const data: Record<string, unknown> = { ...raw };
   for (const field of forms[kind]) {

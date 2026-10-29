@@ -6,6 +6,7 @@ import {
   minor,
   decimal,
   z,
+  invoiceShop,
   type CommandKind,
   type User,
 } from "@tech-trolley/contracts";
@@ -95,6 +96,7 @@ export class PostingService {
             if (!p) fail("NOT_FOUND", 404);
             snapshot.partyName = p.name;
             snapshot.partyPhone = p.phone;
+            snapshot.partyAddress = p.address;
             return p;
           };
           const staff = async () => {
@@ -167,6 +169,12 @@ export class PostingService {
             }
             snapshot = {
               ...snapshot,
+              partyName: data.customerName || snapshot.partyName || null,
+              partyPhone: data.customerPhone || snapshot.partyPhone || null,
+              partyAddress:
+                data.customerAddress || snapshot.partyAddress || null,
+              actorRole: actor.role,
+              invoiceShop: invoiceShop(shop),
               model: u.model,
               brand: u.brand,
               variant: u.variant,
@@ -175,6 +183,7 @@ export class PostingService {
               battery: u.battery,
               box: u.box,
               condition: u.condition,
+              category: u.category,
               cogs: decimal(u.cost),
             };
             line("cash", cash);

@@ -22,3 +22,5 @@ No apps/web or apps/api scaffold is substituted. No .git, .env, records, depende
 TypeORM is retained as the established ORM. Automatic synchronize is disabled; all schema changes are explicit versioned migrations.
 
 Managed hosting additions: `tech-trolley-frontend/src/app/api/[...path]/route.ts` and `src/lib/api-proxy.ts` are a thin same-origin transport for Vercel → Render; no accounting logic moved into Next. `tech-trolley-frontend/vercel.json`, root `render.yaml`, `scripts/{release-api,start-render}.mjs` and migration `003_private_app_tables.sql` configure Vercel/Render/Supabase without reorganizing the reference-derived directories.
+
+Invoice additions: `packages/invoice` shares escaped HTML/CSS and QR generation between the existing web transaction feature and native receipt feature. Receipt/profile types stay in `packages/contracts`; authenticated immutable invoice snapshots stay in backend PostingService/documents. Migration `005_customer_invoice_address.sql` adds the optional party address without moving existing feature directories.

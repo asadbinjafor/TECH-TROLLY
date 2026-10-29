@@ -123,6 +123,7 @@ export function NativeAdministration({ route, navigation }: any) {
                   fields: [
                     { key: "name" },
                     { key: "phone" },
+                    { key: "address", label: "partyAddress" },
                     {
                       key: "kind",
                       options: ["customer", "supplier", "person"],
@@ -137,6 +138,7 @@ export function NativeAdministration({ route, navigation }: any) {
                 <Txt style={{ fontSize: 12 }}>
                   {tr(p.kind)} · {p.phone} · {p.id.slice(0, 8)}
                 </Txt>
+                {p.address && <Txt style={{ fontSize: 12 }}>{p.address}</Txt>}
               </Panel>
             ))}
           </>

@@ -10,6 +10,7 @@ import {
   prepare,
   minor,
   decimal,
+  customerInvoiceFields,
   type CommandKind,
 } from "@tech-trolley/contracts";
 import { t, currency } from "@tech-trolley/i18n";
@@ -157,6 +158,11 @@ export function NativeCommand({ navigation, route }: any) {
                           [f.key]: String(v),
                           ...(f.key === "unitId"
                             ? { price: "", discount: "0", cash: "", bank: "" }
+                            : {}),
+                          ...(f.key === "customerId"
+                            ? customerInvoiceFields(
+                                state.parties.find((p) => p.id === String(v)),
+                              )
                             : {}),
                         }))
                       }

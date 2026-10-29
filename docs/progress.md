@@ -18,6 +18,14 @@ A real login through the public Vercel `/api` proxy succeeded with the requested
 
 Vercel email reauthentication was completed by the user. Existing hosted reference services/projects were not modified, paused or deleted. No paid plan was selected. This execution section supersedes the historical local-only/cloud-blocker status below for web/API/database. Native signing/device/distribution work remains pending.
 
+## Shop memo invoice — 2026-10-30
+
+Replaced the web receipt and native PDF template with the Owner's photographed black/gold memo layout. The Owner confirmed retaining its printed warranty text and exact QR destination. Customer selection fills name, phone and address; walk-in details can be entered on the sale. Migration 005 adds an optional party address. New sales snapshot invoice customer/shop details and the authenticated seller's role; the existing immutable actor name supplies the original seller name. Historical documents are not rewritten, and an unavailable historical role is left unknown.
+
+The shared `packages/invoice` renderer supplies A4 HTML, QR and exact decimal-string money formatting to both clients. Existing one-unit-per-sale accounting remains unchanged. The printed warranty does not introduce returns/exchange/warranty posting workflows.
+
+Verification: full build and workspace typecheck pass; 14 isolated PostgreSQL acceptance tests and 4 hosting/render tests pass; Android and iOS exports pass. A separate disposable browser database verified customer autofill, sale posting and the Owner's identity on the actual receipt. English, Bengali/long-address and actual web print PDFs each fit one A4 page; rasterized QR decodes to the photographed memo's destination. Preview uses clearly marked synthetic data. Live deployment verification is recorded after release below.
+
 ## Managed hosting follow-up — 2026-10-30
 
 User selected Vercel (web), Render (API) and Supabase (PostgreSQL). Added [বাংলা deployment guide](deploy-vercel-render-supabase-bn.md), frontend vercel.json and root render.yaml. Vercel root is tech-trolley-frontend; Render root stays blank so workspace commands can access shared packages. Actual provider project URLs/secrets/accounts are still not supplied; this prepares deployment, not a claim of live hosting.

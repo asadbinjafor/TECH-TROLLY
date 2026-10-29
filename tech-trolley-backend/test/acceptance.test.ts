@@ -753,6 +753,132 @@ test("isolated PostgreSQL acceptance, authorization, accounting and retry safety
       },
     );
     await t.test(
+      "invoice snapshots preserve customer contact, Owner/Staff seller identity and shop details",
+      async () => {
+        const customerRecord = await api("post", "/parties", {
+          name: "Invoice customer",
+          phone: "01700000000",
+          address: "Banasree, Dhaka",
+          kind: "customer",
+        });
+        assert.equal(customerRecord.status, 201);
+        const originalShop = (await api("get", "/shop/state")).body.shop;
+        const stock = await cmd("purchase", {
+          ...buy("000000000000167", "100", "0", "0"),
+        });
+        const stockId = (await api("get", "/shop/state")).body.units.find(
+          (u: any) => u.purchase_id === stock.id,
+        ).id;
+        const data = {
+          unitId: stockId,
+          price: "200",
+          discount: "10",
+          cash: "100",
+          bank: "0",
+          customerId: customerRecord.body.id,
+          note: "Invoice fixture",
+        };
+        const key = randomUUID(),
+          issued = await cmd("sale", data, key);
+        assert.equal((await cmd("sale", data, key)).id, issued.id);
+        assert.equal(
+          (
+            await api("post", "/commands/sale", {
+              ...data,
+              customerAddress: "Changed invoice",
+            }).set("Idempotency-Key", key)
+          ).status,
+          409,
+        );
+        await db.query(
+          "UPDATE party SET name='Renamed customer',phone='01900000000',address='Changed address' WHERE id=$1",
+          [customerRecord.body.id],
+        );
+        await db.query(
+          "UPDATE app_user SET name='Renamed operator',role='STAFF' WHERE id=$1",
+          [owner.user.id],
+        );
+        try {
+          const saved = (await api("get", `/documents/${issued.id}/receipt`))
+            .body;
+          assert.equal(saved.customer, "Invoice customer");
+          assert.equal(saved.phone, "01700000000");
+          assert.equal(saved.address, "Banasree, Dhaka");
+          assert.equal(saved.seller.name, owner.user.name);
+          assert.equal(saved.seller.role, "OWNER");
+          assert.equal(saved.unit.imei, "000000000000167");
+          assert.equal(saved.unit.condition, "used");
+          assert.equal(saved.paid, "100.00");
+          assert.equal(saved.originalDue, "90.00");
+          assert.ok(!("cogs" in saved));
+          assert.ok(!("cost" in saved.unit));
+        } finally {
+          await db.query(
+            "UPDATE app_user SET name=$2,role='OWNER' WHERE id=$1",
+            [owner.user.id, owner.user.name],
+          );
+        }
+        await api("patch", "/shop", {
+          name: "Changed shop",
+          address: "Changed shop address",
+          phone: "01800000000",
+        });
+        assert.equal(
+          (await api("get", `/documents/${issued.id}/receipt`)).body.shop.name,
+          originalShop.name,
+        );
+        await api("patch", "/shop", {
+          name: originalShop.name,
+          address: originalShop.address,
+          phone: originalShop.phone,
+        });
+        await api("patch", "/users/" + staffId, {
+          active: true,
+          role: "STAFF",
+        });
+        const staff = await login("staff@example.test", "reset-staff-password");
+        const second = await cmd("purchase", {
+          ...buy("000000000000168", "100", "0", "0"),
+        });
+        const secondId = (await api("get", "/shop/state")).body.units.find(
+          (u: any) => u.purchase_id === second.id,
+        ).id;
+        const byStaff = await cmd(
+          "sale",
+          {
+            unitId: secondId,
+            price: "150",
+            discount: "0",
+            cash: "150",
+            bank: "0",
+            customerId: null,
+            customerName: "নমুনা ক্রেতা",
+            customerPhone: "01600000000",
+            customerAddress: "ঢাকা",
+            note: "",
+          },
+          randomUUID(),
+          staff.token,
+        );
+        await db.query(
+          "UPDATE app_user SET name='Renamed staff',role='OWNER' WHERE id=$1",
+          [staffId],
+        );
+        const saved = (await api("get", `/documents/${byStaff.id}/receipt`))
+          .body;
+        assert.equal(saved.customer, "নমুনা ক্রেতা");
+        assert.equal(saved.address, "ঢাকা");
+        assert.equal(saved.phone, "01600000000");
+        assert.equal(saved.seller.role, "STAFF");
+        assert.equal(saved.seller.name, staff.user.name);
+        assert.equal(saved.outstandingDue, "0.00");
+        await db.query("UPDATE app_user SET name=$2,role='STAFF' WHERE id=$1", [
+          staffId,
+          staff.user.name,
+        ]);
+      },
+    );
+    await t.test(
       "release startup is idempotent and Supabase-style RLS blocks direct reads",
       async () => {
         const [{ count: before }] = await db.query(

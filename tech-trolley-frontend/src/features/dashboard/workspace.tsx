@@ -38,6 +38,7 @@ import { api, apiBase } from "@/services/api";
 import { Login } from "@/features/auth/login";
 import { CommandForm } from "@/features/transactions/command-form";
 import { Administration } from "@/features/settings/administration";
+import { Invoice } from "@/features/transactions/invoice";
 const icons = [
   LayoutDashboard,
   CalendarDays,
@@ -910,65 +911,7 @@ export function Workspace({ section }: { section: string }) {
                 ×
               </button>
             </header>
-            <div className="receipt-paper">
-              <img
-                src="/tech-trolley-logo.png"
-                width="60"
-                height="60"
-                alt="Tech Trolley"
-              />
-              <h2>{receipt.shop.name}</h2>
-              {receipt.shop.address && <p>{receipt.shop.address}</p>}
-              {receipt.shop.phone && <p>{receipt.shop.phone}</p>}
-              <hr />
-              <h3>{receipt.number}</h3>
-              <p>
-                {dateLabel(receipt.createdAt, lang)} ·{" "}
-                {new Date(receipt.createdAt).toLocaleTimeString(
-                  lang === "bn" ? "bn-BD" : "en-GB",
-                  { timeZone: "Asia/Dhaka" },
-                )}
-              </p>
-              {receipt.reversed && <b className="negative">{tr("reversed")}</b>}
-              <p>
-                {receipt.customer || tr("walkIn")} {receipt.phone}
-              </p>
-              <hr />
-              <h3>
-                {receipt.unit.brand} {receipt.unit.model}
-              </h3>
-              <p>{receipt.unit.variant}</p>
-              <p className="mono">
-                {receipt.unit.imei || receipt.unit.internalId}
-              </p>
-              <p>
-                {tr(receipt.unit.box)}
-                {receipt.unit.battery !== null
-                  ? " · " + receipt.unit.battery + "%"
-                  : ""}
-              </p>
-              {[
-                "price",
-                "discount",
-                "total",
-                "cash",
-                "bank",
-                "originalDue",
-                "outstandingDue",
-              ].map((k) => (
-                <div className="pnl-row" key={k}>
-                  <span>
-                    {tr(
-                      k === "originalDue" || k === "outstandingDue" ? "due" : k,
-                    )}
-                    {k === "originalDue" ? " · " + receipt.date : ""}
-                  </span>
-                  <b>{money(receipt[k])}</b>
-                </div>
-              ))}
-              <hr />
-              <p>Technology · Trust · Tomorrow</p>
-            </div>
+            <Invoice receipt={receipt} lang={lang} />
             <footer>
               <button className="button primary" onClick={() => window.print()}>
                 {tr("print")}

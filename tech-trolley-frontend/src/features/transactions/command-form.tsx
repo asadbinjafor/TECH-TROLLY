@@ -6,6 +6,7 @@ import {
   prepare,
   minor,
   decimal,
+  customerInvoiceFields,
   type CommandKind,
 } from "@tech-trolley/contracts";
 import { t, currency } from "@tech-trolley/i18n";
@@ -166,7 +167,11 @@ export function CommandForm({
             {forms[kind].map((field) => (
               <label
                 key={field.key}
-                className={field.key === "note" ? "wide" : ""}
+                className={
+                  field.key === "note" || field.key === "customerAddress"
+                    ? "wide"
+                    : ""
+                }
               >
                 {t(field.label, lang)}
                 {field.optional &&
@@ -187,6 +192,13 @@ export function CommandForm({
                         [field.key]: e.target.value,
                         ...(field.key === "unitId"
                           ? { price: "", discount: "0", cash: "", bank: "" }
+                          : {}),
+                        ...(field.key === "customerId"
+                          ? customerInvoiceFields(
+                              state.parties.find(
+                                (p) => p.id === e.target.value,
+                              ),
+                            )
                           : {}),
                       }))
                     }
@@ -221,16 +233,20 @@ export function CommandForm({
                     inputMode={
                       field.type === "money"
                         ? "decimal"
-                        : field.type === "number" || field.key === "imei"
-                          ? "numeric"
-                          : undefined
+                        : field.key === "customerPhone"
+                          ? "tel"
+                          : field.type === "number" || field.key === "imei"
+                            ? "numeric"
+                            : undefined
                     }
                     maxLength={
                       field.key === "imei"
                         ? 15
-                        : field.type === "money"
-                          ? 15
-                          : 300
+                        : field.key === "customerPhone"
+                          ? 30
+                          : field.type === "money"
+                            ? 15
+                            : 300
                     }
                     onChange={(e) =>
                       setValues((v) => ({ ...v, [field.key]: e.target.value }))

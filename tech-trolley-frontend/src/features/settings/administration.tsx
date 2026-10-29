@@ -73,6 +73,7 @@ export function Administration({ mode }: { mode: "parties" | "settings" }) {
                       required: true,
                     },
                     { key: "phone" },
+                    { key: "address", label: "partyAddress" },
                   ],
                 })
               }
@@ -85,6 +86,7 @@ export function Administration({ mode }: { mode: "parties" | "settings" }) {
               <b>{p.name}</b>
               <span className="badge">{tr(p.kind)}</span>
               <span>{p.phone}</span>
+              {p.address && <span>{p.address}</span>}
               <small className="muted">{p.id.slice(0, 8)}</small>
             </div>
           ))}

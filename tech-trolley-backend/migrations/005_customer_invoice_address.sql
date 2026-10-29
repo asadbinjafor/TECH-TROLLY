@@ -1,0 +1,1 @@
+ALTER TABLE party ADD COLUMN address text NOT NULL DEFAULT '';

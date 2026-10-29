@@ -829,27 +829,13 @@ td b {
   box-shadow: 0 8px 30px #0002;
 }
 .receipt-paper {
-  max-width: 340px;
+  max-width: 780px;
+  width: 100%;
   margin: 0 auto;
-  padding: 20px 0;
+  padding: 0;
 }
-.receipt-paper > img {
-  display: block;
-  margin: 0 auto 15px;
-  border-radius: 50%;
-}
-.receipt-paper > h2,
-.receipt-paper > h3,
-.receipt-paper > p {
-  text-align: center;
-}
-.receipt-paper p {
-  font-size: 11px;
-}
-.receipt-paper hr {
-  border: 0;
-  border-top: 1px dashed var(--line);
-  margin: 18px 0;
+.receipt {
+  width: min(900px, 96vw);
 }
 .login-screen {
   min-height: 100vh;
@@ -1265,6 +1251,13 @@ td b {
   }
 }
 @media print {
+  .app {
+    display: block;
+    min-height: 0;
+  }
+  .skip-link {
+    display: none !important;
+  }
   body {
     background: #fff;
     color: #111;
@@ -1281,9 +1274,10 @@ td b {
     background: none;
     padding: 0;
     backdrop-filter: none;
+    width: 100%;
   }
   .receipt {
-    width: 80mm;
+    width: 100%;
     max-height: none;
     overflow: visible;
     margin: 0 auto;
@@ -1308,7 +1302,7 @@ td b {
     font-size: 10pt;
   }
   @page {
-    size: 80mm 230mm;
-    margin: 5mm;
+    size: A4 portrait;
+    margin: 10mm;
   }
 }

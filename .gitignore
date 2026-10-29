@@ -20,3 +20,5 @@ next-env.d.ts
 *.mobileprovision
 test-results/
 backups/
+tmp/pdfs/
+output/pdf/
