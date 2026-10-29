@@ -35,9 +35,12 @@ export async function migrate() {
 if (require.main === module)
   migrate()
     .then(() => process.exit(0))
-    .catch(() => {
+    .catch((error) => {
       console.error(
         "Migration failed. Check database connectivity and schema compatibility.",
       );
+      const code = error?.code || error?.message;
+      if (typeof code === "string" && /^[A-Z0-9_]{2,80}$/.test(code))
+        console.error("Error code:", code);
       process.exit(1);
     });

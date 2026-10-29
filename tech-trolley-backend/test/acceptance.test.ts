@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { Client } from "pg";
 import request from "supertest";
+import { execFileSync } from "node:child_process";
+import { resolve } from "node:path";
 
 test("isolated PostgreSQL acceptance, authorization, accounting and retry safety", async (t) => {
   const source = process.env.TEST_DATABASE_URL;
@@ -26,6 +28,7 @@ test("isolated PostgreSQL acceptance, authorization, accounting and retry safety
   const { bootstrap } = require("../dist/auth/bootstrap");
   const { createApp } = require("../dist/main");
   let app: any;
+  let readRole: string | undefined;
   try {
     await migrate();
     await Promise.all([bootstrap(), bootstrap()]);
@@ -743,10 +746,123 @@ test("isolated PostgreSQL acceptance, authorization, accounting and retry safety
         assert.equal(previousReport.documents[0].business_date, previous);
       },
     );
+    await t.test(
+      "release startup is idempotent and Supabase-style RLS blocks direct reads",
+      async () => {
+        const [{ count: before }] = await db.query(
+          "SELECT count(*) FROM document",
+        );
+        const [{ password_hash: oldHash }] = await db.query(
+          "SELECT password_hash FROM app_user WHERE id=$1",
+          [owner.user.id],
+        );
+        const root = resolve(__dirname, "../..");
+        const env = { ...process.env };
+        delete env.BOOTSTRAP_OWNER_EMAIL;
+        delete env.BOOTSTRAP_OWNER_PASSWORD;
+        for (let attempt = 0; attempt < 2; attempt++)
+          execFileSync(
+            process.execPath,
+            [resolve(root, "scripts/release-api.mjs")],
+            { cwd: root, env, stdio: "pipe" },
+          );
+        assert.equal(
+          (await db.query("SELECT count(*) FROM document"))[0].count,
+          before,
+        );
+        assert.equal(
+          (
+            await db.query("SELECT password_hash FROM app_user WHERE id=$1", [
+              owner.user.id,
+            ])
+          )[0].password_hash,
+          oldHash,
+        );
+        const rows = await db.query(
+          "SELECT relname,relrowsecurity FROM pg_class WHERE oid IN ('public.app_user'::regclass,'public.session'::regclass,'public.document'::regclass,'public.journal_line'::regclass,'public.schema_migration'::regclass)",
+        );
+        assert.ok(rows.every((r: any) => r.relrowsecurity));
+        readRole = "trolley_read_" + randomUUID().replaceAll("-", "");
+        await admin.query(`CREATE ROLE "${readRole}" NOLOGIN`);
+        await db.query(`GRANT USAGE ON SCHEMA public TO "${readRole}"`);
+        await db.query(`GRANT SELECT ON public.document TO "${readRole}"`);
+        await db.transaction(async (em: any) => {
+          await em.query(`SET LOCAL ROLE "${readRole}"`);
+          assert.equal(
+            (await em.query("SELECT count(*) FROM public.document"))[0].count,
+            "0",
+          );
+        });
+        assert.equal(
+          (await db.query("SELECT count(*) FROM document"))[0].count,
+          before,
+        );
+      },
+    );
+    await t.test(
+      "web proxy keeps a real Nest login cookie and logout revocation working",
+      async () => {
+        const { proxyApi } =
+          await import("../../tech-trolley-frontend/src/lib/api-proxy");
+        await app.listen(0, "127.0.0.1");
+        const options = { upstream: await app.getUrl(), production: false };
+        const origin = "http://localhost:3001";
+        const login = await proxyApi(
+          new Request(origin + "/api/auth/login", {
+            method: "POST",
+            headers: { Origin: origin, "Content-Type": "application/json" },
+            body: JSON.stringify({
+              identity: "owner@example.test",
+              password: "changed-test-password",
+            }),
+          }),
+          ["auth", "login"],
+          options,
+        );
+        assert.equal(login.status, 201);
+        assert.equal((await login.json()).token, undefined);
+        const setCookie = login.headers.getSetCookie()[0];
+        assert.match(setCookie, /HttpOnly/);
+        assert.match(setCookie, /SameSite=Strict/);
+        const cookie = setCookie.split(";")[0];
+        const me = await proxyApi(
+          new Request(origin + "/api/auth/me", { headers: { Cookie: cookie } }),
+          ["auth", "me"],
+          options,
+        );
+        assert.equal(me.status, 200);
+        assert.equal((await me.json()).id, owner.user.id);
+        const csv = await proxyApi(
+          new Request(origin + "/api/reports/export?period=today&lang=bn", {
+            headers: { Cookie: cookie },
+          }),
+          ["reports", "export"],
+          options,
+        );
+        assert.equal(csv.status, 200);
+        assert.match(csv.headers.get("content-type")!, /text\/csv/);
+        const logout = await proxyApi(
+          new Request(origin + "/api/auth/logout", {
+            method: "POST",
+            headers: { Cookie: cookie, Origin: origin },
+          }),
+          ["auth", "logout"],
+          options,
+        );
+        assert.equal(logout.status, 201);
+        const expired = await proxyApi(
+          new Request(origin + "/api/auth/me", { headers: { Cookie: cookie } }),
+          ["auth", "me"],
+          options,
+        );
+        assert.equal(expired.status, 401);
+      },
+    );
   } finally {
     if (app) await app.close();
     if (db.isInitialized) await db.destroy();
     await admin.query(`DROP DATABASE "${name}" WITH (FORCE)`);
+    if (readRole) await admin.query(`DROP ROLE "${readRole}"`);
     await admin.end();
   }
 });

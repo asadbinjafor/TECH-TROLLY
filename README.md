@@ -4,6 +4,8 @@ One shop's internal inventory, sales, money and daily accounts. Next.js web, nat
 
 Canonical project: `E:\Taki`. Reference structure and audit are in [docs/reference-structure.md](docs/reference-structure.md). The old project remains read-only.
 
+Deploy on **Vercel (web), Render (API), Supabase (PostgreSQL)** using the [বাংলা deployment guide](docs/deploy-vercel-render-supabase-bn.md). Vercel configuration is in `tech-trolley-frontend/vercel.json`; the optional Render Blueprint is `render.yaml`. Browser API calls use `/api` to preserve secure same-origin cookies.
+
 ```powershell
 Set-Location E:\Taki
 npm ci

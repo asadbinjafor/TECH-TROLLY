@@ -30,6 +30,7 @@ jobs:
       - run: npm ci
       - run: npm run build
       - run: npm run typecheck
+      - run: npm run test:hosting
       - run: npm test
       - run: npm run export -w @tech-trolley/mobile
       - run: npx expo-doctor

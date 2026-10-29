@@ -285,6 +285,14 @@ const words: Record<string, [string, string]> = {
     "Enter a reason for the cash difference.",
     "ক্যাশের অমিলের কারণ লিখুন।",
   ],
+  API_CONFIGURATION_REQUIRED: [
+    "API connection is not configured.",
+    "API সংযোগের সেটিংস দেওয়া হয়নি।",
+  ],
+  UPSTREAM_UNAVAILABLE: [
+    "The API is starting or unavailable. Retry when it is ready.",
+    "API চালু হচ্ছে অথবা সংযোগ পাওয়া যাচ্ছে না। প্রস্তুত হলে আবার চেষ্টা করুন।",
+  ],
   NETWORK_ERROR: [
     "Could not connect. Retry when online.",
     "সংযোগ পাওয়া যায়নি। অনলাইনে আবার চেষ্টা করুন।",

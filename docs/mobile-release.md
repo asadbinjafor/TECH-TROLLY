@@ -6,7 +6,7 @@ Expo SDK 58's recommended React 19.3.0 and React Native 0.88.1 are locked. `expo
 
 Configured app IDs: `com.techtrolley.shop` for Android/iOS; these are proposed implementation identifiers whose availability/ownership must be checked in the actual store accounts. Version 1.0.0, Android versionCode 1 and iOS buildNumber 1. Existing Tech Trolley icon/splash branding is bundled. No camera/microphone/storage permission is requested for unapproved scanning features.
 
-Before a cloud build, set the public API endpoint in the corresponding EAS environment. Preview/production profiles require HTTPS. Use e.g. the selected deployment's `/api` base when using the portable same-origin host. No secret belongs in EXPO_PUBLIC variables. A physical phone's localhost is itself: for development, set `.env` to the computer's actual LAN IP plus port 3000, keep both devices on an authorized LAN and restrict firewall exposure; a tunnel is another explicit development option.
+Before a cloud build, set the public API endpoint in the corresponding EAS environment. Preview/production profiles require HTTPS. For the Vercel/Render/Supabase setup, use the **Render service HTTPS URL without `/api`**. For the portable same-origin host, use that host's `/api` base. No secret belongs in EXPO_PUBLIC variables. A physical phone's localhost is itself: for development, set `.env` to the computer's actual LAN IP plus port 3000, keep both devices on an authorized LAN and restrict firewall exposure; a tunnel is another explicit development option.
 
 ```powershell
 Set-Location E:\Taki\tech-trolley-mobile

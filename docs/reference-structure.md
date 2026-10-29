@@ -20,3 +20,5 @@ Reference branch main has untracked audit documents. No reference files, depende
 
 No apps/web or apps/api scaffold is substituted. No .git, .env, records, dependencies or generated output copied.
 TypeORM is retained as the established ORM. Automatic synchronize is disabled; all schema changes are explicit versioned migrations.
+
+Managed hosting additions: `tech-trolley-frontend/src/app/api/[...path]/route.ts` and `src/lib/api-proxy.ts` are a thin same-origin transport for Vercel → Render; no accounting logic moved into Next. `tech-trolley-frontend/vercel.json`, root `render.yaml`, `scripts/{release-api,start-render}.mjs` and migration `003_private_app_tables.sql` configure Vercel/Render/Supabase without reorganizing the reference-derived directories.

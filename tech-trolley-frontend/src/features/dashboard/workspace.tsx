@@ -34,7 +34,7 @@ import {
 } from "@tech-trolley/contracts";
 import { t, currency, dateLabel } from "@tech-trolley/i18n";
 import { useShop } from "@/contexts/shop-context";
-import { api } from "@/services/api";
+import { api, apiBase } from "@/services/api";
 import { Login } from "@/features/auth/login";
 import { CommandForm } from "@/features/transactions/command-form";
 import { Administration } from "@/features/settings/administration";
@@ -760,11 +760,7 @@ export function Workspace({ section }: { section: string }) {
                   className="button"
                   onClick={async () => {
                     try {
-                      const url =
-                        (process.env.NEXT_PUBLIC_API_URL ||
-                          "http://localhost:3000") +
-                        "/reports/export?" +
-                        reportQuery;
+                      const url = apiBase + "/reports/export?" + reportQuery;
                       const res = await fetch(url, { credentials: "include" });
                       if (!res.ok) throw new Error("FORBIDDEN");
                       const link = document.createElement("a");

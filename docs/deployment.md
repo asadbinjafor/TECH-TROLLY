@@ -1,6 +1,6 @@
 # Deployment, backups and recovery
 
-No server/domain/account was supplied for the new repository. Historical Vercel/Render/Supabase settings belong to the read-only reference; no reference credentials or databases were accessed. Portable deployment templates are prepared. Docker is unavailable on this computer, so container startup has not been verified locally.
+The selected managed-hosting setup is now **Vercel web + Render API + Supabase PostgreSQL**. Follow the [বাংলা deployment guide](deploy-vercel-render-supabase-bn.md), `render.yaml` and `tech-trolley-frontend/vercel.json`. Actual new project URLs/accounts/secrets have not been supplied, so live deployment remains unverified. Historical Vercel/Render/Supabase settings belong to the read-only reference; no reference credentials or databases were accessed. The portable Docker alternative below remains available; Docker is unavailable on this computer, so container startup has not been verified locally.
 
 ## Local Windows
 

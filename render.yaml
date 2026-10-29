@@ -1,0 +1,28 @@
+services:
+  - type: web
+    name: tech-trolley-internal-api
+    runtime: node
+    region: singapore
+    plan: free
+    branch: codex/tech-trolley-production
+    buildCommand: npm ci --include=dev && npm run build:api
+    startCommand: npm run start:render
+    healthCheckPath: /health
+    autoDeployTrigger: "off"
+    envVars:
+      - key: NODE_VERSION
+        value: 24.17.0
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_SSL
+        value: "true"
+      - key: DATABASE_POOL_MAX
+        value: "5"
+      - key: DATABASE_URL
+        sync: false
+      - key: WEB_ORIGIN
+        sync: false
+      - key: BOOTSTRAP_OWNER_EMAIL
+        sync: false
+      - key: BOOTSTRAP_OWNER_PASSWORD
+        sync: false

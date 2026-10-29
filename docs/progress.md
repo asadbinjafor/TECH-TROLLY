@@ -1,5 +1,17 @@
 # Progress and release handover
 
+## Managed hosting follow-up — 2026-10-30
+
+User selected Vercel (web), Render (API) and Supabase (PostgreSQL). Added [বাংলা deployment guide](deploy-vercel-render-supabase-bn.md), frontend vercel.json and root render.yaml. Vercel root is tech-trolley-frontend; Render root stays blank so workspace commands can access shared packages. Actual provider project URLs/secrets/accounts are still not supplied; this prepares deployment, not a claim of live hosting.
+
+Browser requests now default to /api through a thin Next route proxy to server-only API_UPSTREAM_URL. This keeps HttpOnly/Secure/SameSite Strict cookies on the Vercel origin across separate Render/Vercel domains. CSV, Origin and idempotency headers are preserved; native/bearer headers from web callers are not forwarded. Financial logic stays in Nest. Native clients continue using the direct Render HTTPS URL.
+
+Render build: npm ci --include=dev && npm run build:api. Start: npm run start:render (versioned migration → idempotent bootstrap → API). No reset or automatic sample data. The optional paid pre-deploy path is documented. Supabase Session pooler port 5432, verified TLS/custom CA and a five-connection pool are covered. Migration 003 enables RLS and revokes Supabase Data API-role privileges only for app-owned objects. Existing application history/passwords are preserved.
+
+Verification: provider JSON schemas validated for both manifests; web/API builds and workspace typecheck pass; 2 hosting tests pass; backend suite 12 tests pass including repeat release without bootstrap secrets and untrusted-role RLS denial. No real provider connection, database migration against Supabase, or public deploy was performed. The historical handover below remains the baseline; the selected providers and web proxy above supersede its hosting-selection/default API notes.
+
+---
+
 Updated 2026-10-30 (Asia/Dhaka). Canonical integrated checkout: `E:\Taki`.
 Branch: [codex/tech-trolley-production](https://github.com/asadbinjafor/TECH-TROLLY/tree/codex/tech-trolley-production).
 Remote: `origin`, verified as `https://github.com/asadbinjafor/TECH-TROLLY.git`.
