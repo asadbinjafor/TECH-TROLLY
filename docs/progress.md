@@ -24,7 +24,9 @@ Replaced the web receipt and native PDF template with the Owner's photographed b
 
 The shared `packages/invoice` renderer supplies A4 HTML, QR and exact decimal-string money formatting to both clients. Existing one-unit-per-sale accounting remains unchanged. The printed warranty does not introduce returns/exchange/warranty posting workflows.
 
-Verification: full build and workspace typecheck pass; 14 isolated PostgreSQL acceptance tests and 4 hosting/render tests pass; Android and iOS exports pass. A separate disposable browser database verified customer autofill, sale posting and the Owner's identity on the actual receipt. English, Bengali/long-address and actual web print PDFs each fit one A4 page; rasterized QR decodes to the photographed memo's destination. Preview uses clearly marked synthetic data. Live deployment verification is recorded after release below.
+Verification: full build and workspace typecheck pass; 14 isolated PostgreSQL acceptance tests and 4 hosting/render tests pass; Android and iOS exports pass. A separate disposable browser database verified customer autofill, sale posting and the Owner's identity on the actual receipt, then was removed. English, Bengali/long-address and actual web print PDFs each fit one A4 page; rasterized QR decodes to the photographed memo's destination. Preview uses clearly marked synthetic data.
+
+Released [88e1d49](https://github.com/asadbinjafor/TECH-TROLLY/commit/88e1d49fe1df74d6154541b79381033db5c4c6f7): [CI run 40955618467](https://github.com/asadbinjafor/TECH-TROLLY/actions/runs/40955618467) passed; Vercel deployment `BhNc22dN3Q3m8qjYJCDcPm2Pwz8b` succeeded, and Render deployment `dep-dbhrdd6tlv9c73cfqqr0` reports Deploy succeeded / Live. Render applied migration 005 through normal startup. Both public health endpoints return 200; canonical web login and dashboard return successfully without a mandatory password change. Read-only Supabase verification confirms the address column and party RLS. No sample business records were created on the live database.
 
 ## Managed hosting follow-up — 2026-10-30
 
