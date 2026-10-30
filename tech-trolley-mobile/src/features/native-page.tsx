@@ -9,6 +9,7 @@ import { t, currency, dateLabel } from "@tech-trolley/i18n";
 import {
   productDetails,
   canChangeStock,
+  acquisitionCycleIds,
   type CommandKind,
   type Report,
   type Document,
@@ -27,6 +28,7 @@ export function NativePage({ navigation, route, section: initial }: any) {
     c = useColors(),
     [search, setSearch] = useState(""),
     [tab, setTab] = useState("inStock"),
+    [purchaseTab, setPurchaseTab] = useState("allPurchases"),
     [historyUnit, setHistoryUnit] = useState<string | null>(null),
     [date, setDate] = useState(""),
     [showDate, setShowDate] = useState(false),
@@ -87,6 +89,9 @@ export function NativePage({ navigation, route, section: initial }: any) {
       </SafeAreaView>
     );
   const r = section === "overview" ? state.report : report || state.report;
+  const historyIds = historyUnit
+    ? acquisitionCycleIds(historyUnit, state.units)
+    : new Set<string>();
   const actions = (kinds: CommandKind[]) =>
     kinds.map((k) => (
       <Button key={k} label={tr(k)} onPress={() => command(k)} />
@@ -131,7 +136,14 @@ export function NativePage({ navigation, route, section: initial }: any) {
               }}
             >
               <Txt style={{ fontWeight: "600" }}>{d.number}</Txt>
-              <Txt style={{ fontSize: 11, color: c.muted }}>{tr(d.kind)}</Txt>
+              <Txt style={{ fontSize: 11, color: c.muted }}>
+                {tr(
+                  d.kind === "purchase" &&
+                    d.snapshot.purchaseSource === "individual"
+                    ? "individualPurchase"
+                    : d.kind,
+                )}
+              </Txt>
             </View>
             <Txt style={{ marginVertical: 6 }}>
               {String(
@@ -193,6 +205,17 @@ export function NativePage({ navigation, route, section: initial }: any) {
                 }
               />
             )}
+            {d.kind === "purchase" &&
+              d.snapshot.purchaseSource === "individual" && (
+                <Button
+                  label={tr("purchaseDeclaration")}
+                  onPress={() =>
+                    section === "overview" && !privacy.visible
+                      ? privacy.toggle()
+                      : navigation.navigate("PurchaseDeclaration", { id: d.id })
+                  }
+                />
+              )}
           </Panel>
         ))
     ) : (
@@ -464,13 +487,37 @@ export function NativePage({ navigation, route, section: initial }: any) {
         {section === "inventory" && historyUnit && (
           <>
             <Button label={tr("close")} onPress={() => setHistoryUnit(null)} />
-            {docList(state.documents.filter((d) => d.unit_id === historyUnit))}
+            {docList(
+              state.documents.filter(
+                (d) => d.unit_id && historyIds.has(d.unit_id),
+              ),
+            )}
           </>
         )}
         {section === "purchases" && (
           <>
-            {actions(["purchase"])}
-            {docList(state.documents.filter((d) => d.kind === "purchase"))}
+            {actions(["purchase", "individualPurchase"])}
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+              {["allPurchases", "supplierPurchases", "individualPurchases"].map(
+                (tab) => (
+                  <Button
+                    key={tab}
+                    label={tr(tab)}
+                    primary={purchaseTab === tab}
+                    onPress={() => setPurchaseTab(tab)}
+                  />
+                ),
+              )}
+            </View>
+            {docList(
+              state.documents.filter(
+                (d) =>
+                  d.kind === "purchase" &&
+                  (purchaseTab === "allPurchases" ||
+                    (purchaseTab === "individualPurchases") ===
+                      (d.snapshot.purchaseSource === "individual")),
+              ),
+            )}
           </>
         )}
         {section === "transactions" && (

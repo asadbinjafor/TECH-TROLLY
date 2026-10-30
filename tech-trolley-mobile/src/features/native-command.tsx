@@ -1,5 +1,5 @@
 import * as Crypto from "expo-crypto";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -26,6 +26,10 @@ import {
   partyKindForSource,
   unitFormValues,
   returnPreview,
+  sellerFormValues,
+  purchaseDeclarationTerms,
+  type IndividualSeller,
+  type Party,
   type Field,
   type CommandKind,
 } from "@tech-trolley/contracts";
@@ -34,13 +38,22 @@ import { useShop } from "../contexts/shop-context";
 import { Button, Input, Txt, Panel, useColors } from "../components/ui";
 import { api } from "../services/api";
 import { NativePartyManager } from "./native-party-manager";
+import { readPrivateDraft, writePrivateDraft } from "../services/private-draft";
 export function NativeCommand({ navigation, route }: any) {
+  const sellerSelection = useRef(0);
+  useEffect(
+    () => () => {
+      sellerSelection.current++;
+    },
+    [],
+  );
   const kind = route.params.kind as CommandKind,
     { state, user, lang, refresh } = useShop(),
     c = useColors(),
     [values, setValues] = useState<Record<string, string>>({}),
     [pending, setPending] = useState<{ key: string; data: any } | null>(null),
     [ready, setReady] = useState(false),
+    [loadAttempt, setLoadAttempt] = useState(0),
     [review, setReview] = useState(false),
     [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
@@ -52,10 +65,12 @@ export function NativeCommand({ navigation, route }: any) {
       t(kind === "expense" && k === "note" ? "expenseDetails" : k, lang);
   useEffect(() => {
     void (async () => {
-      const [[, draft], [, p]] = await AsyncStorage.multiGet([
-        storage,
-        pendingKey,
-      ]);
+      const [draft, p] =
+        kind === "individualPurchase"
+          ? [null, await readPrivateDraft(pendingKey)]
+          : (await AsyncStorage.multiGet([storage, pendingKey])).map(
+              ([, value]) => value,
+            );
       const initial = p
         ? Object.fromEntries(
             Object.entries(JSON.parse(p).data).map(([k, v]) => [
@@ -102,24 +117,83 @@ export function NativeCommand({ navigation, route }: any) {
       setValues(initial);
       setPending(p ? JSON.parse(p) : null);
       setReady(true);
-    })();
-  }, [kind, storage, pendingKey]);
+    })().catch(() => {
+      setError("SERVER_ERROR");
+    });
+  }, [kind, storage, pendingKey, loadAttempt]);
   useEffect(() => {
-    if (ready) void AsyncStorage.setItem(storage, JSON.stringify(values));
-  }, [values, ready, storage]);
-  if (!state || !ready) return <Txt>{tr("loading")}</Txt>;
+    if (ready && kind !== "individualPurchase")
+      void AsyncStorage.setItem(storage, JSON.stringify(values));
+  }, [values, ready, storage, kind]);
+  if (!state || !ready)
+    return (
+      <Panel>
+        <Txt accessibilityRole={error ? "alert" : undefined}>
+          {tr(error || "loading")}
+        </Txt>
+        {error && (
+          <>
+            <Button
+              label={tr("retry")}
+              onPress={() => {
+                setError("");
+                setLoadAttempt((n) => n + 1);
+              }}
+            />
+            <Button label={tr("cancel")} onPress={() => navigation.goBack()} />
+          </>
+        )}
+      </Panel>
+    );
+  const selectSeller = (id: string, selected?: Party) => {
+    const serial = ++sellerSelection.current,
+      base = sellerFormValues(
+        selected || state.parties.find((p) => p.id === id),
+      );
+    setValues((v) => ({ ...v, supplierId: id, ...base }));
+    if (!id) return;
+    void api
+      .request<{ seller: IndividualSeller | null }>(
+        `/purchases/sellers/${encodeURIComponent(id)}`,
+      )
+      .then(({ seller }) => {
+        if (!seller || serial !== sellerSelection.current) return;
+        setValues((v) =>
+          v.supplierId !== id
+            ? v
+            : {
+                ...v,
+                ...Object.fromEntries(
+                  Object.entries(seller).filter(
+                    ([key]) => v[key] === base[key],
+                  ),
+                ),
+              },
+        );
+      })
+      .catch((e) => {
+        if (serial === sellerSelection.current)
+          setError(e.code || "NETWORK_ERROR");
+      });
+  };
   const blockers = selectionBlockers(kind, values, state);
   const blocked = !pending && Object.keys(blockers).length > 0;
   const paymentHint = paymentHelp(kind, values);
   const persist = async (p: typeof pending) => {
     setPending(p);
-    if (p) await AsyncStorage.setItem(pendingKey, JSON.stringify(p));
+    if (kind === "individualPurchase")
+      await writePrivateDraft(pendingKey, p ? JSON.stringify(p) : null);
+    else if (p) await AsyncStorage.setItem(pendingKey, JSON.stringify(p));
     else await AsyncStorage.removeItem(pendingKey);
   };
   const finish = async (id: string) => {
     await AsyncStorage.multiRemove([storage, pendingKey]);
+    if (kind === "individualPurchase")
+      await writePrivateDraft(pendingKey, null);
     await refresh();
     if (kind === "sale") navigation.replace("Receipt", { id });
+    else if (kind === "individualPurchase")
+      navigation.replace("PurchaseDeclaration", { id });
     else navigation.goBack();
   };
   const submit = async () => {
@@ -166,6 +240,15 @@ export function NativeCommand({ navigation, route }: any) {
         total: decimal(total),
         due: decimal(due),
         grossProfit: unit ? decimal(total - minor(unit.cost)) : null,
+      };
+    } else if (kind === "individualPurchase") {
+      preview = {
+        total: decimal(minor(values.cost || "0")),
+        due: decimal(
+          minor(values.cost || "0") -
+            minor(values.cash || "0") -
+            minor(values.bank || "0"),
+        ),
       };
     }
   } catch {}
@@ -238,21 +321,25 @@ export function NativeCommand({ navigation, route }: any) {
                       enabled={!review && !pending}
                       style={{ color: c.text }}
                       onValueChange={(v) =>
-                        setValues((prev) => ({
-                          ...prev,
-                          [f.key]: String(v),
-                          ...(f.key === "unitId"
-                            ? unitFormValues(
-                                kind,
-                                state.units.find((u) => u.id === String(v)),
-                              )
-                            : {}),
-                          ...(f.key === "customerId"
-                            ? customerInvoiceFields(
-                                state.parties.find((p) => p.id === String(v)),
-                              )
-                            : {}),
-                        }))
+                        kind === "individualPurchase" && f.key === "supplierId"
+                          ? selectSeller(String(v))
+                          : setValues((prev) => ({
+                              ...prev,
+                              [f.key]: String(v),
+                              ...(f.key === "unitId"
+                                ? unitFormValues(
+                                    kind,
+                                    state.units.find((u) => u.id === String(v)),
+                                  )
+                                : {}),
+                              ...(f.key === "customerId"
+                                ? customerInvoiceFields(
+                                    state.parties.find(
+                                      (p) => p.id === String(v),
+                                    ),
+                                  )
+                                : {}),
+                            }))
                       }
                     >
                       <Picker.Item
@@ -376,6 +463,13 @@ export function NativeCommand({ navigation, route }: any) {
               <Txt>{tr("review")}</Txt>
             </Panel>
           )}
+          {review && kind === "individualPurchase" && (
+            <Panel>
+              <Txt>{tr("purchasePolicy")}</Txt>
+              <Txt>{purchaseDeclarationTerms}</Txt>
+              <Txt>{tr("purchasePrintHint")}</Txt>
+            </Panel>
+          )}
           {pending && !busy && (
             <Panel>
               <Txt>{tr("uncertain")}</Txt>
@@ -454,6 +548,14 @@ export function NativeCommand({ navigation, route }: any) {
                 <NativePartyManager
                   kind={partyKindForSource(partyField.source)}
                   onSelect={(p) => {
+                    if (
+                      kind === "individualPurchase" &&
+                      partyField.key === "supplierId"
+                    ) {
+                      selectSeller(p.id, p);
+                      setPartyField(null);
+                      return;
+                    }
                     setValues((v) => ({
                       ...v,
                       [partyField.key]: p.id,

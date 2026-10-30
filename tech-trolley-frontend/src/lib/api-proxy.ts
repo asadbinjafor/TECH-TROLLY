@@ -7,6 +7,7 @@ const routes = new Set([
   "commands",
   "reports",
   "documents",
+  "purchases",
   "health",
 ]);
 type ProxyOptions = {
@@ -75,7 +76,7 @@ export async function proxyApi(
   const pdfRoute =
     ["GET", "HEAD"].includes(method) &&
     path.length === 3 &&
-    path[0] === "documents" &&
+    ["documents", "purchases"].includes(path[0]) &&
     path[2] === "pdf";
   try {
     const response = await fetch(target, {

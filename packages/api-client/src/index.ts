@@ -66,12 +66,12 @@ export function createClient(
   }
   return {
     request,
-    receiptPdf: async (id: string) => {
+    receiptPdf: async (id: string, purchase = false) => {
       const bearer = await token?.();
       let response: Response;
       try {
         response = await fetch(
-          `${base}/documents/${encodeURIComponent(id)}/pdf?download=1`,
+          `${base}/${purchase ? "purchases" : "documents"}/${encodeURIComponent(id)}/pdf?download=1`,
           {
             credentials: "include",
             headers: {

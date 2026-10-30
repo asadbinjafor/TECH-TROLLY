@@ -31,6 +31,7 @@ import {
   decimal,
   productDetails,
   canChangeStock,
+  acquisitionCycleIds,
   type CommandKind,
   type Document,
   type Report,
@@ -43,6 +44,7 @@ import { StartupScreen } from "@/features/auth/startup-screen";
 import { CommandForm } from "@/features/transactions/command-form";
 import { Administration } from "@/features/settings/administration";
 import { Invoice } from "@/features/transactions/invoice";
+import { PurchaseDeclaration } from "@/features/transactions/purchase-declaration";
 import { ReportAnalysis } from "./report-analysis";
 import { LoanDues } from "@/features/accounts/loan-dues";
 import { QuickActions } from "./quick-actions";
@@ -68,6 +70,8 @@ const icons = [
 export function Workspace({ section }: { section: string }) {
   const router = useRouter();
   const [saleVersion, setSaleVersion] = useState(0);
+  const [declarationId, setDeclarationId] = useState<string | null>(null);
+  const [purchaseTab, setPurchaseTab] = useState("allPurchases");
   const {
       user,
       state,
@@ -109,6 +113,7 @@ export function Workspace({ section }: { section: string }) {
     setCommand(null);
     setReceipt(null);
     setDetail(null);
+    setDeclarationId(null);
   }, [section]);
   useEffect(() => {
     if (section === "overview" && !privacy.visible) {
@@ -181,6 +186,9 @@ export function Workspace({ section }: { section: string }) {
       />
     );
   const r = section === "overview" ? state.report : report || state.report;
+  const historyIds = historyUnit
+    ? acquisitionCycleIds(historyUnit, state.units)
+    : new Set<string>();
   const money = (v: string) =>
       section === "overview" && !privacy.visible
         ? "৳ ••••••"
@@ -273,7 +281,14 @@ export function Workspace({ section }: { section: string }) {
                     )}
                   </td>
                   <td data-label={tr("kind")}>
-                    <span className="badge">{tr(d.kind)}</span>
+                    <span className="badge">
+                      {tr(
+                        d.kind === "purchase" &&
+                          d.snapshot.purchaseSource === "individual"
+                          ? "individualPurchase"
+                          : d.kind,
+                      )}
+                    </span>
                     <small>
                       {String(
                         d.snapshot.model ||
@@ -445,7 +460,12 @@ export function Workspace({ section }: { section: string }) {
           </div>
         </header>
         <main id="main">
-          <div className="page-heading">
+          <div
+            className={
+              "page-heading" +
+              (section === "purchases" ? " purchase-heading" : "")
+            }
+          >
             <div>
               <h1>{tr(section)}</h1>
               <p>{dateLabel(state.today, lang)}</p>
@@ -476,6 +496,13 @@ export function Workspace({ section }: { section: string }) {
                 >
                   <Plus size={19} />
                   {tr("purchase")}
+                </button>
+                <button
+                  className="button"
+                  onClick={() => action("individualPurchase")}
+                >
+                  <Plus size={19} />
+                  {tr("individualPurchase")}
                 </button>
               </div>
             )}
@@ -829,7 +856,7 @@ export function Workspace({ section }: { section: string }) {
                 {tr("close")}
               </button>
               {table(
-                docs.filter((d) => d.unit_id === historyUnit),
+                docs.filter((d) => d.unit_id && historyIds.has(d.unit_id)),
                 "stockHistory",
               )}
             </>
@@ -845,8 +872,36 @@ export function Workspace({ section }: { section: string }) {
                 )}
                 {card("cash", state.balances.cash)}
               </div>
+              <div
+                className="heading-actions"
+                role="group"
+                aria-label={tr("purchaseSource")}
+              >
+                {[
+                  "allPurchases",
+                  "supplierPurchases",
+                  "individualPurchases",
+                ].map((tab) => (
+                  <button
+                    key={tab}
+                    className={
+                      "button " + (purchaseTab === tab ? "primary" : "")
+                    }
+                    aria-pressed={purchaseTab === tab}
+                    onClick={() => setPurchaseTab(tab)}
+                  >
+                    {tr(tab)}
+                  </button>
+                ))}
+              </div>
               {table(
-                docs.filter((d) => d.kind === "purchase"),
+                docs.filter(
+                  (d) =>
+                    d.kind === "purchase" &&
+                    (purchaseTab === "allPurchases" ||
+                      (purchaseTab === "individualPurchases") ===
+                        (d.snapshot.purchaseSource === "individual")),
+                ),
                 "purchases",
               )}
             </>
@@ -1163,6 +1218,7 @@ export function Workspace({ section }: { section: string }) {
             setCommand(null);
             setToast(tr("saved"));
             if (kind === "sale") void fetchReceipt(id, false);
+            if (kind === "individualPurchase") setDeclarationId(id);
           }}
         />
       )}
@@ -1228,6 +1284,18 @@ export function Workspace({ section }: { section: string }) {
             <p>
               {tr(detail.kind)} · {detail.business_date} · {detail.actor_name}
             </p>
+            {detail.kind === "purchase" &&
+              detail.snapshot.purchaseSource === "individual" && (
+                <button
+                  className="button primary"
+                  onClick={() => {
+                    setDeclarationId(detail.id);
+                    setDetail(null);
+                  }}
+                >
+                  {tr("purchaseDeclaration")}
+                </button>
+              )}
             {detail.kind === "stockEdit" && (
               <table>
                 <thead>
@@ -1306,6 +1374,13 @@ export function Workspace({ section }: { section: string }) {
             )}
           </section>
         </div>
+      )}
+      {declarationId && (
+        <PurchaseDeclaration
+          id={declarationId}
+          lang={lang}
+          onClose={() => setDeclarationId(null)}
+        />
       )}
       {toast && (
         <div className="toast" role="status">

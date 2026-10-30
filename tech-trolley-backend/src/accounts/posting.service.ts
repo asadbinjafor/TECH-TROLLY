@@ -7,6 +7,9 @@ import {
   decimal,
   z,
   invoiceShop,
+  individualSellerSchema,
+  individualSellerKeys,
+  purchaseDeclarationTerms,
   type CommandKind,
   type User,
 } from "@tech-trolley/contracts";
@@ -82,8 +85,18 @@ export class PostingService {
             partyId: string | null = null,
             unitId: string | null = null,
             reversalOf: string | null = null;
-          let snapshot: any = { ...data },
+          const individual = kind === "individualPurchase";
+          const isPurchase = kind === "purchase" || individual;
+          const documentKind = individual ? "purchase" : kind;
+          // Do not spread NID/nominee/parent/address fields into public state.
+          let snapshot: any = Object.fromEntries(
+              Object.entries(data).filter(
+                ([key]) =>
+                  !individual || !individualSellerKeys.includes(key as any),
+              ),
+            ),
             entries: Record<string, bigint> = {};
+          let previousUnitId: string | null = null;
           const line = (account: string, n: bigint) => {
             entries[account] = (entries[account] || 0n) + n;
           };
@@ -156,6 +169,16 @@ export class PostingService {
             snapshot.originalNumber = purchase.number;
             snapshot.partyName = purchase.snapshot.partyName;
             if (kind === "stockEdit") {
+              if (
+                data.imei &&
+                (
+                  await tx.query(
+                    "SELECT 1 FROM inventory_unit WHERE imei=$1 AND status='IN_STOCK' AND id<>$2",
+                    [data.imei, unit.id],
+                  )
+                ).length
+              )
+                fail("IMEI_IN_STOCK", 409);
               snapshot.before = before;
               snapshot.after = Object.fromEntries(
                 metadataKeys.map((k) => [k, data[k]]),
@@ -194,12 +217,31 @@ export class PostingService {
               if (offset > 0n)
                 allocations.push({ target: purchase.id, amount: offset });
             }
-          } else if (kind === "purchase") {
+          } else if (isPurchase) {
             await party(data.supplierId, "supplier");
             partyId = data.supplierId;
+            if (data.imei) {
+              if (
+                (
+                  await tx.query(
+                    "SELECT 1 FROM inventory_unit WHERE imei=$1 AND status='IN_STOCK'",
+                    [data.imei],
+                  )
+                ).length
+              )
+                fail("IMEI_IN_STOCK", 409);
+              const [previous] = await tx.query(
+                "SELECT u.id FROM inventory_unit u JOIN document p ON p.id=u.purchase_id WHERE u.imei=$1 AND u.status<>'REVERSED' ORDER BY p.created_at DESC,p.id DESC LIMIT 1",
+                [data.imei],
+              );
+              previousUnitId = previous?.id || null;
+              if (previousUnitId) snapshot.previousUnitId = previousUnitId;
+            }
             const cost = positive(minor(data.cost)),
-              courier = minor(data.procurement),
-              paid = minor(data.paid);
+              courier = individual ? 0n : minor(data.procurement),
+              paid = individual
+                ? minor(data.cash) + minor(data.bank)
+                : minor(data.paid);
             if (paid > cost) fail("PAYMENT_INVALID");
             total = cost;
             due = cost - paid;
@@ -213,7 +255,15 @@ export class PostingService {
               cost + (data.treatment === "capitalize" ? courier : 0n),
             );
             if (data.treatment === "expense") line("expense", courier);
-            line(data.account, -paid - courier);
+            if (individual) {
+              snapshot.purchaseSource = "individual";
+              snapshot.partyName = data.sellerName;
+              snapshot.partyPhone = data.sellerPhone;
+              snapshot.paid = decimal(paid);
+              snapshot.actorRole = actor.role;
+              line("cash", -minor(data.cash));
+              line("bank", -minor(data.bank));
+            } else line(data.account, -paid - courier);
             line("payable", -due);
           } else if (kind === "sale") {
             const [u] = await tx.query(
@@ -431,6 +481,28 @@ export class PostingService {
                 fail("DEPENDENCY_CONFLICT", 409);
               if (target.kind === "sale" && unit.sale_id !== target.id)
                 fail("DEPENDENCY_CONFLICT", 409);
+              if (target.kind === "sale") {
+                const [later] = await tx.query(
+                  `WITH RECURSIVE cycles AS (
+                  SELECT id,status FROM inventory_unit WHERE previous_unit_id=$1
+                  UNION ALL SELECT u.id,u.status FROM inventory_unit u JOIN cycles c ON u.previous_unit_id=c.id
+                ) SELECT 1 FROM cycles WHERE status<>'REVERSED'
+                UNION ALL SELECT 1 FROM inventory_unit u JOIN document p ON p.id=u.purchase_id
+                  WHERE u.id<>$1 AND u.imei=$2 AND u.status<>'REVERSED' AND p.created_at>(SELECT created_at FROM document WHERE id=$3) LIMIT 1`,
+                  [unit.id, unit.imei, target.id],
+                );
+                if (later) fail("LATER_ACQUISITION", 409);
+                if (
+                  unit.imei &&
+                  (
+                    await tx.query(
+                      "SELECT 1 FROM inventory_unit WHERE imei=$1 AND status='IN_STOCK' AND id<>$2",
+                      [unit.imei, unit.id],
+                    )
+                  ).length
+                )
+                  fail("IMEI_IN_STOCK", 409);
+              }
               unitId = unit.id;
             }
             const source = await tx.query(
@@ -487,7 +559,7 @@ export class PostingService {
             [
               id,
               number,
-              kind,
+              documentKind,
               actor.id,
               actor.name,
               instant,
@@ -512,12 +584,27 @@ export class PostingService {
               "UPDATE salary_settlement SET document_id=NULL WHERE document_id=$1",
               [reversalOf],
             );
-          if (kind === "purchase") {
+          if (individual) {
+            const seller = individualSellerSchema.parse(
+              Object.fromEntries(
+                individualSellerKeys.map((key) => [key, data[key]]),
+              ),
+            );
+            await tx.query(
+              "INSERT INTO purchase_declaration(document_id,seller,terms,buyer_role) VALUES($1,$2,$3,$4)",
+              [id, seller, purchaseDeclarationTerms, actor.role],
+            );
+            await tx.query(
+              "INSERT INTO individual_seller_profile(party_id,details,updated_at) VALUES($1,$2,$3) ON CONFLICT(party_id) DO UPDATE SET details=EXCLUDED.details,updated_at=EXCLUDED.updated_at",
+              [partyId, seller, instant],
+            );
+          }
+          if (isPurchase) {
             const [{ seq: unitNumber }] = await tx.query(
               "SELECT nextval('unit_number') AS seq",
             );
             await tx.query(
-              `INSERT INTO inventory_unit(id,internal_id,model,brand,variant,category,condition,imei,battery,box,cost,status,purchase_id,storage,color) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'IN_STOCK',$12,$13,$14)`,
+              `INSERT INTO inventory_unit(id,internal_id,model,brand,variant,category,condition,imei,battery,box,cost,status,purchase_id,storage,color,previous_unit_id) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'IN_STOCK',$12,$13,$14,$15)`,
               [
                 unitId,
                 `ST-${String(unitNumber).padStart(6, "0")}`,
@@ -533,6 +620,7 @@ export class PostingService {
                 id,
                 data.storage || "",
                 data.color || "",
+                previousUnitId,
               ],
             );
             await tx.query(

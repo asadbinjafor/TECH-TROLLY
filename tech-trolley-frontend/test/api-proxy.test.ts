@@ -217,6 +217,13 @@ test("same-origin receipt PDFs retain binary bytes and cookies, reject fake PDFs
     assert.equal(seen[0].cookie, "tt_session=private-session");
     assert.equal(seen[0].authorization, undefined);
     assert.equal(seen[0]["x-native-client"], undefined);
+    const purchase = await call(["purchases", "saved-purchase", "pdf"]);
+    assert.equal(purchase.status, 200);
+    assert.deepEqual(Buffer.from(await purchase.arrayBuffer()), pdf);
+    assert.equal(
+      (await call(["purchases", "saved-purchase", "pdf"], "?bad=1")).status,
+      502,
+    );
     assert.equal(
       (await call(["documents", "saved-invoice", "pdf"], "?bad=1")).status,
       502,

@@ -5,8 +5,12 @@ import { resolve } from "node:path";
 import puppeteer from "puppeteer-core";
 import chromium from "@sparticuz/chromium";
 import { PDFDocument } from "pdf-lib";
-import { renderInvoiceHtml } from "@tech-trolley/invoice";
-import type { Receipt } from "@tech-trolley/contracts";
+import {
+  renderInvoiceHtml,
+  renderPurchaseHtml,
+  fitPurchaseLayout,
+} from "@tech-trolley/invoice";
+import type { Receipt, PurchaseDeclaration } from "@tech-trolley/contracts";
 import { fail } from "../common/errors";
 import { invoiceRendererHash } from "./invoice-version";
 
@@ -24,8 +28,23 @@ export class InvoicePdfService {
   private running?: { key: string; result: Promise<Buffer> };
 
   async render(receipt: Receipt): Promise<Buffer> {
+    return this.renderDocument(receipt, false);
+  }
+
+  async renderPurchase(declaration: PurchaseDeclaration): Promise<Buffer> {
+    return this.renderDocument(declaration, true);
+  }
+
+  private async renderDocument(
+    receipt: Receipt | PurchaseDeclaration,
+    purchase: boolean,
+  ): Promise<Buffer> {
     const key = createHash("sha256")
-      .update(invoiceRendererHash + JSON.stringify(receipt))
+      .update(
+        invoiceRendererHash +
+          (purchase ? "purchase:" : "sale:") +
+          JSON.stringify(receipt),
+      )
       .digest("hex");
     const hit = this.cache.get(key);
     if (hit && hit.expires > Date.now()) return hit.bytes;
@@ -33,7 +52,7 @@ export class InvoicePdfService {
       if (this.running.key === key) return this.running.result;
       fail("PDF_BUSY", 503);
     }
-    const result = this.generate(receipt)
+    const result = this.generate(receipt, purchase)
       .then((bytes) => {
         this.cache.set(key, { bytes, expires: Date.now() + 10 * 60_000 });
         while (this.cache.size > 4)
@@ -47,7 +66,10 @@ export class InvoicePdfService {
     return result;
   }
 
-  private async generate(receipt: Receipt): Promise<Buffer> {
+  private async generate(
+    receipt: Receipt | PurchaseDeclaration,
+    purchase: boolean,
+  ): Promise<Buffer> {
     let browser: Awaited<ReturnType<typeof puppeteer.launch>> | undefined;
     let stage = "launch";
     try {
@@ -79,35 +101,43 @@ export class InvoicePdfService {
         else void request.abort();
       });
       await page.setContent(
-        renderInvoiceHtml(receipt, "en", { font: this.font }),
+        purchase
+          ? renderPurchaseHtml(receipt as PurchaseDeclaration, {
+              font: this.font,
+            })
+          : renderInvoiceHtml(receipt as Receipt, "en", { font: this.font }),
         { waitUntil: "load", timeout: 15_000 },
       );
       await page.emulateMediaType("print");
-      const fits = await page.evaluate(async () => {
-        await document.fonts.ready;
-        const rect = (selector: string) =>
-          document.querySelector(selector)!.getBoundingClientRect();
-        const body = document.querySelector(
-          ".tt-memo__items-body",
-        ) as HTMLElement;
-        const front = rect(".tt-memo__front"),
-          back = rect(".tt-memo__back");
-        return (
-          body.scrollHeight <= body.clientHeight + 1 &&
-          Array.from(document.querySelectorAll(".tt-memo__product-row")).every(
-            (row) =>
-              row.getBoundingClientRect().bottom <=
-              body.getBoundingClientRect().bottom + 1,
-          ) &&
-          rect(".tt-memo__accounting").bottom <
-            rect(".tt-memo__authorised").top &&
-          rect(".tt-memo__warranty ul").bottom <=
-            rect(".tt-memo__warranty").bottom + 1 &&
-          rect(".tt-memo__terms").bottom < rect(".tt-memo__delivery").top &&
-          rect(".tt-memo__thanks").bottom <= front.bottom + 1 &&
-          rect(".tt-memo__back-footer").bottom <= back.bottom + 1
-        );
-      });
+      const fits = purchase
+        ? await page.evaluate(fitPurchaseLayout)
+        : await page.evaluate(async () => {
+            await document.fonts.ready;
+            const rect = (selector: string) =>
+              document.querySelector(selector)!.getBoundingClientRect();
+            const body = document.querySelector(
+              ".tt-memo__items-body",
+            ) as HTMLElement;
+            const front = rect(".tt-memo__front"),
+              back = rect(".tt-memo__back");
+            return (
+              body.scrollHeight <= body.clientHeight + 1 &&
+              Array.from(
+                document.querySelectorAll(".tt-memo__product-row"),
+              ).every(
+                (row) =>
+                  row.getBoundingClientRect().bottom <=
+                  body.getBoundingClientRect().bottom + 1,
+              ) &&
+              rect(".tt-memo__accounting").bottom <
+                rect(".tt-memo__authorised").top &&
+              rect(".tt-memo__warranty ul").bottom <=
+                rect(".tt-memo__warranty").bottom + 1 &&
+              rect(".tt-memo__terms").bottom < rect(".tt-memo__delivery").top &&
+              rect(".tt-memo__thanks").bottom <= front.bottom + 1 &&
+              rect(".tt-memo__back-footer").bottom <= back.bottom + 1
+            );
+          });
       if (!fits) return fail("PDF_LAYOUT_ERROR", 503);
       const bytes = await page.pdf({
         format: "A4",
@@ -120,7 +150,7 @@ export class InvoicePdfService {
       const pdf = await PDFDocument.load(bytes);
       stage = "validate";
       if (
-        pdf.getPageCount() !== 2 ||
+        pdf.getPageCount() !== (purchase ? 1 : 2) ||
         pdf
           .getPages()
           .some(
@@ -130,7 +160,9 @@ export class InvoicePdfService {
           )
       )
         fail("PDF_LAYOUT_ERROR", 503);
-      pdf.setTitle(`${receipt.number} - ${receipt.shop.name}`);
+      pdf.setTitle(
+        `${receipt.number} - ${purchase ? "Phone purchase" : (receipt as Receipt).shop.name}`,
+      );
       pdf.setCreator("Tech Trolley");
       pdf.setProducer("Tech Trolley");
       return Buffer.from(await pdf.save());

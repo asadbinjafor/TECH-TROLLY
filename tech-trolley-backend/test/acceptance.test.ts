@@ -292,19 +292,10 @@ test("isolated PostgreSQL acceptance, authorization, accounting and retry safety
         const next = (await api("get", "/shop/state")).body.units.find(
           (x: any) => x.imei === "000000000000003",
         );
-        const rs = await Promise.all([
-          api("post", "/commands/sale", { ...data, unitId: next.id }).set(
-            "Idempotency-Key",
-            randomUUID(),
-          ),
-          api("post", "/commands/sale", { ...data, unitId: next.id }).set(
-            "Idempotency-Key",
-            randomUUID(),
-          ),
-        ]);
-        assert.deepEqual(rs.map((r) => r.status).sort(), [201, 409]);
         const before = (await db.query("SELECT count(*) FROM document"))[0]
           .count;
+        // Reacquisition after a sale is now supported; duplicates must still be
+        // rejected while this exact phone is physically IN_STOCK.
         assert.equal(
           (
             await api("post", "/commands/purchase", buy("000000000000003")).set(
@@ -318,6 +309,17 @@ test("isolated PostgreSQL acceptance, authorization, accounting and retry safety
           (await db.query("SELECT count(*) FROM document"))[0].count,
           before,
         );
+        const rs = await Promise.all([
+          api("post", "/commands/sale", { ...data, unitId: next.id }).set(
+            "Idempotency-Key",
+            randomUUID(),
+          ),
+          api("post", "/commands/sale", { ...data, unitId: next.id }).set(
+            "Idempotency-Key",
+            randomUUID(),
+          ),
+        ]);
+        assert.deepEqual(rs.map((r) => r.status).sort(), [201, 409]);
       },
     );
     let staffToken: string, staffId: string;

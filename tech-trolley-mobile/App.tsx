@@ -26,6 +26,7 @@ import { NativePage } from "./src/features/native-page";
 import { NativeCommand } from "./src/features/native-command";
 import { NativeAdministration } from "./src/features/native-administration";
 import { NativeReceipt } from "./src/features/native-receipt";
+import { NativePurchaseDeclaration } from "./src/features/native-purchase-declaration";
 const Tabs = createBottomTabNavigator(),
   Stack = createNativeStackNavigator();
 function Login() {
@@ -238,6 +239,11 @@ function Root() {
           name="Receipt"
           component={NativeReceipt}
           options={{ title: t("receipt", lang) }}
+        />
+        <Stack.Screen
+          name="PurchaseDeclaration"
+          component={NativePurchaseDeclaration}
+          options={{ title: t("purchaseDeclaration", lang) }}
         />
       </Stack.Navigator>
     </NavigationContainer>

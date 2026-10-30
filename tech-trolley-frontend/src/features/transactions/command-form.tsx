@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   choices,
   prepareForm,
@@ -16,6 +16,10 @@ import {
   partyKindForSource,
   unitFormValues,
   returnPreview,
+  sellerFormValues,
+  purchaseDeclarationTerms,
+  type IndividualSeller,
+  type Party,
   type Field,
   type CommandKind,
 } from "@tech-trolley/contracts";
@@ -41,6 +45,13 @@ export function CommandForm({
   onSaved: (id: string, kind: CommandKind) => void;
 }) {
   const { state, lang, user, refresh, connection } = useShop();
+  const sellerSelection = useRef(0);
+  useEffect(
+    () => () => {
+      sellerSelection.current++;
+    },
+    [],
+  );
   const storage = `tt-${user!.id}-draft-${kind}`,
     pendingKey = `tt-${user!.id}-pending-${kind}`;
   const [values, setValues] = useState<Record<string, string>>(() => {
@@ -95,6 +106,37 @@ export function CommandForm({
     sessionStorage.setItem(storage, JSON.stringify(values));
   }, [storage, values]);
   if (!state) return null;
+  const selectSeller = (id: string, selected?: Party) => {
+    const serial = ++sellerSelection.current;
+    const base = sellerFormValues(
+      selected || state.parties.find((p) => p.id === id),
+    );
+    setValues((v) => ({ ...v, supplierId: id, ...base }));
+    if (!id) return;
+    void api
+      .request<{ seller: IndividualSeller | null }>(
+        `/purchases/sellers/${encodeURIComponent(id)}`,
+      )
+      .then(({ seller }) => {
+        if (!seller || serial !== sellerSelection.current) return;
+        setValues((v) =>
+          v.supplierId !== id
+            ? v
+            : {
+                ...v,
+                ...Object.fromEntries(
+                  Object.entries(seller).filter(
+                    ([key]) => v[key] === base[key],
+                  ),
+                ),
+              },
+        );
+      })
+      .catch((e) => {
+        if (serial === sellerSelection.current)
+          setError(e.code || "NETWORK_ERROR");
+      });
+  };
   const blockers = selectionBlockers(kind, values, state);
   const blocked = !pending && Object.keys(blockers).length > 0;
   const paymentHint = paymentHelp(kind, values);
@@ -158,6 +200,15 @@ export function CommandForm({
         total: decimal(total),
         due: decimal(due),
         profit: unit ? decimal(total - minor(unit.cost)) : undefined,
+      };
+    } else if (kind === "individualPurchase") {
+      preview = {
+        total: decimal(minor(values.cost || "0")),
+        due: decimal(
+          minor(values.cost || "0") -
+            minor(values.cash || "0") -
+            minor(values.bank || "0"),
+        ),
       };
     }
   } catch {}
@@ -241,7 +292,12 @@ export function CommandForm({
               <label
                 key={field.key}
                 className={
-                  field.key === "note" || field.key === "customerAddress"
+                  [
+                    "note",
+                    "customerAddress",
+                    "presentAddress",
+                    "permanentAddress",
+                  ].includes(field.key)
                     ? "wide"
                     : ""
                 }
@@ -262,23 +318,28 @@ export function CommandForm({
                     required={fieldRequired(kind, field, values, state)}
                     disabled={!!pending || review}
                     onChange={(e) =>
-                      setValues((v) => ({
-                        ...v,
-                        [field.key]: e.target.value,
-                        ...(field.key === "unitId"
-                          ? unitFormValues(
-                              kind,
-                              state.units.find((u) => u.id === e.target.value),
-                            )
-                          : {}),
-                        ...(field.key === "customerId"
-                          ? customerInvoiceFields(
-                              state.parties.find(
-                                (p) => p.id === e.target.value,
-                              ),
-                            )
-                          : {}),
-                      }))
+                      kind === "individualPurchase" &&
+                      field.key === "supplierId"
+                        ? selectSeller(e.target.value)
+                        : setValues((v) => ({
+                            ...v,
+                            [field.key]: e.target.value,
+                            ...(field.key === "unitId"
+                              ? unitFormValues(
+                                  kind,
+                                  state.units.find(
+                                    (u) => u.id === e.target.value,
+                                  ),
+                                )
+                              : {}),
+                            ...(field.key === "customerId"
+                              ? customerInvoiceFields(
+                                  state.parties.find(
+                                    (p) => p.id === e.target.value,
+                                  ),
+                                )
+                              : {}),
+                          }))
                     }
                   >
                     <option value="">
@@ -395,6 +456,13 @@ export function CommandForm({
             </div>
           )}
           {review && <p className="notice">{t("review", lang)}</p>}
+          {kind === "individualPurchase" && review && (
+            <section className="notice">
+              <b>{t("purchasePolicy", lang)}</b>
+              <p>{purchaseDeclarationTerms}</p>
+              <p>{t("purchasePrintHint", lang)}</p>
+            </section>
+          )}
           {pending && !busy && (
             <div className="notice">
               <p>{t("uncertain", lang)}</p>
@@ -484,6 +552,14 @@ export function CommandForm({
             <PartyManager
               kind={partyKindForSource(partyField.source)}
               onSelect={(p) => {
+                if (
+                  kind === "individualPurchase" &&
+                  partyField.key === "supplierId"
+                ) {
+                  selectSeller(p.id, p);
+                  setPartyField(null);
+                  return;
+                }
                 setValues((v) => ({
                   ...v,
                   [partyField.key]: p.id,

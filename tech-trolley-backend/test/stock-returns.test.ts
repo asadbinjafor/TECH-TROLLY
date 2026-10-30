@@ -59,6 +59,12 @@ test("stock edits and supplier returns preserve immutable accounting and actual 
       });
     }
     await bootstrap();
+    // The current PostingService writes this nullable acquisition link. Add it
+    // temporarily to the explicitly owned v7 fixture, then remove it before
+    // exercising the real v7 -> v8 -> v9 startup migration below.
+    await db.query(
+      "ALTER TABLE inventory_unit ADD COLUMN previous_unit_id uuid",
+    );
     app = await createApp();
     await app.init();
     const http = app.getHttpServer();
@@ -150,6 +156,9 @@ test("stock edits and supplier returns preserve immutable accounting and actual 
         );
         const journal = await db.query(
           "SELECT * FROM journal_line ORDER BY id",
+        );
+        await db.query(
+          "ALTER TABLE inventory_unit DROP COLUMN previous_unit_id",
         );
         await migrate();
         assert.deepEqual(

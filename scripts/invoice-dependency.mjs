@@ -4,7 +4,7 @@ import { resolve } from "node:path";
 
 export function invoiceSourceHash(root) {
   const hash = createHash("sha256");
-  for (const file of ["artwork.ts", "index.ts", "styles.ts"])
+  for (const file of ["artwork.ts", "index.ts", "styles.ts", "purchase.ts"])
     hash.update(
       file +
         "\n" +

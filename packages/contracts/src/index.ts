@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { individualSellerSchema } from "./purchase-declaration";
+export * from "./purchase-declaration";
 export { z };
 export { ZodError } from "zod";
 export {
@@ -209,6 +211,45 @@ export const commands = {
           message: "ACCESSORY_IMEI",
         });
     }),
+  individualPurchase: z.strictObject({
+    ...individualSellerSchema.shape,
+    supplierId: id,
+    brand: text.max(60).regex(/^[^\r\n\t]+$/),
+    model: text.max(100).regex(/^[^\r\n\t]+$/),
+    storage: z
+      .string()
+      .trim()
+      .max(40)
+      .regex(/^[^\r\n\t]*$/)
+      .default(""),
+    color: z
+      .string()
+      .trim()
+      .max(40)
+      .regex(/^[^\r\n\t]*$/)
+      .default(""),
+    variant: z
+      .string()
+      .trim()
+      .max(80)
+      .regex(/^[^\r\n\t]*$/)
+      .default(""),
+    category: z.literal("phone").default("phone"),
+    condition: z.enum(["new", "used", "refurbished"]),
+    imei: z.string().regex(/^\d{15}$/),
+    battery: z.number().int().min(0).max(100).nullable().default(null),
+    box: z.enum(["with", "without"]),
+    accessories: z
+      .string()
+      .trim()
+      .max(120)
+      .regex(/^[^\r\n\t]*$/)
+      .default(""),
+    cost: money,
+    cash: money,
+    bank: money,
+    note,
+  }),
   sale: z
     .strictObject({
       unitId: id,
@@ -301,6 +342,7 @@ export interface Unit {
   status: "IN_STOCK" | "SOLD" | "REVERSED" | "RETURNED";
   revision: number;
   sale_id: string | null;
+  previous_unit_id?: string | null;
 }
 export interface Document {
   id: string;
@@ -547,6 +589,40 @@ export const forms: Record<CommandKind, Field[]> = {
     { ...a, optional: true },
     n,
   ],
+  individualPurchase: [
+    f("supplierId", "select", {
+      source: "suppliers",
+      label: "individualSeller",
+    }),
+    ...[
+      "sellerName",
+      "sellerPhone",
+      "fatherName",
+      "motherName",
+      "presentAddress",
+      "permanentAddress",
+      "identityNumber",
+      "nomineeName",
+      "nomineePhone",
+    ].map((key) => f(key)),
+    f("model"),
+    f("brand"),
+    f("storage", "text", { optional: true }),
+    f("color", "text", { optional: true }),
+    f("variant", "text", { optional: true }),
+    f("condition", "select", {
+      options: ["new", "used", "refurbished"],
+      default: "used",
+    }),
+    f("imei"),
+    f("battery", "number", { optional: true }),
+    f("box", "select", { options: ["with", "without"] }),
+    f("accessories", "text", { optional: true }),
+    f("cost", "money"),
+    optionalMoney("cash", { label: "cashPaid" }),
+    optionalMoney("bank", { label: "bankPaid" }),
+    n,
+  ],
   sale: [
     f("unitId", "select", { source: "units" }),
     f("customerId", "select", { source: "customers", optional: true }),
@@ -700,6 +776,7 @@ export function fieldRequired(
   return !field.optional;
 }
 export function paymentHelp(kind: CommandKind, values: Record<string, string>) {
+  if (kind === "individualPurchase") return "individualPaymentHelp";
   if (kind !== "sale") return null;
   try {
     const total = minor(values.price || "0") - minor(values.discount || "0"),
@@ -716,6 +793,15 @@ export function paymentHelp(kind: CommandKind, values: Record<string, string>) {
 export function fieldMaxLength(kind: CommandKind, field: Field) {
   if (field.type === "money") return 15;
   if (field.type === "month") return 7;
+  if (kind === "individualPurchase") {
+    const limit = (
+      { brand: 60, model: 100, storage: 40, color: 40, variant: 80 } as Record<
+        string,
+        number
+      >
+    )[field.key];
+    if (limit) return limit;
+  }
   return (
     (
       {
@@ -730,6 +816,16 @@ export function fieldMaxLength(kind: CommandKind, field: Field) {
         customerPhone: 30,
         customerAddress: 300,
         expenseName: 180,
+        sellerName: 80,
+        sellerPhone: 30,
+        fatherName: 80,
+        motherName: 80,
+        presentAddress: 240,
+        permanentAddress: 240,
+        identityNumber: 60,
+        nomineeName: 80,
+        nomineePhone: 30,
+        accessories: 120,
       } as Record<string, number>
     )[field.key] ?? (field.key === "note" && !field.optional ? 180 : 300)
   );
@@ -872,6 +968,14 @@ export function prepare(kind: CommandKind, raw: Record<string, string>) {
   )
     issue("paid", "PAYMENT_INVALID");
   if (
+    kind === "individualPurchase" &&
+    minor(String(values.cash)) + minor(String(values.bank)) >
+      minor(String(values.cost))
+  ) {
+    issue("cash", "PAYMENT_INVALID");
+    issue("bank", "PAYMENT_INVALID");
+  }
+  if (
     kind === "salary" &&
     minor(String(values.applyAdvance)) > minor(String(values.amount))
   )
@@ -981,6 +1085,29 @@ export function correctableDocument(d: Document, state: State) {
   const unit = state.units.find((u) => u.id === d.unit_id);
   if (d.kind === "purchase" && unit && unit.status !== "IN_STOCK") return false;
   if (d.kind === "sale" && unit && unit.sale_id !== d.id) return false;
+  if (d.kind === "sale" && unit) {
+    const descendants = new Set([unit.id]);
+    let changed = true;
+    while (changed) {
+      changed = false;
+      for (const cycle of state.units)
+        if (
+          cycle.previous_unit_id &&
+          descendants.has(cycle.previous_unit_id) &&
+          !descendants.has(cycle.id)
+        ) {
+          descendants.add(cycle.id);
+          changed = true;
+        }
+    }
+    if (
+      state.units.some(
+        (u) =>
+          u.id !== unit.id && descendants.has(u.id) && u.status !== "REVERSED",
+      )
+    )
+      return false;
+  }
   try {
     const s = d.snapshot;
     const originalDue =
@@ -1012,6 +1139,24 @@ export function canChangeStock(unit: Unit, state: State) {
           d.business_date === state.today,
       ))
   );
+}
+export function acquisitionCycleIds(unitId: string, units: Unit[]) {
+  const ids = new Set([unitId]);
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const unit of units)
+      if (
+        unit.previous_unit_id &&
+        (ids.has(unit.id) || ids.has(unit.previous_unit_id))
+      )
+        for (const id of [unit.id, unit.previous_unit_id])
+          if (!ids.has(id)) {
+            ids.add(id);
+            changed = true;
+          }
+  }
+  return ids;
 }
 export function unitFormValues(
   kind: CommandKind,

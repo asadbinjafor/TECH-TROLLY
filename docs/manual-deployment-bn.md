@@ -1,8 +1,14 @@
 # নিজে deployment করার নির্দেশনা
 
-নতুন DUE / ধার-পাওনা পাতা এবং optional Expense reason / details update-এর deployment অনুমোদিত। পরীক্ষিত পরিবর্তন `codex/tech-trolley-production`-এ push করলে নিচের স্বাভাবিক automatic deployment চলবে। এই update-এ নতুন migration নেই; আগের Stock Edit / Supplier Return-এর migration 008 অক্ষত থাকবে। Supabase reset বা পুরোনো SQL edit করবেন না। ব্যক্তির কাছ থেকে ফোন কেনার পূর্ণ পরিচয়/ঘোষণাপত্রের আলোচনা এই release-এর অংশ নয়।
+ব্যক্তির কাছ থেকে ফোন ক্রয় / পরিচয় / এক পৃষ্ঠার A4 ক্রয়পত্র update-এর deployment অনুমোদিত। পরীক্ষিত পরিবর্তন `codex/tech-trolley-production`-এ push করলে নিচের স্বাভাবিক automatic deployment চলবে। নতুন migration **009** Render-এর স্বাভাবিক startup runner চালাবে; পুরোনো আটটি migration অক্ষত থাকবে। Supabase reset বা হাতে SQL চালাবেন না।
 
-আগের Stock Return release live আছে: API version 1.1, migration 008-সহ মোট ৮টি migration। নতুন release-এর পর CI ও `/api/health`-এ প্রত্যাশিত revision মিলিয়ে নিশ্চিত হবেন। শুধু docs-এ শেষ commit দিয়ে API roll-out হয়েছে ধরে নেবেন না। Dashboard-এর Manual Deploy সাধারণ update-এর জন্য লাগবে না।
+নতুন release-এর পর CI ও `/api/health`-এ প্রত্যাশিত API revision মিলিয়ে নিশ্চিত হবেন। এই release-এ মোট **৯টি migration** ও **১৯টি RLS-সুরক্ষিত app table** হবে। শুধু docs-এর শেষ commit দিয়ে API roll-out হয়েছে ধরে নেবেন না। Dashboard-এর Manual Deploy সাধারণ update-এর জন্য লাগবে না।
+
+ব্যবহার: **কেনাকাটা → ব্যক্তির কাছ থেকে ফোন ক্রয়**। বিক্রেতা নির্বাচন/যোগ করুন, পরিচয়ের সব তথ্য পূরণ ও যাচাই করুন, ফোনের তথ্য ও বক্সসহ/বক্স ছাড়া বাছুন। শুধু বাস্তবে দেওয়া Cash/Bank লিখুন; অব্যবহৃত ঘর খালি থাকবে। Review-তে মোট/বাকি মিলিয়ে নিশ্চিত করুন। Save-এর পরে **ফোন ক্রয়পত্র → PDF খুলুন / প্রিন্ট** থেকে A4, Actual size / 100% দিয়ে এক পৃষ্ঠা প্রিন্ট নিন। দুইটি স্বাক্ষর হাতে দেবেন। পরে Purchases-এর Details থেকে একই মূল ক্রয়পত্র আবার খুলতে পারবেন। পরের বাকি পরিশোধ বা Stock Edit মূল স্বাক্ষরিত তথ্য বদলাবে না; লেনদেনের history-তে থাকবে।
+
+বিক্রেতাকে দেওয়ার বাকি থাকলে **টাকা ও বাকি → Supplier-কে বাকি পরিশোধ** থেকে মূল ক্রয়টি বেছে বাস্তব পেমেন্ট দিন। Personal DUE / ধার-পাওনা এখানে ব্যবহার করবেন না। একই ফোন আগে বিক্রি হয়ে থাকলে আবার নতুন purchase হবে; পুরোনো লাভ/ইতিহাস মুছবে না। একই IMEI ইতিমধ্যে stock-এ থাকলে দ্বিতীয়বার যোগ বন্ধ থাকবে।
+
+Migration 009-এর পরে একই ফোনের নতুন ক্রয়চক্র তৈরি হলে আগের API version-এ সরাসরি rollback করবেন না—সেটি নতুন history ও reversal guard বোঝে না। প্রয়োজন হলে যাচাই করা নতুন fix দিয়ে recovery করতে হবে।
 
 DUE / ধার-পাওনা update এখন live: feature commit `dbd6d6f`, [CI verification](https://github.com/asadbinjafor/TECH-TROLLY/actions/runs/41091347037) পাস। [DUE পাতা](https://tech-trolley-internal.vercel.app/dues) খুলে refresh দিন। Vercel/Render স্বয়ংক্রিয়ভাবে update হয়েছে; নতুন migration বা Supabase-এ হাতে SQL লাগেনি। Expense reason / details ফাঁকা রাখা যাবে।
 

@@ -1,5 +1,52 @@
 export type Language = "bn" | "en";
 const words: Record<string, [string, string]> = {
+  individualPurchase: [
+    "Buy a phone from a person",
+    "ব্যক্তির কাছ থেকে ফোন ক্রয়",
+  ],
+  recordedBy: ["Recorded by", "লিখেছেন"],
+  individualSeller: ["Select / add seller", "বিক্রেতা নির্বাচন / যোগ করুন"],
+  sellerName: ["Seller name", "বিক্রেতার নাম"],
+  sellerPhone: ["Seller phone", "বিক্রেতার ফোন"],
+  fatherName: ["Father's name", "পিতার নাম"],
+  motherName: ["Mother's name", "মাতার নাম"],
+  presentAddress: ["Present address", "বর্তমান ঠিকানা"],
+  permanentAddress: ["Permanent address", "স্থায়ী ঠিকানা"],
+  identityNumber: [
+    "NID / Driving licence number",
+    "এনআইডি / ড্রাইভিং লাইসেন্স নম্বর",
+  ],
+  nomineeName: ["Nominee name", "নমিনির নাম"],
+  nomineePhone: ["Nominee phone", "নমিনির ফোন"],
+  accessories: [
+    "Other items received with the phone",
+    "ফোনের সঙ্গে পাওয়া অন্য জিনিস",
+  ],
+  cashPaid: ["Cash paid", "নগদে দেওয়া টাকা"],
+  bankPaid: ["Bank paid", "ব্যাংকে দেওয়া টাকা"],
+  purchaseDeclaration: ["Phone purchase declaration", "ফোন ক্রয়পত্র"],
+  purchasePrintHint: [
+    "One A4 page. Print at actual size / 100%. Both signature areas stay blank for handwritten signatures. This is the original purchase declaration; later payments and stock edits remain in transaction history.",
+    "এক পৃষ্ঠা A4, Actual size / 100% দিয়ে প্রিন্ট করুন। দুইটি স্বাক্ষরের জায়গা হাতে সইয়ের জন্য খালি। এটি মূল ক্রয়পত্র; পরের পেমেন্ট ও স্টক সংশোধন লেনদেনের ইতিহাসে থাকবে।",
+  ],
+  individualPaymentHelp: [
+    "Enter only money actually paid. Cash or Bank may stay empty. The remainder is money the shop owes this seller, separate from personal loans. Confirm the seller's identity before saving.",
+    "বাস্তবে দেওয়া টাকা লিখুন। Cash বা Bank খালি রাখা যায়। অবশিষ্ট টাকা দোকান এই বিক্রেতাকে দেবে; ব্যক্তিগত ধার থেকে আলাদা। সংরক্ষণের আগে পরিচয় যাচাই করুন।",
+  ],
+  allPurchases: ["All purchases", "সব ক্রয়"],
+  supplierPurchases: ["Supplier purchases", "সরবরাহকারী থেকে ক্রয়"],
+  individualPurchases: ["Purchases from people", "ব্যক্তির কাছ থেকে ক্রয়"],
+  purchaseSource: ["Purchase source", "ক্রয়ের উৎস"],
+  individual: ["Individual seller", "ব্যক্তিগত বিক্রেতা"],
+  purchasePolicy: ["Printed seller declaration", "প্রিন্টে বিক্রেতার ঘোষণা"],
+  IMEI_IN_STOCK: [
+    "This IMEI is already in stock. Open the existing unit instead of buying it twice.",
+    "এই IMEI ইতিমধ্যে stock-এ আছে। একই ফোন দ্বিতীয়বার যোগ করা যাবে না।",
+  ],
+  LATER_ACQUISITION: [
+    "This phone was bought again later. Resolve its later purchase/sale history before reversing the earlier sale.",
+    "ফোনটি পরে আবার কেনা হয়েছে। পরের ক্রয়/বিক্রির ইতিহাস সমাধান ছাড়া আগের বিক্রি বাতিল করা যাবে না।",
+  ],
   originalRefundDue: ["Original refund receivable", "ফেরতের সময় মূল পাওনা"],
   acquisitionCost: ["Stock acquisition cost", "মজুদের মোট ক্রয় খরচ"],
   partyName: ["Supplier / contact", "Supplier / যোগাযোগের নাম"],

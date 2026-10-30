@@ -18,6 +18,12 @@ import {
 } from "./artwork";
 import { invoiceStyles } from "./styles";
 export { invoiceStyles } from "./styles";
+export {
+  purchaseStyles,
+  renderPurchaseBody,
+  renderPurchaseHtml,
+  fitPurchaseLayout,
+} from "./purchase";
 
 const esc = (value: unknown) =>
   String(value ?? "").replace(

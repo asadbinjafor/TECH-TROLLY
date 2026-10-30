@@ -387,6 +387,10 @@ main#main {
 .heading-actions {
   display: flex;
   gap: 8px;
+  flex-wrap: wrap;
+}
+.purchase-heading {
+  flex-wrap: wrap;
 }
 .notice {
   background: var(--pale);

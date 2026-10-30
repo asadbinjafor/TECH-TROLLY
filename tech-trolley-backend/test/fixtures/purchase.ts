@@ -1,0 +1,37 @@
+import type { PurchaseDeclaration } from "@tech-trolley/contracts";
+export const samplePurchase: PurchaseDeclaration = {
+  id: "00000000-0000-4000-8000-000000000001",
+  number: "TT-PURCHASE-QA",
+  date: "2026-10-31",
+  reversed: false,
+  buyer: { name: "Sample shop buyer", role: "OWNER" },
+  seller: {
+    sellerName: "নমুনা বিক্রেতা",
+    sellerPhone: "01700000000",
+    fatherName: "নমুনা পিতা",
+    motherName: "নমুনা মাতা",
+    presentAddress: "বসুন্ধরা, ঢাকা",
+    permanentAddress: "নমুনা ঠিকানা, বাংলাদেশ",
+    identityNumber: "SAMPLE-NID-0000",
+    nomineeName: "নমুনা নমিনি",
+    nomineePhone: "01800000000",
+  },
+  unit: {
+    brand: "Apple",
+    model: "iPhone 17 Pro Max",
+    storage: "256 GB",
+    color: "Blue",
+    variant: "Japan",
+    imei: "000000000000001",
+    condition: "used",
+    battery: 78,
+    box: "with",
+    accessories: "চার্জিং কেবল",
+  },
+  total: "60000.00",
+  cash: "40000.00",
+  bank: "15000.00",
+  originalDue: "5000.00",
+  terms:
+    "যদি এই পণ্যটি নিয়ে কোন আইনগত বা মালিকানা বিষয়ক কোনরূপ ঝামেলা হয়, সে ক্ষেত্রে পণ্য ও সমস্ত দায়ভার আমি (বিক্রেতা) আমার উপর বর্তাবে। আমি স্বেচ্ছায়, স্বজ্ঞানে ও সুস্থ মস্তিষ্কে ৭ দিনের মধ্যে ফোনে কোন সমস্যা হলে সমাধানের শর্ত মেনে নিয়ে নিম্নে স্বাক্ষর করিলাম।",
+};
