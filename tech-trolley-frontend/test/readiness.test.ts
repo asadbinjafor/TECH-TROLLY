@@ -158,21 +158,23 @@ test("an unauthenticated read remains a login response rather than a retrying ne
     await server.close();
   }
 });
-test("default backoff increases even when no progress listener is attached", async () => {
+test("default backoff increases without a listener but detects recovery within the two-second polling gap", async () => {
   const times: number[] = [];
   const server = await serverFor((_req, res) => {
     times.push(Date.now());
     res.setHeader("content-type", "application/json");
-    res.statusCode = times.length < 3 ? 503 : 200;
+    res.statusCode = times.length < 4 ? 503 : 200;
     res.end(
-      JSON.stringify({ status: times.length < 3 ? "unavailable" : "ok" }),
+      JSON.stringify({ status: times.length < 4 ? "unavailable" : "ok" }),
     );
   });
   try {
     await waitForApi(server.base, { timeoutMs: 8000 });
-    assert.equal(times.length, 3);
+    assert.equal(times.length, 4);
     assert.ok(times[1] - times[0] >= 900);
     assert.ok(times[2] - times[1] >= 1800);
+    assert.ok(times[3] - times[2] >= 1800);
+    assert.ok(times[3] - times[2] < 3500);
   } finally {
     await server.close();
   }

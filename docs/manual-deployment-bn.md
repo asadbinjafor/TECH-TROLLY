@@ -80,7 +80,18 @@ Root Directory: blank
 
 Render Free-তে ১৫ মিনিট inbound traffic না থাকলে service sleep করে; পরের request সেটি চালু করে এবং প্রায় এক মিনিট লাগতে পারে। [Render-এর নিয়ম](https://render.com/docs/free#spinning-down-on-idle)।
 
-Website-এর public screen আগে থেকেই তৈরি static HTML হিসেবে আসে। এরপর database-backed health পরীক্ষা করা হয়। সংযোগের সময় animation, সত্যিকারের অপেক্ষার সময় ও ধাপ দেখা যায়; server প্রস্তুত হলে app নিজে থেকেই এগোয়। Read-only health probe সর্বোচ্চ দুই মিনিট চেষ্টা করে, মাঝে বিরতি বাড়ায়। সংযোগ না হলে স্পষ্ট Retry দেখায়; internet ফিরে এলে আবার চেষ্টা করে। Sale/খরচের POST automatic replay হয় না; কোনো submission uncertain হলে আগের একই key-এর status/retry ব্যবহার করুন।
+Website-এর public screen আগে থেকেই তৈরি static HTML হিসেবে আসে। এরপর database-backed health পরীক্ষা করা হয়। সংযোগের সময় animation, সত্যিকারের অপেক্ষার সময় ও ধাপ দেখা যায়; server প্রস্তুত হলে app নিজে থেকেই এগোয়। Read-only health probe সর্বোচ্চ দুই মিনিট চেষ্টা করে; probe-এর মাঝের বিরতি এখন সর্বোচ্চ ২ সেকেন্ড, আগে ৮ সেকেন্ড ছিল। সংযোগ না হলে স্পষ্ট Retry দেখায়; internet ফিরে এলে আবার চেষ্টা করে। Sale/খরচের POST automatic replay হয় না; কোনো submission uncertain হলে আগের একই key-এর status/retry ব্যবহার করুন।
+
+### ফ্রিতে sleep কমানোর health check
+
+[GitHub → Actions → Production health](https://github.com/asadbinjafor/TECH-TROLLY/actions/workflows/production-health.yml)-এ প্রতি ৫ মিনিটে public Render health endpoint পরীক্ষা হয়। এতে নিয়মিত inbound request যায়, service সাধারণত সচল থাকে এবং browser বন্ধ থাকলেও কাজটি চলে। এটি login করে না বা দোকানের কোনো হিসাব বদলায় না। Repository-টি বর্তমানে public; standard public runner-এ এই check-এর GitHub charge নেই। Private করলে খরচ এড়াতে workflow নিজে থেকে skip করবে।
+
+- সর্বশেষ run সবুজ কি না ও log-এর `elapsedMs` দেখুন। Manual পরীক্ষা করতে **Run workflow → Run workflow** দিন।
+- বন্ধ করতে workflow-এর **… → Disable workflow**; আবার চালু করতে **Enable workflow**। Code update হলেই Render deploy দিতে হয় না—এটি GitHub-এ চলে।
+- GitHub schedule দেরি করতে বা কোনো run বাদ দিতে পারে; ৬০ দিন repository activity না থাকলে schedule disable হয়। তাই এটি সবসময় তাৎক্ষণিক খোলার guarantee নয়। [GitHub-এর সীমা](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#schedule)।
+- Render-এর ৭৫০ free hours পুরো workspace-এর সব Free service মিলে ভাগ হয়। এই একটি service সারামাস সচল থাকলে সর্বোচ্চ ৭৪৪ ঘণ্টা লাগতে পারে; অন্য service বেশি চললে quota-ও দেখবেন। ২০২৬-১০-৩০ পরীক্ষার সময়ে usage ছিল ১.২৫/৭৫০ ঘণ্টা। Quota শেষ হলে provider-এর নিয়মে service suspend হতে পারে; health check quota বাড়ায় না।
+
+আরও বিস্তারিত কারণ ও পরীক্ষার তথ্য: [cold-start audit](cold-start-audit.md)।
 
 Render service-এর paid compute plan-এ এই idle spin-down থাকে না; workspace plan upgrade আলাদা বিষয়। Supabase Free project সাত দিনের কম activity-তেও pause হতে পারে এবং dashboard restore লাগতে পারে। Paid Render compute এবং Supabase Pro এই দুই inactivity সীমার সংশ্লিষ্ট সমাধান; plan ও খরচ Owner বেছে নেবেন। Animation কোনো provider outage, suspended account বা paused database নিজে থেকে ঠিক করতে পারে না।
 

@@ -1,5 +1,13 @@
 # Progress and release handover
 
+## Cold-start latency reduction — 2026-10-30
+
+The Owner reported about 70 seconds after idle and asked to reduce it while retaining the approved animation. Added a bounded, credential-free GitHub production health check scheduled every five minutes on the verified public default branch. It checks only the existing Render database-backed health endpoint and keeps normal inbound traffic ahead of user visits. Public standard-runner and exact-repository guards avoid private/fork execution. Reduced browser readiness backoff from a maximum eight-second gap to two seconds. No backend/schema/financial behavior or animation change. See [findings and limits](cold-start-audit.md) and the updated [Bengali operating guide](manual-deployment-bn.md).
+
+Initial warm measurements: direct health 575 ms and Vercel proxy 2,038 ms. Render Billing showed 1.25/750 shared free instance hours and no payment card. These are observations, not a measured decomposition of the reported cold start or a future latency guarantee. GitHub schedule delays/drops, 60-day inactivity disablement and shared Render usage remain explicit limits.
+
+Local verification: 11 hosting/readiness/monitor tests, production web build and all workspace typechecks pass. The same isolated no-database 40-second unavailability fixture was probed simultaneously by the old and new clients: recovery detection was 47,208 ms versus 41,508 ms, a 5,700 ms improvement. A warm live run of the credential-free monitor returned database readiness in 313 ms. No production financial writes or deliberate production suspension. Release and scheduled-run evidence follows after deployment.
+
 ## Startup recovery and deployment guide — 2026-10-30
 
 The user requested clearer cold-start behavior and a manual deployment tutorial while retaining Codex deployment after updates. Added [Bengali manual instructions](manual-deployment-bn.md) and recorded the continuing deployment preference in AGENTS.md.

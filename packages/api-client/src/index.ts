@@ -168,7 +168,9 @@ export async function waitForApi(base: string, options: ReadinessOptions = {}) {
       try {
         await pause(
           options.retryDelayMs ??
-            Math.min(1000 * 2 ** Math.min(attempt - 1, 3), 8000),
+            // Detect a recovered server promptly; a long backoff adds visible
+            // delay after Render has already finished starting.
+            Math.min(1000 * 2 ** Math.min(attempt - 1, 1), 2000),
           signal,
         );
       } catch {

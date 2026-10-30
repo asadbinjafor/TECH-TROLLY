@@ -22,7 +22,7 @@
     "build:web": "npm run build:shared && npm run build --workspace @tech-trolley/frontend",
     "release:api": "node scripts/release-api.mjs",
     "start:render": "node scripts/start-render.mjs",
-    "test:hosting": "tsx --test tech-trolley-frontend/test/*.test.ts tech-trolley-backend/test/hosting.test.ts"
+    "test:hosting": "tsx --test tech-trolley-frontend/test/*.test.ts tech-trolley-backend/test/hosting.test.ts scripts/*.test.mjs"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
