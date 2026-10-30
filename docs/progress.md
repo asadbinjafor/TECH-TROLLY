@@ -1,5 +1,11 @@
 # Progress and release handover
 
+## Blank Sample A4 download — 2026-10-31
+
+The Owner requests a completely unfilled download from Sample A4 form. Replaced the static demo PDF with one blank A4 form retaining branding, printed declaration/labels, writing lines, eight empty date boxes, NID/birth-date fields and two empty signature areas. All product/box/IMEI/seller/date/payment values and the sample watermark are removed before PDF writing, including all formatted zeros. The button uses the new `tech-trolley-purchase-blank-a4.pdf` URL and `Tech-Trolley-Blank-A4-Form.pdf` download name to avoid an old cached filled example; the original sample path is also replaced with identical blank bytes. Repeatable generation: `npm run build:shared` then `node scripts/generate-blank-purchase-form.mjs`. No shared-renderer/API/financial/database/migration change.
+
+The output was rasterized and visually inspected; pypdf confirms exactly one A4 page, no ASCII digits/default numeric values and no demo names/product/battery/box values. Both public copies match the validated output byte-for-byte. Thirty hosting/form checks pass; production web build and Git/Vercel verification follow. Physical printer acceptance is not claimed.
+
 ## Android/iPhone, RAM and storage menus — 2026-10-31
 
 Added Android/iPhone beside the actual model in supplier/individual phone purchases and stock edits. New phone purchases require storage from 64 GB, 128 GB, 256 GB, 512 GB, 1 TB or 2 TB; Android additionally requires RAM from 4 GB, 8 GB, 12 GB or 16 GB. iPhone hides/clears RAM. Accessories keep their existing workflow. New sale offers optional platform/RAM/storage stock filters, fills saved specifications and resets an incompatible stock/payment draft; its PostingService sale still snapshots the locked stock unit rather than trusting client-entered specs. Inventory, receipts, one-page purchase PDFs, two-page sales PDFs and per-sale statements/CSV retain RAM. Actual model names and model-profit grouping remain intact.

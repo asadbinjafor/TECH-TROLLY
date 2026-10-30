@@ -507,8 +507,8 @@ export function Workspace({ section }: { section: string }) {
                 </button>
                 <a
                   className="button"
-                  href="/samples/tech-trolley-purchase-sample.pdf"
-                  download="Tech-Trolley-Purchase-Sample.pdf"
+                  href="/samples/tech-trolley-purchase-blank-a4.pdf"
+                  download="Tech-Trolley-Blank-A4-Form.pdf"
                 >
                   <ArrowDownToLine size={17} />
                   {tr("downloadPurchaseSample")}
