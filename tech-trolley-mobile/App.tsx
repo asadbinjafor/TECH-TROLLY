@@ -164,7 +164,6 @@ function TabScreens() {
       {[
         ["Home", "overview"],
         ["Stock", "inventory"],
-        ["Sell", "sell"],
         ["Daybook", "daybook"],
         ["More", "more"],
       ].map(([name, section]) => (
@@ -172,45 +171,7 @@ function TabScreens() {
           key={name}
           name={name}
           options={{
-            title: t(
-              section === "sell"
-                ? "sale"
-                : section === "more"
-                  ? "more"
-                  : section,
-              lang,
-            ),
-            ...(name === "Sell"
-              ? {
-                  tabBarIcon: () => (
-                    <View
-                      style={{
-                        backgroundColor: "#e9ba4b",
-                        borderRadius: 12,
-                        width: 42,
-                        height: 30,
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
-                    >
-                      <Txt
-                        style={{
-                          color: "#332a12",
-                          fontSize: 25,
-                          lineHeight: 29,
-                        }}
-                      >
-                        +
-                      </Txt>
-                    </View>
-                  ),
-                  tabBarLabelStyle: {
-                    fontFamily: "Shop",
-                    fontWeight: "700",
-                    color: "#9d7b2d",
-                  },
-                }
-              : {}),
+            title: t(section === "more" ? "more" : section, lang),
           }}
         >
           {(props) => <NativePage {...props} section={section} />}

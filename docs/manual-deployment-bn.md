@@ -12,6 +12,8 @@ DUE / ধার-পাওনা update এখন live: feature commit `dbd6d6f`,
 
 ## Dashboard-এর অঙ্ক দেখা
 
+**New sale / নতুন বিক্রি** এখন Workspace মেনুতে **Purchases / কেনাকাটা-এর ঠিক উপরে** থাকবে। [নতুন বিক্রির পাতা](https://tech-trolley-internal.vercel.app/sale) থেকে একই বিক্রির ফর্ম পূরণ → Review → Confirm করুন। সফল বিক্রির পরে invoice খুলবে এবং পরের বিক্রির জন্য ফর্ম খালি হবে। **Today’s overview**-এর New sale / Reconcile cash আগের মতো আছে; অন্য পাতার header-এ এই দুটি shortcut থাকবে না। এই update-এ Supabase migration বা হাতে SQL লাগবে না।
+
 Dashboard-এর টাকার অঙ্ক শুরুতে ঢাকা থাকবে। **টাকার অঙ্ক দেখতে চাপুন / Tap to see balance** থেকে নিজের account-এর বর্তমান password দিন। সঠিক হলে এক মিনিট Dashboard-এর অঙ্ক দেখা যাবে; Hide চাপলে, অন্য পাতায় গেলে, refresh করলে বা অ্যাপ থেকে বের হলে আবার ঢাকবে। অন্য পাতার access আগের মতো। Quick actions-এর বড় রঙিন কার্ডে চাপলে আগের কেনাকাটা/খরচ/স্থানান্তর/ধার ফর্মই খুলবে। এই code update-এ নতুন migration লাগবে না; Vercel ও Render দুটোই স্বাভাবিক Git/CI পথে update হবে।
 
 এই update live: API `68cc508`, website `0f41923`; [final CI verification](https://github.com/asadbinjafor/TECH-TROLLY/actions/runs/41094873527) পাস। [স্থায়ী অ্যাপ](https://tech-trolley-internal.vercel.app/) একবার refresh দিন। Website-এর শেষ সংশোধন শুধু frontend-এর হওয়ায় API health-এ `68cc508` থাকাই ঠিক; version mismatch error নয়।

@@ -1,7 +1,6 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { ScrollView, View, RefreshControl, Platform } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useFocusEffect } from "@react-navigation/native";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { File, Paths } from "expo-file-system";
 import * as Sharing from "expo-sharing";
@@ -48,14 +47,6 @@ export function NativePage({ navigation, route, section: initial }: any) {
         : currency(v, lang);
   const command = (kind: CommandKind) =>
     navigation.navigate("Command", { kind });
-  useFocusEffect(
-    useCallback(() => {
-      if (section === "sell") {
-        navigation.navigate("Home");
-        navigation.getParent()?.navigate("Command", { kind: "sale" });
-      }
-    }, [section, navigation]),
-  );
   const query = new URLSearchParams({
     lang,
     period: user?.role !== "OWNER" || section === "daybook" ? "today" : period,
@@ -242,7 +233,19 @@ export function NativePage({ navigation, route, section: initial }: any) {
               {dateLabel(state.today, lang)}
             </Txt>
           </View>
-          <Button label="+" primary onPress={() => command("sale")} />
+          {section === "overview" && (
+            <View>
+              <Button
+                label={tr("sale")}
+                primary
+                onPress={() => command("sale")}
+              />
+              <Button
+                label={tr("cashCount")}
+                onPress={() => command("cashCount")}
+              />
+            </View>
+          )}
         </View>
         {(error || problem) && (
           <Panel>
@@ -746,6 +749,7 @@ export function NativePage({ navigation, route, section: initial }: any) {
         {section === "more" && (
           <>
             {[
+              "sale",
               "purchases",
               "transactions",
               "money",
@@ -757,7 +761,11 @@ export function NativePage({ navigation, route, section: initial }: any) {
               <Button
                 key={s}
                 label={tr(s)}
-                onPress={() => navigation.navigate("Page", { section: s })}
+                onPress={() =>
+                  s === "sale"
+                    ? command("sale")
+                    : navigation.navigate("Page", { section: s })
+                }
               />
             ))}
             <Button

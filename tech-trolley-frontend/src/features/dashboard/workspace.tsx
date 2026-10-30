@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   LayoutDashboard,
@@ -54,6 +55,7 @@ const icons = [
   LayoutDashboard,
   CalendarDays,
   Package,
+  Plus,
   ShoppingBag,
   ReceiptText,
   Wallet,
@@ -64,6 +66,8 @@ const icons = [
   Settings,
 ];
 export function Workspace({ section }: { section: string }) {
+  const router = useRouter();
+  const [saleVersion, setSaleVersion] = useState(0);
   const {
       user,
       state,
@@ -101,6 +105,11 @@ export function Workspace({ section }: { section: string }) {
     visible: privacy.visible,
   };
   const [revealOpen, setRevealOpen] = useState(false);
+  useEffect(() => {
+    setCommand(null);
+    setReceipt(null);
+    setDetail(null);
+  }, [section]);
   useEffect(() => {
     if (section === "overview" && !privacy.visible) {
       setReceipt(null);
@@ -372,10 +381,12 @@ export function Workspace({ section }: { section: string }) {
               </Link>
             );
           })}
-          <button className="nav-item" onClick={() => action("cashCount")}>
-            <CheckCheck size={19} />
-            {tr("cashCount")}
-          </button>
+          {section === "overview" && (
+            <button className="nav-item" onClick={() => action("cashCount")}>
+              <CheckCheck size={19} />
+              {tr("cashCount")}
+            </button>
+          )}
         </nav>
         <div className="sidebar-bottom">
           <span className="avatar">{user.name.slice(0, 1)}</span>
@@ -439,21 +450,35 @@ export function Workspace({ section }: { section: string }) {
               <h1>{tr(section)}</h1>
               <p>{dateLabel(state.today, lang)}</p>
             </div>
-            <div className="heading-actions">
-              <button className="button" onClick={() => action("cashCount")}>
-                <CheckCheck size={17} />
-                {tr("cashCount")}
-              </button>
-              <button
-                className="button primary"
-                onClick={() =>
-                  action(section === "purchases" ? "purchase" : "sale")
-                }
-              >
-                <Plus size={19} />
-                {tr(section === "purchases" ? "purchase" : "sale")}
-              </button>
-            </div>
+            {section === "overview" && (
+              <div className="heading-actions">
+                <button
+                  className="button reconcile-action"
+                  onClick={() => action("cashCount")}
+                >
+                  <CheckCheck size={17} />
+                  {tr("cashCount")}
+                </button>
+                <button
+                  className="button primary"
+                  onClick={() => action("sale")}
+                >
+                  <Plus size={19} />
+                  {tr("sale")}
+                </button>
+              </div>
+            )}
+            {section === "purchases" && (
+              <div className="heading-actions">
+                <button
+                  className="button primary"
+                  onClick={() => action("purchase")}
+                >
+                  <Plus size={19} />
+                  {tr("purchase")}
+                </button>
+              </div>
+            )}
           </div>
           {connection !== "ready" && (
             <div className="notice connection-notice" role="status">
@@ -628,6 +653,19 @@ export function Workspace({ section }: { section: string }) {
                 {card("payable", state.balances.payable)}
               </div>
             </>
+          )}
+          {section === "sale" && (
+            <CommandForm
+              key={`sale-page-${saleVersion}`}
+              kind="sale"
+              embedded
+              onClose={() => router.push("/")}
+              onSaved={(id) => {
+                setSaleVersion((value) => value + 1);
+                setToast(tr("saved"));
+                void fetchReceipt(id, false);
+              }}
+            />
           )}
           {section === "inventory" && (
             <>
@@ -1082,32 +1120,36 @@ export function Workspace({ section }: { section: string }) {
         </main>
       </div>
       <nav className="mobile-nav">
-        {["overview", "inventory", "sale", "daybook", "settings"].map(
-          (p, i) => (
-            <button
-              key={p}
-              className={p === "sale" ? "sell-nav" : ""}
-              onClick={() =>
-                p === "sale"
-                  ? action("sale")
-                  : location.assign(p === "overview" ? "/" : "/" + p)
-              }
-            >
-              {i === 2 ? (
-                <Plus size={24} />
-              ) : i === 0 ? (
-                <LayoutDashboard size={19} />
-              ) : i === 1 ? (
-                <Package size={19} />
-              ) : i === 3 ? (
-                <CalendarDays size={19} />
-              ) : (
-                <Menu size={19} />
-              )}
-              <small>{tr(p)}</small>
-            </button>
-          ),
-        )}
+        {[
+          "overview",
+          "inventory",
+          ...(section === "overview" ? ["sale"] : []),
+          "daybook",
+          "settings",
+        ].map((p) => (
+          <button
+            key={p}
+            className={p === "sale" ? "sell-nav" : ""}
+            onClick={() =>
+              p === "sale"
+                ? action("sale")
+                : location.assign(p === "overview" ? "/" : "/" + p)
+            }
+          >
+            {p === "sale" ? (
+              <Plus size={24} />
+            ) : p === "overview" ? (
+              <LayoutDashboard size={19} />
+            ) : p === "inventory" ? (
+              <Package size={19} />
+            ) : p === "daybook" ? (
+              <CalendarDays size={19} />
+            ) : (
+              <Menu size={19} />
+            )}
+            <small>{tr(p)}</small>
+          </button>
+        ))}
       </nav>
       {command && (
         <CommandForm

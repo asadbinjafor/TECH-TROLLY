@@ -885,6 +885,25 @@ td b {
   gap: 15px;
   margin-bottom: 18px;
 }
+.command-card {
+  width: 100%;
+  max-width: 900px;
+}
+.command-card > header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 15px;
+  margin-bottom: 18px;
+}
+.command-card form > footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+}
 .modal header h2 {
   font-size: 20px;
 }
@@ -1153,7 +1172,7 @@ td b {
     font-size: 10px;
     max-width: 190px;
   }
-  .heading-actions > .button:first-child {
+  .heading-actions > .reconcile-action {
     display: none;
   }
   .heading-actions > .button {

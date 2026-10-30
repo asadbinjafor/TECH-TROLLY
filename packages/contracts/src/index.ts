@@ -1077,6 +1077,7 @@ export const pages = [
   "overview",
   "daybook",
   "inventory",
+  "sale",
   "purchases",
   "transactions",
   "money",

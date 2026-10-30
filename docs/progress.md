@@ -1,5 +1,11 @@
 # Progress and release handover
 
+## Dedicated New sale page and overview shortcuts — 2026-10-30
+
+The Owner requests global New sale/Reconcile cash controls only on Today's overview and a Workspace New sale page immediately above Purchases. Added `/sale` using the existing sale CommandForm in embedded page mode. Overview retains its original action/modal flow; other headers and mobile shortcut duplication are removed. Purchases keeps New purchase and stock rows retain contextual selling. Native More exposes the existing full-screen sale form before Purchases; the overview alone has the global action buttons. No migration, money logic, role permission or cookie/proxy change.
+
+API/web builds, all workspace typechecks, 28 existing form/hosting checks and Android/iOS exports pass. In an explicitly isolated `sale_route_flow_*_test` shop, the real page retained a 35,000 Cash sale draft across reload, posted once, refreshed stock, reset the completed form and opened the original invoice. Exact final synthetic Cash 83,050 / Bank 50,000 and balanced journals are checked before cleanup; the review showed 3,000 gross profit for that sale. Browser audit covers every Workspace page: only overview has the two global header actions and sidebar cash action; Purchases only has New purchase. New sale is directly before Purchases. At 390px, the dedicated page has no duplicate mobile sale shortcut or horizontal overflow. Cancel returns to overview and the original overview New sale modal still opens. No production business test writes. Deployment/live evidence follows below.
+
 ## Dashboard privacy and colorful actions — 2026-10-30
 
 The Owner confirmed Dashboard-only masking and requested larger colorful quick actions. Web/native now hide overview amounts by default, verify the current account password through a protected throttled endpoint, show for one minute and relock on hiding/leaving/reloading. Dashboard recent money, chart/tooltips and detail shortcuts follow the same lock; other pages and financial forms keep their existing access. Four icon cards use the reference's blue/pink/green/purple colors. No migration or business history rewrite. See [scope/security limits and checks](dashboard-privacy-audit.md).

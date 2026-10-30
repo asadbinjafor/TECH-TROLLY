@@ -30,11 +30,13 @@ export function CommandForm({
   initialUnit,
   initialDocument,
   initialParty,
+  embedded = false,
 }: {
   kind: CommandKind;
   initialUnit?: string;
   initialDocument?: string;
   initialParty?: string;
+  embedded?: boolean;
   onClose: () => void;
   onSaved: (id: string, kind: CommandKind) => void;
 }) {
@@ -164,12 +166,12 @@ export function CommandForm({
     if (kind === "purchaseReturn") returnSummary = returnPreview(state, values);
   } catch {}
   return (
-    <div className="modal-backdrop">
+    <div className={embedded ? "command-embedded" : "modal-backdrop"}>
       <section
-        className="modal"
+        className={embedded ? "command-card panel" : "modal"}
         inert={partyField ? true : undefined}
-        role="dialog"
-        aria-modal="true"
+        role={embedded ? "region" : "dialog"}
+        aria-modal={embedded ? undefined : true}
         aria-labelledby="form-title"
       >
         <header>
