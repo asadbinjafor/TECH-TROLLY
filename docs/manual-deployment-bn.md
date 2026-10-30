@@ -2,6 +2,8 @@
 
 **খালি A4 ফর্ম:** Purchases → **Sample A4 form / নমুনা A4 ফর্ম** এখন থেকে হাত দিয়ে পূরণ করার খালি ফর্ম দেবে। নাম, তারিখ, জন্মতারিখ, ফোন/IMEI ও টাকার কোনো default থাকবে না। লোগো, ছাপানো ঘোষণার লেখা ও স্বাক্ষরের জায়গা থাকবে। বাটনের নতুন ফাইলের ঠিকানা `/samples/tech-trolley-purchase-blank-a4.pdf`; আগের sample ঠিকানাতেও একই খালি ফাইল থাকবে। ভবিষ্যতে আবার বানাতে `npm run build:shared` এবং `node scripts/generate-blank-purchase-form.mjs` চালাবেন, PDF এক পৃষ্ঠা ও সত্যিই খালি কি না দেখে commit/push করবেন। এটি frontend/static file update—নতুন migration বা Render manual deploy লাগবে না।
 
+খালি ফর্মের update live হয়েছে: `4721779`, [CI সফল](https://github.com/asadbinjafor/TECH-TROLLY/actions/runs/41120107886)। Refresh দিয়ে বাটন চাপুন। Live download পরীক্ষা করা খালি PDF-এর সঙ্গে মিলেছে; API/database বদলায়নি।
+
 **Android/iPhone ও RAM/Storage update (৩১ অক্টোবর):** New purchase ও ব্যক্তির কাছ থেকে ক্রয়ে ফোনের ধরন বাছুন; আসল Model নামও লিখবেন। Android হলে RAM 4/8/12/16 GB এবং Storage 64/128/256/512 GB বা 1/2 TB বাছুন। iPhone হলে RAM লাগবে না। New sale-এ এই বাছাইগুলো দিয়ে stock খুঁজবেন; নির্দিষ্ট stock বাছলে তার তথ্য আসবে। পুরোনো stock-এর ধরন দেওয়া না থাকলে Phone type খালি রেখে সেটি বাছুন, অথবা Inventory → Edit stock details দিয়ে সঠিক ধরন/RAM/Storage দিন। অনুমান করে পুরোনো তথ্য বদলানো হয়নি।
 
 এই update এখন **live**, commit `ed3918c`; [CI সফল](https://github.com/asadbinjafor/TECH-TROLLY/actions/runs/41118444791)। স্বাভাবিক Git push → CI pass → Render startup runner **010_phone_type_and_ram.sql** চালিয়েছে। মোট **১০টি migration**, আগের মতো **১৯টি RLS table** আছে। Vercel/Render revision ও live PDF/হিসাব যাচাই হয়েছে; পুরোনো stock/লেনদেন অক্ষত। Supabase-এ হাতে SQL/reset নয়। ভবিষ্যৎ release-এর পরেও `/api/health` revision ও live ফল পরীক্ষা করবেন।
