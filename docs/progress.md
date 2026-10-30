@@ -1,5 +1,11 @@
 # Progress and release handover
 
+## Owner / Staff profile editing — 2026-10-30
+
+Added My profile → Edit profile for both business roles on web/native: name, User ID and optional email, alongside the existing password form. Owner account management gains the same metadata editor. Identity changes require the actor's current password and force fresh login; name-only edits retain sessions. Strict self-service fields preserve roles/access controls. Atomic alias replacement, duplicate handling, login-race protection, safe responses and audit metadata retain stable UUIDs and immutable historical seller names. No new database migration. See [implementation and checks](profile-editing.md).
+
+Local builds/typechecks, 19 hosting/form checks and 22 isolated PostgreSQL checks pass. Disposable Owner/Staff browser accounts verified display-name edits and the 390px form; real account credentials and business records were not edited. The persistent localhost app's API was restarted on its existing loopback-only database without resetting data or passwords. Cloud release verification follows.
+
 ## Final form / empty-field audit — 2026-10-30
 
 Audited all 16 transaction forms and supporting contact/category/user/shop/login/report inputs after the Owner requested a broader final check. Fixed empty-list guidance/blocking for stock, Staff and outstanding sources, optional walk-in messaging, credit Customer preflight, accessory IMEI switching, zero sale payment defaults/current salary month, invalid correction options, stale selections and field length mismatches. Fixed category/user PATCH object responses and missing user audit role/active details; added the missing translated contact heading. See [coverage, findings and limits](final-form-audit.md).

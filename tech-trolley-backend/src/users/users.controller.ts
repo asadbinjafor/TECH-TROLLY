@@ -6,6 +6,7 @@ import {
   Patch,
   Post,
   Req,
+  Res,
   UseGuards,
 } from "@nestjs/common";
 import { userSchema, userUpdateSchema, z } from "@tech-trolley/contracts";
@@ -15,6 +16,9 @@ import { db } from "../database/database";
 import { fail } from "../common/errors";
 import { AuthGuard } from "../auth/auth.guard";
 import { safeUser } from "../auth/auth.service";
+import type { Response } from "express";
+import { updateProfile, profileDetails } from "./profile";
+import { sessionCookieOptions } from "../auth/cookies";
 @Controller("users")
 @UseGuards(AuthGuard)
 export class UsersController {
@@ -65,6 +69,7 @@ export class UsersController {
     @Param("id") id: string,
     @Body() body: unknown,
     @Req() req: any,
+    @Res({ passthrough: true }) res: Response,
   ) {
     if (req.user.role !== "OWNER") fail("FORBIDDEN", 403);
     z.uuid().parse(id);
@@ -73,7 +78,7 @@ export class UsersController {
     return db.transaction(async (em) => {
       await em.query("SELECT pg_advisory_xact_lock(74819322)");
       const [actor] = await em.query(
-        "SELECT role,active FROM app_user WHERE id=$1",
+        "SELECT * FROM app_user WHERE id=$1 FOR UPDATE",
         [req.user.id],
       );
       if (!actor?.active || actor.role !== "OWNER") fail("FORBIDDEN", 403);
@@ -82,6 +87,7 @@ export class UsersController {
         [id],
       );
       if (!u) fail("NOT_FOUND", 404);
+      const profile = await updateProfile(em, u, v, actor);
       const [{ count }] = await em.query(
         "SELECT count(*) FROM app_user WHERE role='OWNER' AND active",
       );
@@ -96,16 +102,35 @@ export class UsersController {
         "WITH saved AS (UPDATE app_user SET role=$2,active=$3,password_hash=COALESCE($4,password_hash),must_change=CASE WHEN $4::text IS NULL THEN must_change ELSE false END WHERE id=$1 RETURNING *) SELECT * FROM saved",
         [id, v.role ?? u.role, v.active ?? u.active, hash],
       );
-      await em.query("DELETE FROM session WHERE user_id=$1", [id]);
+      const securityChanged =
+        !!hash ||
+        profile.identityChanged ||
+        (v.role !== undefined && v.role !== u.role) ||
+        (v.active !== undefined && v.active !== u.active);
+      if (securityChanged)
+        await em.query("DELETE FROM session WHERE user_id=$1", [id]);
       await em.query(
         "INSERT INTO audit_event(actor_id,action,subject_id,details) VALUES($1,'user_updated',$2,$3)",
         [
           req.user.id,
           id,
-          { role: result.role, active: result.active, passwordReset: !!hash },
+          {
+            role: result.role,
+            active: result.active,
+            passwordReset: !!hash,
+            ...(profile.changed
+              ? {
+                  profileBefore: profileDetails(u),
+                  profileAfter: profileDetails(result),
+                  identityChanged: profile.identityChanged,
+                }
+              : {}),
+          },
         ],
       );
-      return safeUser(result);
+      const requiresLogin = req.user.id === id && securityChanged;
+      if (requiresLogin) res.clearCookie("tt_session", sessionCookieOptions);
+      return { ...safeUser(result), requiresLogin };
     });
   }
 }

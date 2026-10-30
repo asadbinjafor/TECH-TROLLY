@@ -5,6 +5,7 @@ import type { Request } from "express";
 import { db } from "../database/database";
 import { fail } from "../common/errors";
 import type { User } from "@tech-trolley/contracts";
+import { updateProfile, profileDetails } from "../users/profile";
 export const digest = (s: string) =>
   createHash("sha256").update(s).digest("hex");
 export const safeUser = (u: any): User => ({
@@ -43,6 +44,11 @@ export class AuthService {
       ]);
       if (!fresh.active || fresh.password_hash !== u.password_hash)
         fail("INVALID_CREDENTIALS", 401);
+      const [identity] = await em.query(
+        "SELECT user_id FROM identity WHERE value=$1 AND user_id=$2",
+        [normalized, fresh.id],
+      );
+      if (!identity) fail("INVALID_CREDENTIALS", 401);
       const token = randomBytes(32).toString("base64url");
       await em.query(
         `INSERT INTO session(token_hash,user_id,expires_at,absolute_expires_at) VALUES($1,$2,now()+interval '30 minutes',now()+interval '7 days')`,
@@ -87,6 +93,36 @@ export class AuthService {
       );
     });
     return { ok: true };
+  }
+  async profile(user: User, values: Parameters<typeof updateProfile>[2]) {
+    return db.transaction(async (tx) => {
+      await tx.query("SELECT pg_advisory_xact_lock(74819322)");
+      const [actor] = await tx.query(
+        "SELECT * FROM app_user WHERE id=$1 FOR UPDATE",
+        [user.id],
+      );
+      if (!actor?.active) fail("SESSION_EXPIRED", 401);
+      const result = await updateProfile(tx, actor, values, actor);
+      if (result.identityChanged)
+        await tx.query("DELETE FROM session WHERE user_id=$1", [user.id]);
+      if (result.changed)
+        await tx.query(
+          "INSERT INTO audit_event(actor_id,action,subject_id,details) VALUES($1,'profile_updated',$2,$3)",
+          [
+            user.id,
+            user.id,
+            {
+              before: profileDetails(actor),
+              after: profileDetails(result.user),
+              identityChanged: result.identityChanged,
+            },
+          ],
+        );
+      return {
+        user: safeUser(result.user),
+        requiresLogin: result.identityChanged,
+      };
+    });
   }
   async refresh(hash: string) {
     return db.transaction(async (em) => {

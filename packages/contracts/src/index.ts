@@ -68,11 +68,34 @@ export const userSchema = z
   .strict();
 export const userUpdateSchema = z
   .object({
+    name: text.optional(),
+    login: userSchema.shape.login.optional(),
+    email: z
+      .string()
+      .trim()
+      .toLowerCase()
+      .pipe(z.union([z.email(), z.literal("")]))
+      .optional(),
+    currentPassword: z.union([currentPassword, z.literal("")]).optional(),
     role: z.enum(["OWNER", "STAFF"]).optional(),
     active: z.boolean().optional(),
     password: newPassword.optional(),
   })
   .strict();
+export const profileSchema = userUpdateSchema
+  .pick({ name: true, login: true, email: true, currentPassword: true })
+  .required({ name: true, login: true });
+export function profileIdentityChanged(
+  before: { login?: string; email?: string | null },
+  after: { login?: string; email?: string | null },
+) {
+  return (
+    (before.login || "").trim().toLowerCase() !==
+      (after.login || "").trim().toLowerCase() ||
+    (before.email || "").trim().toLowerCase() !==
+      (after.email || "").trim().toLowerCase()
+  );
+}
 export const partySchema = z
   .object({
     name: text,

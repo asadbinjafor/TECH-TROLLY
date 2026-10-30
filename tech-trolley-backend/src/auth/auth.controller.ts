@@ -4,23 +4,22 @@ import {
   Controller,
   Get,
   Post,
+  Patch,
   Req,
   Res,
   UseGuards,
 } from "@nestjs/common";
 import { ApiBody, ApiTags } from "@nestjs/swagger";
-import { loginSchema, passwordSchema } from "@tech-trolley/contracts";
+import {
+  loginSchema,
+  passwordSchema,
+  profileSchema,
+} from "@tech-trolley/contracts";
 import type { Request, Response } from "express";
 import { AuthService } from "./auth.service";
 import { AuthGuard } from "./auth.guard";
 import { db } from "../database/database";
-const cookieOptions = {
-  httpOnly: true,
-  secure: process.env.NODE_ENV === "production",
-  sameSite: "strict" as const,
-  path: "/",
-  maxAge: 7 * 86400000,
-};
+import { sessionCookieOptions as cookieOptions } from "./cookies";
 @ApiTags("Authentication")
 @Controller("auth")
 export class AuthController {
@@ -67,6 +66,15 @@ export class AuthController {
       v.password,
     );
     res.clearCookie("tt_session", cookieOptions);
+    return result;
+  }
+  @Patch("profile") @UseGuards(AuthGuard) async profile(
+    @Body() body: unknown,
+    @Req() req: any,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const result = await this.auth.profile(req.user, profileSchema.parse(body));
+    if (result.requiresLogin) res.clearCookie("tt_session", cookieOptions);
     return result;
   }
   @Post("refresh") @UseGuards(AuthGuard) async refresh(

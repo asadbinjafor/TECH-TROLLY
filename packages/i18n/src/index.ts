@@ -234,6 +234,28 @@ const words: Record<string, [string, string]> = {
   active: ["Active", "সক্রিয়"],
   createUser: ["Create account", "অ্যাকাউন্ট তৈরি"],
   users: ["User management", "ইউজার ব্যবস্থাপনা"],
+  myProfile: ["My profile", "আমার প্রোফাইল"],
+  editProfile: ["Edit profile", "প্রোফাইল সম্পাদনা"],
+  profileHelp: [
+    "Edit your name, User ID and email. Changing User ID or email requires your current password and signs you out of all sessions. Use the updated User ID or email to sign in again. Previous invoices keep their original seller name.",
+    "নাম, ইউজার আইডি ও ইমেইল বদলাতে পারবেন। আইডি বা ইমেইল বদলাতে বর্তমান পাসওয়ার্ড লাগবে এবং সব session থেকে logout হবে। এরপর নতুন আইডি বা ইমেইল দিয়ে login করুন। পুরোনো invoice-এর seller name অক্ষত থাকবে।",
+  ],
+  accountProfileHelp: [
+    "Changes apply to this account. For User ID or email changes, enter your own current Owner password. The account will need to sign in again.",
+    "পরিবর্তন এই account-এ প্রযোজ্য হবে। ইউজার আইডি বা ইমেইল বদলাতে আপনার নিজের বর্তমান Owner password দিন। ওই account-এ আবার login করতে হবে।",
+  ],
+  userIdHelp: [
+    "User ID: 3–60 English letters, digits, dot, underscore or hyphen.",
+    "ইউজার আইডি: ৩–৬০টি ইংরেজি অক্ষর, সংখ্যা, ডট, আন্ডারস্কোর বা হাইফেন।",
+  ],
+  CURRENT_PASSWORD_REQUIRED: [
+    "Enter your current password to change the User ID or email.",
+    "ইউজার আইডি বা ইমেইল বদলাতে আপনার বর্তমান পাসওয়ার্ড দিন।",
+  ],
+  CURRENT_PASSWORD_INVALID: [
+    "Your current password is incorrect.",
+    "আপনার বর্তমান পাসওয়ার্ড সঠিক নয়।",
+  ],
   createParty: ["Add party", "ব্যক্তি যোগ করুন"],
   parties: ["Contacts and names", "যোগাযোগ ও নামের তালিকা"],
   manageParties: ["Add / manage names", "নাম যোগ / পরিচালনা করুন"],

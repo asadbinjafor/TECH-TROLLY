@@ -10,6 +10,8 @@ import {
   fieldMaxLength,
   selectionBlockers,
   prepareForm,
+  profileSchema,
+  profileIdentityChanged,
   correctableDocument,
   type State,
   type CommandKind,
@@ -17,6 +19,41 @@ import {
 import { t } from "@tech-trolley/i18n";
 const id = (n: number) =>
   `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
+test("profile forms distinguish a display-name edit from a normalized login identity change", () => {
+  const before = { login: "owner", email: "owner@example.test" };
+  assert.equal(
+    profileIdentityChanged(before, {
+      login: " OWNER ",
+      email: "Owner@Example.Test ",
+    }),
+    false,
+  );
+  assert.equal(
+    profileIdentityChanged(before, { ...before, login: "new.owner" }),
+    true,
+  );
+  assert.equal(profileIdentityChanged(before, { ...before, email: "" }), true);
+  assert.equal(
+    profileIdentityChanged(
+      { login: "staff", email: null },
+      { login: "staff", email: "" },
+    ),
+    false,
+  );
+  const data = { name: "Name", ...before, currentPassword: "" };
+  assert.ok(profileSchema.safeParse(data).success);
+  for (const invalid of [
+    { name: " " },
+    { login: "bad login" },
+    { email: "invalid" },
+    { role: "OWNER" },
+    { currentPassword: "x".repeat(73) },
+  ])
+    assert.equal(
+      profileSchema.safeParse({ ...data, ...invalid }).success,
+      false,
+    );
+});
 const empty = {
   today: "2026-10-30",
   balances: { cash: "0.00" },

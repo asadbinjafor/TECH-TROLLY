@@ -4,6 +4,11 @@ import { t } from "@tech-trolley/i18n";
 import { useShop } from "@/contexts/shop-context";
 import { api } from "@/services/api";
 import { PartyManager } from "./party-manager";
+import {
+  profileSchema,
+  profileIdentityChanged,
+  type User,
+} from "@tech-trolley/contracts";
 type Editor = {
   title: string;
   path: string;
@@ -17,6 +22,7 @@ type Editor = {
   }[];
   initial?: Record<string, string>;
   fixed?: Record<string, unknown>;
+  profile?: boolean;
 };
 export function Administration({ mode }: { mode: "parties" | "settings" }) {
   const { state, user, lang, refresh } = useShop(),
@@ -39,6 +45,24 @@ export function Administration({ mode }: { mode: "parties" | "settings" }) {
     setValues(v.initial || {});
     setError("");
   };
+  const editProfile = (account: User, own: boolean) =>
+    open({
+      title: "editProfile",
+      path: own ? "/auth/profile" : "/users/" + account.id,
+      method: "PATCH",
+      profile: true,
+      initial: {
+        name: account.name,
+        login: account.login,
+        email: account.email || "",
+      },
+      fields: [
+        { key: "name", required: true },
+        { key: "login", label: "loginId", required: true },
+        { key: "email" },
+        { key: "currentPassword", type: "password" },
+      ],
+    });
   const mutate = async (path: string, body: any) => {
     try {
       await api.request(path, "PATCH", body);
@@ -63,6 +87,48 @@ export function Administration({ mode }: { mode: "parties" | "settings" }) {
       )}
       {mode === "settings" && (
         <>
+          <section className="panel">
+            <div className="panel-heading">
+              <h2>{tr("myProfile")}</h2>
+              <button
+                className="button"
+                onClick={() => editProfile(user!, true)}
+              >
+                {tr("editProfile")}
+              </button>
+            </div>
+            <b>{user?.name}</b>
+            <p>
+              {user?.login}
+              {user?.email ? " · " + user.email : ""} · {tr(user!.role)}
+            </p>
+            <p className="muted">{tr("profileHelp")}</p>
+            <button
+              className="button"
+              onClick={() =>
+                open({
+                  title: "changePassword",
+                  path: "/auth/password",
+                  method: "POST",
+                  fields: [
+                    {
+                      key: "currentPassword",
+                      type: "password",
+                      required: true,
+                    },
+                    {
+                      key: "password",
+                      label: "newPassword",
+                      type: "password",
+                      required: true,
+                    },
+                  ],
+                })
+              }
+            >
+              {tr("changePassword")}
+            </button>
+          </section>
           <section className="panel">
             <div className="panel-heading">
               <h2>{state.shop.name}</h2>
@@ -93,31 +159,6 @@ export function Administration({ mode }: { mode: "parties" | "settings" }) {
             </div>
             <p>{state.shop.address}</p>
             <p>{state.shop.phone}</p>
-            <button
-              className="button"
-              onClick={() =>
-                open({
-                  title: "changePassword",
-                  path: "/auth/password",
-                  method: "POST",
-                  fields: [
-                    {
-                      key: "currentPassword",
-                      type: "password",
-                      required: true,
-                    },
-                    {
-                      key: "password",
-                      label: "newPassword",
-                      type: "password",
-                      required: true,
-                    },
-                  ],
-                })
-              }
-            >
-              {tr("changePassword")}
-            </button>
           </section>
           <section className="panel">
             <div className="panel-heading">
@@ -220,6 +261,12 @@ export function Administration({ mode }: { mode: "parties" | "settings" }) {
                   <div className="row-actions">
                     <button
                       className="text-button"
+                      onClick={() => editProfile(u, u.id === user.id)}
+                    >
+                      {tr("editProfile")}
+                    </button>
+                    <button
+                      className="text-button"
                       onClick={() =>
                         open({
                           title: "role",
@@ -296,26 +343,56 @@ export function Administration({ mode }: { mode: "parties" | "settings" }) {
                 setBusy(true);
                 setError("");
                 try {
-                  await api.request(editor.path, editor.method, {
+                  const data = {
                     ...values,
                     ...editor.fixed,
-                  });
+                  };
+                  if (editor.profile) {
+                    profileSchema.parse(data);
+                    if (
+                      profileIdentityChanged(editor.initial || {}, values) &&
+                      !values.currentPassword
+                    ) {
+                      setError("CURRENT_PASSWORD_REQUIRED");
+                      return;
+                    }
+                  }
+                  const result = await api.request<{ requiresLogin?: boolean }>(
+                    editor.path,
+                    editor.method,
+                    data,
+                  );
                   setEditor(null);
                   setValues({});
-                  if (editor.path === "/auth/password") {
-                    location.assign("/login");
+                  if (
+                    editor.path === "/auth/password" ||
+                    result.requiresLogin
+                  ) {
+                    location.assign("/");
                     return;
                   }
                   await refresh();
                   await loadUsers();
                 } catch (e: any) {
-                  setError(e.code || "NETWORK_ERROR");
+                  setError(
+                    e.code || (e.issues ? "VALIDATION_ERROR" : "NETWORK_ERROR"),
+                  );
                 } finally {
                   setBusy(false);
                 }
               }}
             >
               <div className="form-grid">
+                {editor.profile && (
+                  <p className="notice wide">
+                    {tr(
+                      editor.path === "/auth/profile"
+                        ? "profileHelp"
+                        : "accountProfileHelp",
+                    )}{" "}
+                    {tr("userIdHelp")}
+                  </p>
+                )}
                 {editor.fields.map((f) => (
                   <label key={f.key}>
                     {tr(f.label || f.key)}
@@ -338,8 +415,21 @@ export function Administration({ mode }: { mode: "parties" | "settings" }) {
                       <input
                         type={f.type || (f.key === "email" ? "email" : "text")}
                         value={values[f.key] || ""}
-                        required={f.required}
-                        minLength={f.type === "password" ? 8 : undefined}
+                        required={
+                          f.key === "currentPassword" && editor.profile
+                            ? profileIdentityChanged(
+                                editor.initial || {},
+                                values,
+                              )
+                            : f.required
+                        }
+                        minLength={
+                          f.type === "password"
+                            ? f.key === "currentPassword"
+                              ? 1
+                              : 8
+                            : undefined
+                        }
                         maxLength={
                           f.type === "password"
                             ? 72
@@ -354,7 +444,11 @@ export function Administration({ mode }: { mode: "parties" | "settings" }) {
                                     : 180
                         }
                         autoComplete={
-                          f.type === "password" ? "new-password" : "off"
+                          f.type === "password"
+                            ? f.key === "currentPassword"
+                              ? "current-password"
+                              : "new-password"
+                            : "off"
                         }
                         onChange={(e) =>
                           setValues((v) => ({ ...v, [f.key]: e.target.value }))

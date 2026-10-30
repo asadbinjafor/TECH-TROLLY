@@ -14,6 +14,11 @@ import { Button, Input, Txt, Panel, useColors } from "../components/ui";
 import { api, tokenKey } from "../services/api";
 import * as SecureStore from "expo-secure-store";
 import { NativePartyManager } from "./native-party-manager";
+import {
+  profileSchema,
+  profileIdentityChanged,
+  type User,
+} from "@tech-trolley/contracts";
 type Editor = {
   title: string;
   path: string;
@@ -26,6 +31,7 @@ type Editor = {
   }[];
   initial?: Record<string, string>;
   fixed?: Record<string, unknown>;
+  profile?: boolean;
 };
 export function NativeAdministration({ route, navigation }: any) {
   const { mode } = route.params,
@@ -46,6 +52,24 @@ export function NativeAdministration({ route, navigation }: any) {
     setValues(e.initial || {});
     setError("");
   };
+  const editProfile = (account: User, own: boolean) =>
+    open({
+      title: "editProfile",
+      path: own ? "/auth/profile" : "/users/" + account.id,
+      method: "PATCH",
+      profile: true,
+      initial: {
+        name: account.name,
+        login: account.login,
+        email: account.email || "",
+      },
+      fields: [
+        { key: "name" },
+        { key: "login", label: "loginId" },
+        { key: "email" },
+        { key: "currentPassword", secure: true },
+      ],
+    });
   useEffect(() => {
     void reload().catch((e: any) => setError(e.code));
     if (mode === "password")
@@ -79,6 +103,36 @@ export function NativeAdministration({ route, navigation }: any) {
           <Txt accessibilityRole="alert" style={{ color: "#b95050" }}>
             {tr(error)}
           </Txt>
+        )}
+        {mode === "settings" && (
+          <Panel>
+            <Txt style={{ fontSize: 20, fontWeight: "600" }}>
+              {tr("myProfile")}
+            </Txt>
+            <Txt>{user?.name}</Txt>
+            <Txt>
+              {user?.login} · {user?.email}
+            </Txt>
+            <Txt>{tr("profileHelp")}</Txt>
+            <Button
+              label={tr("editProfile")}
+              onPress={() => editProfile(user!, true)}
+            />
+            <Button
+              label={tr("changePassword")}
+              onPress={() =>
+                open({
+                  title: "changePassword",
+                  path: "/auth/password",
+                  method: "POST",
+                  fields: [
+                    { key: "currentPassword", secure: true },
+                    { key: "password", label: "newPassword", secure: true },
+                  ],
+                })
+              }
+            />
+          </Panel>
         )}
         {mode === "settings" && (
           <Panel>
@@ -187,6 +241,10 @@ export function NativeAdministration({ route, navigation }: any) {
                   {u.login} · {u.email} · {tr(u.role)}
                 </Txt>
                 <Button
+                  label={tr("editProfile")}
+                  onPress={() => editProfile(u, u.id === user.id)}
+                />
+                <Button
                   label={tr("role")}
                   onPress={() =>
                     open({
@@ -249,6 +307,16 @@ export function NativeAdministration({ route, navigation }: any) {
                   >
                     {tr(editor.title)}
                   </Txt>
+                  {editor.profile && (
+                    <Txt>
+                      {tr(
+                        editor.path === "/auth/profile"
+                          ? "profileHelp"
+                          : "accountProfileHelp",
+                      )}{" "}
+                      {tr("userIdHelp")}
+                    </Txt>
+                  )}
                   {editor.fields.map((f) =>
                     f.options ? (
                       <View key={f.key} style={{ marginBottom: 15 }}>
@@ -306,7 +374,7 @@ export function NativeAdministration({ route, navigation }: any) {
                       setError("");
                       void (async () => {
                         try {
-                          await api.request(editor.path, editor.method, {
+                          const data = {
                             ...Object.fromEntries(
                               editor.fields.map((f) => [
                                 f.key,
@@ -314,16 +382,36 @@ export function NativeAdministration({ route, navigation }: any) {
                               ]),
                             ),
                             ...editor.fixed,
-                          });
+                          };
+                          if (editor.profile) {
+                            profileSchema.parse(data);
+                            if (
+                              profileIdentityChanged(
+                                editor.initial || {},
+                                values,
+                              ) &&
+                              !values.currentPassword
+                            ) {
+                              setError("CURRENT_PASSWORD_REQUIRED");
+                              return;
+                            }
+                          }
+                          const result = await api.request<{
+                            requiresLogin?: boolean;
+                          }>(editor.path, editor.method, data);
                           const isPassword = editor.path === "/auth/password";
                           setEditor(null);
                           setValues({});
-                          if (isPassword)
+                          if (isPassword || result.requiresLogin)
                             await SecureStore.deleteItemAsync(tokenKey);
                           await refresh();
+                          if (isPassword || result.requiresLogin) return;
                           await reload();
                         } catch (e: any) {
-                          setError(e.code || "NETWORK_ERROR");
+                          setError(
+                            e.code ||
+                              (e.issues ? "VALIDATION_ERROR" : "NETWORK_ERROR"),
+                          );
                         } finally {
                           setBusy(false);
                         }
