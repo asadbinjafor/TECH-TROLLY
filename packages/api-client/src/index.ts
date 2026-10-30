@@ -66,7 +66,7 @@ export function createClient(
   }
   return {
     request,
-    receiptPdf: async (id: string, purchase = false) => {
+    receiptPdf: async (id: string, purchase = false, signal?: AbortSignal) => {
       const bearer = await token?.();
       let response: Response;
       try {
@@ -79,7 +79,9 @@ export function createClient(
               ...(bearer ? { Authorization: `Bearer ${bearer}` } : {}),
               ...(token ? { "X-Native-Client": "1" } : {}),
             },
-            signal: AbortSignal.timeout(60000),
+            signal: signal
+              ? AbortSignal.any([signal, AbortSignal.timeout(60000)])
+              : AbortSignal.timeout(60000),
           },
         );
       } catch {

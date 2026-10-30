@@ -25,13 +25,30 @@ export const individualSellerSchema = z.strictObject({
   fatherName: name,
   motherName: name,
   presentAddress: address,
-  permanentAddress: address,
+  permanentAddress: z
+    .string()
+    .trim()
+    .max(240)
+    .regex(/^[^\r\n\t]*$/)
+    .optional(),
   identityNumber: z
     .string()
     .trim()
     .min(1)
     .max(60)
     .regex(/^[^\r\n\t]+$/),
+  // Optional on the wire so existing saved declarations and retries still parse.
+  dateOfBirth: z.iso
+    .date()
+    .refine(
+      (value) =>
+        value <=
+        new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Dhaka" }).format(
+          new Date(),
+        ),
+      "BIRTH_DATE_INVALID",
+    )
+    .optional(),
   nomineeName: name,
   nomineePhone: phone,
 });

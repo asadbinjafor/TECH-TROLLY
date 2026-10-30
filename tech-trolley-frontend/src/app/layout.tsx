@@ -1,6 +1,10 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { ShopProvider } from "@/contexts/shop-context";
 import "./globals.css";
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+};
 export const metadata: Metadata = {
   title: "Tech Trolley · Shop Manager",
   description: "Internal shop inventory, sales and daily accounts",

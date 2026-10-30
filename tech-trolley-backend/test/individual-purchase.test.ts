@@ -297,7 +297,6 @@ test(
             "fatherName",
             "motherName",
             "presentAddress",
-            "permanentAddress",
             "identityNumber",
             "nomineeName",
             "nomineePhone",
@@ -742,6 +741,161 @@ test(
                   )[0].granted,
                   false,
                 );
+        },
+      );
+      await t.test(
+        "direct seller entry atomically links dues, retries, optional address and private birth date",
+        async () => {
+          const input: any = {
+            ...data,
+            sellerName: "Direct seller QA",
+            identityNumber: "DIRECT-NID-QA",
+            dateOfBirth: "1995-05-20",
+            imei: "860000000000081",
+            cost: "1.23",
+            cash: "0.41",
+            bank: "0.42",
+          };
+          delete input.supplierId;
+          delete input.permanentAddress;
+          const counts = async () =>
+            (
+              await db.query(
+                "SELECT (SELECT count(*) FROM party)::int AS parties,(SELECT count(*) FROM document)::int AS documents,(SELECT count(*) FROM individual_seller_profile)::int AS profiles,(SELECT count(*) FROM command_result)::int AS commands",
+              )
+            )[0];
+          const before = await counts();
+          for (const birth of [
+            undefined,
+            "2023-02-29",
+            "1995-02-30",
+            "2999-01-01",
+          ])
+            assert.equal(
+              (
+                await post("individualPurchase", {
+                  ...input,
+                  dateOfBirth: birth,
+                })
+              ).status,
+              400,
+            );
+          const failed = await post("individualPurchase", {
+            ...input,
+            cost: "999999999999",
+            cash: "999999999999",
+            bank: "0",
+          });
+          assert.equal(failed.body.code, "INSUFFICIENT_FUNDS");
+          assert.deepEqual(
+            await counts(),
+            before,
+            "Failed posting left an orphan contact or financial record",
+          );
+          const beforeBalances = (await state()).balances;
+          const directKey = randomUUID();
+          const [a, b] = await Promise.all([
+            post("individualPurchase", input, directKey),
+            post("individualPurchase", input, directKey),
+          ]);
+          assert.equal(a.status, 201, JSON.stringify(a.body));
+          assert.equal(b.status, 201);
+          assert.equal(a.body.id, b.body.id);
+          const afterCounts = await counts();
+          assert.equal(afterCounts.parties, before.parties + 1);
+          assert.equal(afterCounts.documents, before.documents + 1);
+          const [saved] = await db.query(
+            "SELECT party_id,snapshot FROM document WHERE id=$1",
+            [a.body.id],
+          );
+          assert.ok(saved.party_id);
+          assert.equal(saved.snapshot.supplierId, saved.party_id);
+          const s = await state();
+          assert.equal(
+            minor(s.balances.cash),
+            minor(beforeBalances.cash) - 41n,
+          );
+          assert.equal(
+            minor(s.balances.bank),
+            minor(beforeBalances.bank) - 42n,
+          );
+          assert.equal(
+            minor(s.balances.inventory),
+            minor(beforeBalances.inventory) + 123n,
+          );
+          assert.equal(
+            minor(s.balances.payable),
+            minor(beforeBalances.payable) + 40n,
+          );
+          assert.ok(!JSON.stringify(s).includes(input.dateOfBirth));
+          const declaration = await api(
+            "get",
+            `/purchases/${a.body.id}/declaration`,
+          );
+          assert.equal(declaration.body.seller.dateOfBirth, input.dateOfBirth);
+          assert.equal(declaration.body.seller.permanentAddress, undefined);
+          assert.equal(declaration.body.originalDue, "0.40");
+          const repeat = await cmd("individualPurchase", {
+            ...input,
+            imei: "860000000000082",
+            permanentAddress: "",
+          });
+          assert.equal(
+            (
+              await db.query("SELECT party_id FROM document WHERE id=$1", [
+                repeat.id,
+              ])
+            )[0].party_id,
+            saved.party_id,
+          );
+          assert.equal(
+            (await counts()).parties,
+            afterCounts.parties,
+            "Exact private identity should reuse its stable contact",
+          );
+          const other = await cmd("individualPurchase", {
+            ...input,
+            imei: "860000000000083",
+            identityNumber: "DIFFERENT-NID-QA",
+          });
+          assert.notEqual(
+            (
+              await db.query("SELECT party_id FROM document WHERE id=$1", [
+                other.id,
+              ])
+            )[0].party_id,
+            saved.party_id,
+            "Name and phone alone must never merge people's dues",
+          );
+          const payment = await cmd("supplierPayment", {
+            documentId: a.body.id,
+            amount: "0.40",
+            account: "cash",
+            note: "Synthetic settlement",
+          });
+          assert.ok(payment.id);
+          assert.equal(
+            (await state()).documents.find((d: any) => d.id === a.body.id).due,
+            "0.00",
+          );
+          assert.equal(
+            (
+              await db.query(
+                "SELECT count(*) FROM (SELECT document_id FROM journal_line GROUP BY document_id HAVING sum(amount)<>0) x",
+              )
+            )[0].count,
+            "0",
+          );
+          assert.ok(
+            !(await api("get", `/purchases/${purchase.id}/declaration`)).body
+              .seller.dateOfBirth,
+            "Do not invent a birth date for historical declarations",
+          );
+          assert.equal(
+            (await cmd("individualPurchase", data, key)).id,
+            purchase.id,
+            "Legacy frozen retry remains compatible",
+          );
         },
       );
     } finally {

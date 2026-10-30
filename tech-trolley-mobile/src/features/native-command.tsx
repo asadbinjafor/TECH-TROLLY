@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Picker } from "@react-native-picker/picker";
+import DateTimePicker from "@react-native-community/datetimepicker";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   choices,
@@ -59,6 +60,7 @@ export function NativeCommand({ navigation, route }: any) {
     [error, setError] = useState(""),
     [issues, setIssues] = useState<Record<string, string>>({}),
     [partyField, setPartyField] = useState<Field | null>(null);
+  const [dateField, setDateField] = useState<string | null>(null);
   const storage = `tt-${user!.id}-draft-${kind}`,
     pendingKey = `tt-${user!.id}-pending-${kind}`,
     tr = (k: string) =>
@@ -364,6 +366,32 @@ export function NativeCommand({ navigation, route }: any) {
                     {tr(f.label)}
                   </Txt>
                   <Txt>{values[f.key] || "—"}</Txt>
+                </Panel>
+              ) : f.type === "date" ? (
+                <Panel>
+                  <Txt>{tr(f.label)}</Txt>
+                  <Button
+                    label={values[f.key] || tr("select")}
+                    onPress={() => setDateField(f.key)}
+                  />
+                  {dateField === f.key && (
+                    <DateTimePicker
+                      value={
+                        new Date((values[f.key] || "2000-01-01") + "T12:00:00")
+                      }
+                      maximumDate={new Date(state.today + "T23:59:59")}
+                      mode="date"
+                      display={Platform.OS === "ios" ? "inline" : "default"}
+                      onChange={(event, date) => {
+                        setDateField(null);
+                        if (event.type === "set" && date)
+                          setValues((v) => ({
+                            ...v,
+                            [f.key]: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`,
+                          }));
+                      }}
+                    />
+                  )}
                 </Panel>
               ) : (
                 <Input

@@ -131,7 +131,6 @@ const scenarios: Record<CommandKind, Record<string, string>> = {
     paid: "0",
   },
   individualPurchase: {
-    supplierId: id(2),
     sellerName: "Seller",
     sellerPhone: "01700000000",
     fatherName: "Father",
@@ -139,6 +138,7 @@ const scenarios: Record<CommandKind, Record<string, string>> = {
     presentAddress: "Dhaka",
     permanentAddress: "Dhaka",
     identityNumber: "QA-NID-ONLY",
+    dateOfBirth: "1995-05-20",
     nomineeName: "Nominee",
     nomineePhone: "01800000000",
     model: "Phone",
@@ -566,6 +566,28 @@ test("conditional contact, IMEI, reason and stale selection validation preserves
   assert.ok(
     prepareForm("cashCount", fields("cashCount", { counted: "0" }), empty),
   );
+});
+test("individual purchase needs no supplier list, keeps permanent address optional and validates birth date", () => {
+  const keys = forms.individualPurchase.map((f) => f.key);
+  assert.ok(!keys.includes("supplierId"));
+  assert.equal(keys.indexOf("dateOfBirth"), keys.indexOf("identityNumber") + 1);
+  const raw = fields("individualPurchase", {
+    ...scenarios.individualPurchase,
+    permanentAddress: "",
+    supplierId: id(2),
+  });
+  const prepared: any = prepareForm("individualPurchase", raw, empty);
+  assert.equal(prepared.permanentAddress, "");
+  assert.equal(prepared.supplierId, undefined);
+  assert.equal(prepared.dateOfBirth, "1995-05-20");
+  assert.equal(
+    restoreFormDraft("individualPurchase", raw, empty.today).supplierId,
+    undefined,
+  );
+  for (const dateOfBirth of ["", "2025-02-29", "2026-02-30", "2999-01-01"])
+    assert.throws(() =>
+      prepareForm("individualPurchase", { ...raw, dateOfBirth }, empty),
+    );
 });
 test("correction choices exclude document types the API can never correct", () => {
   const options = choices(forms.reversal[0], populated, "en");

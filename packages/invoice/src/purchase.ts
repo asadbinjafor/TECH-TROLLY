@@ -30,18 +30,21 @@ export const purchaseStyles = `
 .tt-purchase__wordmark path{fill:#171b1e}
 .tt-purchase__date{height:10mm;display:flex;align-items:center;justify-content:flex-end;gap:2mm;font-size:9pt}
 .tt-purchase__digits{display:flex;height:7mm}
-.tt-purchase__digits span{width:5.3mm;border:.2mm solid #555;border-right:0;text-align:center;line-height:7mm;font-size:11pt}
+.tt-purchase__digits span{width:5.3mm;border:.2mm solid #555;border-right:0;text-align:center;line-height:7mm;font-size:11pt;font-weight:700}
 .tt-purchase__digits span:last-child{border-right:.2mm solid #555}
 .tt-purchase__intro{margin-top:4mm}
 .tt-purchase__sentence{display:flex;gap:1.2mm;align-items:baseline;min-height:7mm}
-.tt-purchase__fill{flex:1;min-width:0;border-bottom:.35mm dotted #555;font-weight:500;overflow-wrap:anywhere;line-height:1.65;font-size:10pt}
+.tt-purchase__fill{flex:1;min-width:0;border-bottom:.35mm dotted #555;font-weight:700;overflow-wrap:anywhere;line-height:1.65;font-size:10pt}
 .tt-purchase__phone{font-size:10pt}
 .tt-purchase__phone .tt-purchase__fill{font-size:var(--purchase-product-font,10pt);line-height:1.5}
 .tt-purchase__terms{margin:0 0 2mm;line-height:1.7;font-size:11pt}
 .tt-purchase__payments{font-size:9pt;margin:0 0 3mm}
 .tt-purchase__identity{margin-top:2mm}
 .tt-purchase__row{display:grid;grid-template-columns:40mm 3mm 1fr;align-items:center;min-height:9.5mm;gap:1mm}
-.tt-purchase__value{border-bottom:.35mm dotted #555;padding:0 1mm;overflow-wrap:anywhere;font-size:10pt;line-height:1.5;white-space:pre-wrap}
+.tt-purchase__value{min-width:0;border-bottom:.35mm dotted #555;padding:0 1mm;overflow-wrap:anywhere;font-size:10pt;font-weight:700;line-height:1.5;white-space:pre-wrap}
+.tt-purchase__identity-pair{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:4mm}
+.tt-purchase__identity-pair .tt-purchase__row{grid-template-columns:40mm 3mm minmax(0,1fr)}
+.tt-purchase__identity-pair .tt-purchase__row:last-child{grid-template-columns:20mm 2mm minmax(0,1fr)}
 .tt-purchase__row.address{min-height:13mm}
 .tt-purchase__row.address .tt-purchase__value{font-size:9pt}
 .tt-purchase__signatures{position:absolute;left:24mm;right:21mm;bottom:18mm;display:flex;justify-content:space-between;gap:30mm;text-align:center;font-size:10pt}
@@ -87,15 +90,20 @@ export function renderPurchaseBody(d: PurchaseDeclaration, sample = false) {
     ["মাতার নাম", s.motherName],
     ["মোবাইল নাম্বার", s.sellerPhone],
     ["বর্তমান ঠিকানা", s.presentAddress, "address"],
-    ["স্থায়ী ঠিকানা", s.permanentAddress, "address"],
-    ["এনআইডি/ডিএল", s.identityNumber],
+    ["স্থায়ী ঠিকানা", s.permanentAddress || "", "address"],
     ["নমিনি: নাম", s.nomineeName],
     ["মোবাইল নাম্বার", s.nomineePhone],
   ];
   const [year, month, day] = d.date.split("-");
+  const birthDate = s.dateOfBirth
+    ? s.dateOfBirth.split("-").reverse().join(" / ")
+    : "";
+  const identityPair = `<div class="tt-purchase__identity-pair"><div class="tt-purchase__row"><span>এনআইডি/ডিএল</span><span>:</span><span class="tt-purchase__value">${esc(s.identityNumber)}</span></div><div class="tt-purchase__row"><span>জন্মতারিখ</span><span>:</span><span class="tt-purchase__value">${esc(birthDate)}</span></div></div>`;
   const compact =
     description.length > 180 ||
-    Object.values(s).some((value) => value.length > 130) ||
+    Object.values(s).some(
+      (value) => typeof value === "string" && value.length > 130,
+    ) ||
     [s.sellerName, s.fatherName, s.motherName, s.nomineeName].some(
       (value) => value.length > 60,
     );
@@ -116,11 +124,11 @@ export function renderPurchaseBody(d: PurchaseDeclaration, sample = false) {
       <div class="tt-purchase__sentence">IMEI <span class="tt-purchase__fill">${esc(u.imei)}</span></div>
       <div class="tt-purchase__sentence">যার মূল্য <span class="tt-purchase__fill">${esc(money(d.total))}</span> Tech Trolley এর</div>
       <p class="tt-purchase__terms">নিকট বিক্রয় করিলাম। ${esc(d.terms)}</p>
-      <p class="tt-purchase__payments">নগদ: ${esc(money(d.cash))} · ব্যাংক: ${esc(money(d.bank))} · বাকি: ${esc(money(d.originalDue))}</p>
+      <p class="tt-purchase__payments">নগদ: <strong>${esc(money(d.cash))}</strong> · ব্যাংক: <strong>${esc(money(d.bank))}</strong> · বাকি: <strong>${esc(money(d.originalDue))}</strong></p>
     </section>
-    <section class="tt-purchase__identity">${rows.map(([label, value, cls]) => `<div class="tt-purchase__row ${cls || ""}"><span>${esc(label)}</span><span>:</span><span class="tt-purchase__value">${esc(value)}</span></div>`).join("")}</section></div>
+    <section class="tt-purchase__identity">${rows.map(([label, value, cls], index) => `${index === 6 ? identityPair : ""}<div class="tt-purchase__row ${cls || ""}"><span>${esc(label)}</span><span>:</span><span class="tt-purchase__value">${esc(value)}</span></div>`).join("")}</section></div>
     <footer class="tt-purchase__signatures">
-      <div class="tt-purchase__signature"><div class="tt-purchase__signature-space"></div><div>ক্রেতার স্বাক্ষর</div><em>Tech Trolly</em></div>
+      <div class="tt-purchase__signature"><div class="tt-purchase__signature-space"></div><div>ক্রেতার স্বাক্ষর</div><em>Tech Trolley</em></div>
       <div class="tt-purchase__signature"><div class="tt-purchase__signature-space"></div><div>বিক্রেতার স্বাক্ষর</div></div>
     </footer>
   </article>`;

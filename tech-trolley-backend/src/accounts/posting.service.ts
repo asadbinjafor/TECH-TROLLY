@@ -218,8 +218,32 @@ export class PostingService {
                 allocations.push({ target: purchase.id, amount: offset });
             }
           } else if (isPurchase) {
-            await party(data.supplierId, "supplier");
-            partyId = data.supplierId;
+            partyId = data.supplierId || null;
+            if (individual && !partyId) {
+              // Direct seller entry must create/link its payable atomically with
+              // stock, the private declaration and the persisted command result.
+              // Never merge people on a name/phone alone or pick an ambiguous match.
+              const matches = await tx.query(
+                `SELECT p.id FROM party p JOIN individual_seller_profile s ON s.party_id=p.id
+                 WHERE p.kind='supplier' AND p.active AND NOT p.is_walk_in
+                   AND s.details->>'identityNumber'=$1 AND s.details->>'sellerName'=$2
+                   AND s.details->>'sellerPhone'=$3 LIMIT 2`,
+                [data.identityNumber, data.sellerName, data.sellerPhone],
+              );
+              partyId = matches.length === 1 ? matches[0].id : randomUUID();
+              if (matches.length !== 1) {
+                await tx.query(
+                  "INSERT INTO party(id,name,phone,address,kind) VALUES($1,$2,$3,'','supplier')",
+                  [partyId, data.sellerName, data.sellerPhone],
+                );
+                await tx.query(
+                  "INSERT INTO audit_event(actor_id,action,subject_id,details) VALUES($1,'individual_supplier_created',$2,$3)",
+                  [actor.id, partyId, { source: "individualPurchase" }],
+                );
+              }
+              snapshot.supplierId = partyId;
+            }
+            await party(partyId!, "supplier");
             if (data.imei) {
               if (
                 (

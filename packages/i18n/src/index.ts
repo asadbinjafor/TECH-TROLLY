@@ -12,6 +12,11 @@ const words: Record<string, [string, string]> = {
   motherName: ["Mother's name", "মাতার নাম"],
   presentAddress: ["Present address", "বর্তমান ঠিকানা"],
   permanentAddress: ["Permanent address", "স্থায়ী ঠিকানা"],
+  dateOfBirth: ["Date of birth", "জন্মতারিখ"],
+  BIRTH_DATE_INVALID: [
+    "Enter a valid date of birth that is not in the future.",
+    "সঠিক জন্মতারিখ দিন; ভবিষ্যতের তারিখ দেওয়া যাবে না।",
+  ],
   identityNumber: [
     "NID / Driving licence number",
     "এনআইডি / ড্রাইভিং লাইসেন্স নম্বর",
@@ -382,6 +387,18 @@ const words: Record<string, [string, string]> = {
   ],
   openInvoicePdf: ["Open PDF / Print", "PDF খুলুন / প্রিন্ট"],
   downloadInvoicePdf: ["Download PDF", "PDF ডাউনলোড"],
+  preparingPdf: ["Preparing PDF…", "PDF তৈরি হচ্ছে…"],
+  preparingPdfHelp: [
+    "Please keep this dialog open while the PDF is prepared.",
+    "PDF তৈরি হওয়া পর্যন্ত এই ঘরটি খোলা রাখুন।",
+  ],
+  pdfReadyHelp: [
+    "PDF ready. If the download did not start, tap Save PDF file.",
+    "PDF প্রস্তুত। ডাউনলোড শুরু না হলে ‘ফাইল সেভ করুন’ চাপুন।",
+  ],
+  savePdfFile: ["Save PDF file", "ফাইল সেভ করুন"],
+  retryPdfDownload: ["Retry PDF download", "আবার PDF ডাউনলোড করুন"],
+  downloadPurchaseSample: ["Sample A4 form", "নমুনা A4 ফর্ম"],
   PDF_BUSY: [
     "Another invoice PDF is being prepared. Please try again shortly.",
     "আরেকটি invoice-এর PDF তৈরি হচ্ছে। একটু পরে আবার চেষ্টা করুন।",

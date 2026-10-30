@@ -211,45 +211,54 @@ export const commands = {
           message: "ACCESSORY_IMEI",
         });
     }),
-  individualPurchase: z.strictObject({
-    ...individualSellerSchema.shape,
-    supplierId: id,
-    brand: text.max(60).regex(/^[^\r\n\t]+$/),
-    model: text.max(100).regex(/^[^\r\n\t]+$/),
-    storage: z
-      .string()
-      .trim()
-      .max(40)
-      .regex(/^[^\r\n\t]*$/)
-      .default(""),
-    color: z
-      .string()
-      .trim()
-      .max(40)
-      .regex(/^[^\r\n\t]*$/)
-      .default(""),
-    variant: z
-      .string()
-      .trim()
-      .max(80)
-      .regex(/^[^\r\n\t]*$/)
-      .default(""),
-    category: z.literal("phone").default("phone"),
-    condition: z.enum(["new", "used", "refurbished"]),
-    imei: z.string().regex(/^\d{15}$/),
-    battery: z.number().int().min(0).max(100).nullable().default(null),
-    box: z.enum(["with", "without"]),
-    accessories: z
-      .string()
-      .trim()
-      .max(120)
-      .regex(/^[^\r\n\t]*$/)
-      .default(""),
-    cost: money,
-    cash: money,
-    bank: money,
-    note,
-  }),
+  individualPurchase: z
+    .strictObject({
+      ...individualSellerSchema.shape,
+      supplierId: id.optional(),
+      brand: text.max(60).regex(/^[^\r\n\t]+$/),
+      model: text.max(100).regex(/^[^\r\n\t]+$/),
+      storage: z
+        .string()
+        .trim()
+        .max(40)
+        .regex(/^[^\r\n\t]*$/)
+        .default(""),
+      color: z
+        .string()
+        .trim()
+        .max(40)
+        .regex(/^[^\r\n\t]*$/)
+        .default(""),
+      variant: z
+        .string()
+        .trim()
+        .max(80)
+        .regex(/^[^\r\n\t]*$/)
+        .default(""),
+      category: z.literal("phone").default("phone"),
+      condition: z.enum(["new", "used", "refurbished"]),
+      imei: z.string().regex(/^\d{15}$/),
+      battery: z.number().int().min(0).max(100).nullable().default(null),
+      box: z.enum(["with", "without"]),
+      accessories: z
+        .string()
+        .trim()
+        .max(120)
+        .regex(/^[^\r\n\t]*$/)
+        .default(""),
+      cost: money,
+      cash: money,
+      bank: money,
+      note,
+    })
+    .superRefine((value, context) => {
+      if (!value.supplierId && !value.dateOfBirth)
+        context.addIssue({
+          code: "custom",
+          path: ["dateOfBirth"],
+          message: "BIRTH_DATE_INVALID",
+        });
+    }),
   sale: z
     .strictObject({
       unitId: id,
@@ -482,7 +491,7 @@ export interface State {
 export interface Field {
   key: string;
   label: string;
-  type?: "money" | "text" | "select" | "password" | "number" | "month";
+  type?: "money" | "text" | "select" | "password" | "number" | "month" | "date";
   source?:
     | "units"
     | "editableUnits"
@@ -590,21 +599,18 @@ export const forms: Record<CommandKind, Field[]> = {
     n,
   ],
   individualPurchase: [
-    f("supplierId", "select", {
-      source: "suppliers",
-      label: "individualSeller",
-    }),
     ...[
       "sellerName",
       "sellerPhone",
       "fatherName",
       "motherName",
       "presentAddress",
-      "permanentAddress",
-      "identityNumber",
-      "nomineeName",
-      "nomineePhone",
     ].map((key) => f(key)),
+    f("permanentAddress", "text", { optional: true }),
+    f("identityNumber"),
+    f("dateOfBirth", "date"),
+    f("nomineeName"),
+    f("nomineePhone"),
     f("model"),
     f("brand"),
     f("storage", "text", { optional: true }),
@@ -729,6 +735,7 @@ export function restoreFormDraft(
   today: string,
 ) {
   const values = { ...formDefaults(kind, today), ...draft };
+  if (kind === "individualPurchase") delete values.supplierId;
   // Replace old seeded zeros only in ordinary drafts, never pending commands.
   for (const field of forms[kind])
     if (
@@ -793,6 +800,7 @@ export function paymentHelp(kind: CommandKind, values: Record<string, string>) {
 export function fieldMaxLength(kind: CommandKind, field: Field) {
   if (field.type === "money") return 15;
   if (field.type === "month") return 7;
+  if (field.type === "date") return 10;
   if (kind === "individualPurchase") {
     const limit = (
       { brand: 60, model: 100, storage: 40, color: 40, variant: 80 } as Record<
@@ -914,6 +922,9 @@ export function prepareForm(
 }
 export function prepare(kind: CommandKind, raw: Record<string, string>) {
   const data: Record<string, unknown> = { ...raw };
+  // Ordinary new forms use direct seller entry. Frozen pending commands bypass
+  // preparation and retain their original supplier ID and idempotency hash.
+  if (kind === "individualPurchase") delete data.supplierId;
   if (["purchase", "stockEdit"].includes(kind) && raw.category === "accessory")
     data.imei = null;
   for (const field of forms[kind]) {

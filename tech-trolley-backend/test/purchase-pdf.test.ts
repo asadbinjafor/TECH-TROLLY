@@ -32,6 +32,11 @@ test(
     );
     assert.ok(!html.includes(samplePurchase.buyer.name));
     assert.ok(html.includes("5,000/="));
+    assert.ok(html.includes("Tech Trolley</em>"));
+    assert.ok(!html.includes("Tech Trolly"));
+    assert.ok(html.includes("20 / 05 / 1995"));
+    assert.ok(html.includes("tt-purchase__identity-pair"));
+    assert.ok(html.includes("<strong>40,000/=</strong>"));
     const escaped = renderPurchaseHtml({
       ...samplePurchase,
       seller: {
@@ -81,5 +86,18 @@ test(
     };
     const wideBytes = await service.renderPurchase(wide);
     assert.equal((await PDFDocument.load(wideBytes)).getPageCount(), 1);
+    const legacy = {
+      ...samplePurchase,
+      number: "LEGACY-PURCHASE-QA",
+      seller: { ...samplePurchase.seller },
+    };
+    delete legacy.seller.dateOfBirth;
+    delete legacy.seller.permanentAddress;
+    assert.equal(
+      (
+        await PDFDocument.load(await service.renderPurchase(legacy))
+      ).getPageCount(),
+      1,
+    );
   },
 );

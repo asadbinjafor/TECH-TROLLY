@@ -11,6 +11,7 @@ import {
   fitPurchaseLayout,
 } from "@tech-trolley/invoice";
 import { api, apiBase } from "@/services/api";
+import { PdfDownload } from "./pdf-download";
 
 export function PurchaseDeclaration({
   id,
@@ -97,13 +98,7 @@ export function PurchaseDeclaration({
               >
                 {t("openInvoicePdf", lang)}
               </a>
-              <a
-                className="button"
-                href={`${apiBase}/purchases/${encodeURIComponent(id)}/pdf?download=1`}
-                download
-              >
-                {t("downloadInvoicePdf", lang)}
-              </a>
+              <PdfDownload id={id} number={data.number} lang={lang} purchase />
             </footer>
           </>
         )}

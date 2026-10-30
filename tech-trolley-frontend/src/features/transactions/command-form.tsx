@@ -364,8 +364,11 @@ export function CommandForm({
                         ? "password"
                         : field.type === "month"
                           ? "month"
-                          : "text"
+                          : field.type === "date"
+                            ? "date"
+                            : "text"
                     }
+                    max={field.type === "date" ? state.today : undefined}
                     inputMode={
                       field.type === "money"
                         ? "decimal"

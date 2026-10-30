@@ -44,6 +44,7 @@ import { StartupScreen } from "@/features/auth/startup-screen";
 import { CommandForm } from "@/features/transactions/command-form";
 import { Administration } from "@/features/settings/administration";
 import { Invoice } from "@/features/transactions/invoice";
+import { PdfDownload } from "@/features/transactions/pdf-download";
 import { PurchaseDeclaration } from "@/features/transactions/purchase-declaration";
 import { ReportAnalysis } from "./report-analysis";
 import { LoanDues } from "@/features/accounts/loan-dues";
@@ -504,6 +505,14 @@ export function Workspace({ section }: { section: string }) {
                   <Plus size={19} />
                   {tr("individualPurchase")}
                 </button>
+                <a
+                  className="button"
+                  href="/samples/tech-trolley-purchase-sample.pdf"
+                  download="Tech-Trolley-Purchase-Sample.pdf"
+                >
+                  <ArrowDownToLine size={17} />
+                  {tr("downloadPurchaseSample")}
+                </a>
               </div>
             )}
           </div>
@@ -1257,13 +1266,11 @@ export function Workspace({ section }: { section: string }) {
               >
                 {tr("openInvoicePdf")}
               </a>
-              <a
-                className="button"
-                href={`${apiBase}/documents/${encodeURIComponent(receipt.id)}/pdf?download=1`}
-                download
-              >
-                {tr("downloadInvoicePdf")}
-              </a>
+              <PdfDownload
+                id={receipt.id}
+                number={receipt.number}
+                lang={lang}
+              />
             </footer>
           </section>
         </div>

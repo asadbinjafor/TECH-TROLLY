@@ -13,6 +13,7 @@ export const samplePurchase: PurchaseDeclaration = {
     presentAddress: "বসুন্ধরা, ঢাকা",
     permanentAddress: "নমুনা ঠিকানা, বাংলাদেশ",
     identityNumber: "SAMPLE-NID-0000",
+    dateOfBirth: "1995-05-20",
     nomineeName: "নমুনা নমিনি",
     nomineePhone: "01800000000",
   },
