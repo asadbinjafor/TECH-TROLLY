@@ -44,6 +44,12 @@ import { Administration } from "@/features/settings/administration";
 import { Invoice } from "@/features/transactions/invoice";
 import { ReportAnalysis } from "./report-analysis";
 import { LoanDues } from "@/features/accounts/loan-dues";
+import { QuickActions } from "./quick-actions";
+import {
+  useBalancePrivacy,
+  BalanceToggle,
+  RevealBalances,
+} from "./balance-privacy";
 const icons = [
   LayoutDashboard,
   CalendarDays,
@@ -88,6 +94,23 @@ export function Workspace({ section }: { section: string }) {
     [receipt, setReceipt] = useState<any>(null),
     [detail, setDetail] = useState<Document | null>(null),
     [toast, setToast] = useState("");
+  const privacy = useBalancePrivacy(`${user?.id || ""}:${section}`);
+  const [revealOpen, setRevealOpen] = useState(false);
+  useEffect(() => {
+    if (section === "overview" && !privacy.visible) {
+      setReceipt(null);
+      setDetail(null);
+    }
+  }, [privacy.visible, section]);
+  useEffect(() => {
+    const closeReveal = () => setRevealOpen(false);
+    window.addEventListener("blur", closeReveal);
+    document.addEventListener("visibilitychange", closeReveal);
+    return () => {
+      window.removeEventListener("blur", closeReveal);
+      document.removeEventListener("visibilitychange", closeReveal);
+    };
+  }, []);
   const reportQuery = new URLSearchParams({
     lang,
     period: user?.role !== "OWNER" || section === "daybook" ? "today" : period,
@@ -144,8 +167,18 @@ export function Workspace({ section }: { section: string }) {
       />
     );
   const r = section === "overview" ? state.report : report || state.report;
-  const money = (v: string) => currency(v, lang),
+  const money = (v: string) =>
+      section === "overview" && !privacy.visible
+        ? "৳ ••••••"
+        : currency(v, lang),
     tr = (k: string) => t(k, lang);
+  const balanceToggle = () => (
+    <BalanceToggle
+      visible={privacy.visible}
+      lang={lang}
+      onClick={() => (privacy.visible ? privacy.hide() : setRevealOpen(true))}
+    />
+  );
   const action = (kind: CommandKind) => {
     setSelectedUnit(undefined);
     setSelectedDocument(undefined);
@@ -176,6 +209,7 @@ export function Workspace({ section }: { section: string }) {
         <Coins size={17} />
       </div>
       <strong className="amount">{money(value)}</strong>
+      {section === "overview" && balanceToggle()}
     </article>
   );
   const table = (documents: Document[], title = "recent") => (
@@ -249,11 +283,14 @@ export function Workspace({ section }: { section: string }) {
                   <td>
                     <button
                       className="text-button"
-                      onClick={() =>
-                        d.kind === "sale"
-                          ? void fetchReceipt(d.id)
-                          : setDetail(d)
-                      }
+                      onClick={() => {
+                        if (section === "overview" && !privacy.visible) {
+                          setRevealOpen(true);
+                          return;
+                        }
+                        if (d.kind === "sale") void fetchReceipt(d.id);
+                        else setDetail(d);
+                      }}
                     >
                       {tr(d.kind === "sale" ? "receipt" : "details")}{" "}
                       <ArrowUpRight size={13} />
@@ -270,7 +307,12 @@ export function Workspace({ section }: { section: string }) {
     </section>
   );
   let docs = state.documents.filter((d) =>
-    JSON.stringify(d).toLowerCase().includes(search.toLowerCase()),
+    (section === "overview" && !privacy.visible
+      ? `${d.number} ${d.kind} ${d.actor_name} ${d.snapshot.model || ""} ${d.snapshot.partyName || ""}`
+      : JSON.stringify(d)
+    )
+      .toLowerCase()
+      .includes(search.toLowerCase()),
   );
   const dateShift = (n: number) => {
     const d = new Date((date || state.today) + "T12:00:00Z");
@@ -455,6 +497,7 @@ export function Workspace({ section }: { section: string }) {
                     {tr("cash")}
                   </div>
                   <strong>{money(state.balances.cash)}</strong>
+                  {balanceToggle()}
                   <div className="balance-foot">
                     <span>
                       {tr("openingCash")}
@@ -476,6 +519,7 @@ export function Workspace({ section }: { section: string }) {
                     {tr("bank")}
                   </div>
                   <strong>{money(state.balances.bank)}</strong>
+                  {balanceToggle()}
                   <p className="muted">
                     {lang === "bn"
                       ? "দোকানের ব্যাংক অ্যাকাউন্ট"
@@ -501,12 +545,7 @@ export function Workspace({ section }: { section: string }) {
                 {card("expenses", r.expense)}
                 {card("stockCost", state.balances.inventory)}
               </div>
-              <section className="quick-actions">
-                <h2>{tr("quick")}</h2>
-                <div>
-                  {actions(["purchase", "expense", "transfer", "loan"])}
-                </div>
-              </section>
+              <QuickActions lang={lang} onAction={action} />
               <div className="overview-lower">
                 <div>{table(docs.slice(0, 6))}</div>
                 {user.role === "OWNER" && (
@@ -516,50 +555,57 @@ export function Workspace({ section }: { section: string }) {
                         ? "বিক্রির গত ৭ দিন"
                         : "Sales over the last 7 days"}
                     </h2>
-                    <div className="chart">
-                      {Array.from({ length: 7 }, (_, i) => {
-                        const d = new Date(state.today + "T12:00:00Z");
-                        d.setUTCDate(d.getUTCDate() - 6 + i);
-                        const ds = d.toISOString().slice(0, 10),
-                          sum = state.documents
-                            .filter(
-                              (x) =>
-                                x.business_date === ds &&
-                                x.kind === "sale" &&
-                                !x.reversed_by,
-                            )
-                            .reduce((n, x) => n + minor(x.total), 0n);
-                        const max = state.documents
-                          .filter((x) => x.kind === "sale")
-                          .reduce(
-                            (n, x) => (minor(x.total) > n ? minor(x.total) : n),
-                            1n,
-                          );
-                        return (
-                          <div
-                            className="chart-day"
-                            key={ds}
-                            title={`${ds}: ${decimal(sum)}`}
-                          >
+                    {!privacy.visible ? (
+                      <div className="chart chart-locked">
+                        {balanceToggle()}
+                      </div>
+                    ) : (
+                      <div className="chart">
+                        {Array.from({ length: 7 }, (_, i) => {
+                          const d = new Date(state.today + "T12:00:00Z");
+                          d.setUTCDate(d.getUTCDate() - 6 + i);
+                          const ds = d.toISOString().slice(0, 10),
+                            sum = state.documents
+                              .filter(
+                                (x) =>
+                                  x.business_date === ds &&
+                                  x.kind === "sale" &&
+                                  !x.reversed_by,
+                              )
+                              .reduce((n, x) => n + minor(x.total), 0n);
+                          const max = state.documents
+                            .filter((x) => x.kind === "sale")
+                            .reduce(
+                              (n, x) =>
+                                minor(x.total) > n ? minor(x.total) : n,
+                              1n,
+                            );
+                          return (
                             <div
-                              className="bar"
-                              style={{
-                                height:
-                                  sum > 0n
-                                    ? `${Math.max(3, Number((sum * 100n) / max))}%`
-                                    : "2px",
-                              }}
-                            />
-                            <small>
-                              {d.toLocaleDateString(
-                                lang === "bn" ? "bn-BD" : "en-GB",
-                                { weekday: "short", timeZone: "Asia/Dhaka" },
-                              )}
-                            </small>
-                          </div>
-                        );
-                      })}
-                    </div>
+                              className="chart-day"
+                              key={ds}
+                              title={`${ds}: ${decimal(sum)}`}
+                            >
+                              <div
+                                className="bar"
+                                style={{
+                                  height:
+                                    sum > 0n
+                                      ? `${Math.max(3, Number((sum * 100n) / max))}%`
+                                      : "2px",
+                                }}
+                              />
+                              <small>
+                                {d.toLocaleDateString(
+                                  lang === "bn" ? "bn-BD" : "en-GB",
+                                  { weekday: "short", timeZone: "Asia/Dhaka" },
+                                )}
+                              </small>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
                   </section>
                 )}
               </div>
@@ -1061,6 +1107,17 @@ export function Workspace({ section }: { section: string }) {
             setCommand(null);
             setToast(tr("saved"));
             if (kind === "sale") void fetchReceipt(id);
+          }}
+        />
+      )}
+      {revealOpen && (
+        <RevealBalances
+          key={user.id}
+          lang={lang}
+          onClose={() => setRevealOpen(false)}
+          onVerified={() => {
+            privacy.reveal();
+            setRevealOpen(false);
           }}
         />
       )}

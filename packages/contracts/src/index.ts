@@ -58,6 +58,9 @@ export const passwordSchema = z
     password: newPassword,
   })
   .strict();
+export const verifyPasswordSchema = z.strictObject({
+  password: currentPassword,
+});
 export const userSchema = z
   .object({
     name: text,

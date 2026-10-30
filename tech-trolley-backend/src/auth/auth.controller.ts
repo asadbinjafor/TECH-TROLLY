@@ -14,6 +14,7 @@ import {
   loginSchema,
   passwordSchema,
   profileSchema,
+  verifyPasswordSchema,
 } from "@tech-trolley/contracts";
 import type { Request, Response } from "express";
 import { AuthService } from "./auth.service";
@@ -53,6 +54,13 @@ export class AuthController {
   @Get("me") @UseGuards(AuthGuard) me(@Req() req: any) {
     const { sessionHash, ...user } = req.user;
     return user;
+  }
+  @Post("verify-password") @UseGuards(AuthGuard) async verifyPassword(
+    @Body() body: unknown,
+    @Req() req: any,
+  ) {
+    const { password } = verifyPasswordSchema.parse(body);
+    return this.auth.verifyPassword(req.user, password);
   }
   @Post("password") @UseGuards(AuthGuard) async password(
     @Body() body: unknown,

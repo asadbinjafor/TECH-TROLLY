@@ -16,6 +16,8 @@ import {
 } from "@tech-trolley/contracts";
 import { NativeReportAnalysis } from "./native-report-analysis";
 import { NativeLoanDues } from "./native-loan-dues";
+import { useNativeDashboardPrivacy } from "./native-dashboard-privacy";
+import { NativeQuickActions } from "./native-quick-actions";
 import { useShop } from "../contexts/shop-context";
 import { Button, Txt, Panel, Input, Empty, useColors } from "../components/ui";
 import { api, tokenKey } from "../services/api";
@@ -35,8 +37,15 @@ export function NativePage({ navigation, route, section: initial }: any) {
     [report, setReport] = useState<Report | null>(null),
     [problem, setProblem] = useState(""),
     [busy, setBusy] = useState(false);
+  const privacy = useNativeDashboardPrivacy(
+    `${user?.id || ""}:${section}`,
+    navigation,
+  );
   const tr = (k: string) => t(k, lang),
-    money = (v: string) => currency(v, lang);
+    money = (v: string) =>
+      section === "overview" && !privacy.visible
+        ? "৳ ••••••"
+        : currency(v, lang);
   const command = (kind: CommandKind) =>
     navigation.navigate("Command", { kind });
   useFocusEffect(
@@ -106,6 +115,7 @@ export function NativePage({ navigation, route, section: initial }: any) {
         >
           {money(value)}
         </Txt>
+        {section === "overview" && privacy.control}
       </Panel>
     </View>
   );
@@ -113,7 +123,12 @@ export function NativePage({ navigation, route, section: initial }: any) {
     docs.length ? (
       docs
         .filter((d) =>
-          JSON.stringify(d).toLowerCase().includes(search.toLowerCase()),
+          (section === "overview" && !privacy.visible
+            ? `${d.number} ${d.kind} ${d.actor_name} ${d.snapshot.model || ""}`
+            : JSON.stringify(d)
+          )
+            .toLowerCase()
+            .includes(search.toLowerCase()),
         )
         .map((d) => (
           <Panel key={d.id}>
@@ -180,7 +195,11 @@ export function NativePage({ navigation, route, section: initial }: any) {
             {d.kind === "sale" && (
               <Button
                 label={tr("receipt")}
-                onPress={() => navigation.navigate("Receipt", { id: d.id })}
+                onPress={() =>
+                  section === "overview" && !privacy.visible
+                    ? privacy.toggle()
+                    : navigation.navigate("Receipt", { id: d.id })
+                }
               />
             )}
           </Panel>
@@ -267,6 +286,7 @@ export function NativePage({ navigation, route, section: initial }: any) {
               >
                 {money(state.balances.cash)}
               </Txt>
+              {privacy.control}
               <Txt style={{ color: "#c8c8c3", fontSize: 11, marginTop: 15 }}>
                 {tr("cashIn")} +{money(r.cashIn)} · {tr("cashOut")} −
                 {money(r.cashOut)}
@@ -277,6 +297,7 @@ export function NativePage({ navigation, route, section: initial }: any) {
               <Txt style={{ fontSize: 30, lineHeight: 45, marginTop: 12 }}>
                 {money(state.balances.bank)}
               </Txt>
+              {privacy.control}
               <Button
                 label={tr("transfer")}
                 onPress={() => command("transfer")}
@@ -297,7 +318,7 @@ export function NativePage({ navigation, route, section: initial }: any) {
             <Txt style={{ fontWeight: "600", marginBottom: 10 }}>
               {tr("quick")}
             </Txt>
-            {actions(["purchase", "expense", "collection", "cashCount"])}
+            <NativeQuickActions lang={lang} onAction={command} />
             <Txt style={{ fontWeight: "600", marginVertical: 15 }}>
               {tr("recent")}
             </Txt>
@@ -798,6 +819,7 @@ export function NativePage({ navigation, route, section: initial }: any) {
           {tr("connected")} · Tech Trolley
         </Txt>
       </ScrollView>
+      {privacy.dialog}
     </SafeAreaView>
   );
 }

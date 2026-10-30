@@ -125,6 +125,19 @@ const words: Record<string, [string, string]> = {
   purchases: ["Purchases", "কেনাকাটা"],
   transactions: ["Transactions", "লেনদেন"],
   money: ["Money & dues", "টাকা ও বাকি"],
+  tapBalance: ["Tap to see balance", "টাকার অঙ্ক দেখতে চাপুন"],
+  hideBalance: ["Hide amounts", "টাকার অঙ্ক ঢাকুন"],
+  hiddenAmount: ["Amount hidden", "টাকার অঙ্ক ঢাকা আছে"],
+  revealDashboard: ["Show dashboard amounts", "Dashboard-এর টাকার অঙ্ক দেখুন"],
+  revealPasswordHelp: [
+    "Enter your own account password. Dashboard amounts will show for one minute and hide when you leave the app.",
+    "নিজের account-এর password দিন। এক মিনিট অঙ্ক দেখা যাবে; অ্যাপ থেকে বের হলে আবার ঢেকে যাবে।",
+  ],
+  revealSubmit: ["Verify & show", "যাচাই করে দেখান"],
+  dashboardPrivacyHelp: [
+    "Dashboard amounts are hidden. Other pages keep their existing access rules.",
+    "Dashboard-এর অঙ্ক ঢাকা আছে। অন্য পাতায় আগের নিয়মেই তথ্য দেখা যাবে।",
+  ],
   dues: ["DUE · Personal loans", "DUE · ধার-পাওনা"],
   loanDuesHelp: [
     "Track money lent to each person, including Staff. Add their name as a Person. This is separate from salary advances and customer/supplier dues; lending and repayment do not change profit.",

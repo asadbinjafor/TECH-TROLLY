@@ -1,5 +1,13 @@
 # Progress and release handover
 
+## Dashboard privacy and colorful actions — 2026-10-30
+
+The Owner confirmed Dashboard-only masking and requested larger colorful quick actions. Web/native now hide overview amounts by default, verify the current account password through a protected throttled endpoint, show for one minute and relock on hiding/leaving/reloading. Dashboard recent money, chart/tooltips and detail shortcuts follow the same lock; other pages and financial forms keep their existing access. Four icon cards use the reference's blue/pink/green/purple colors. No migration or business history rewrite. See [scope/security limits and checks](dashboard-privacy-audit.md).
+
+API/web builds, all workspace typechecks, 48 backend/PDF/isolated PostgreSQL checks, 28 hosting/form checks and Android/iOS exports pass. Synthetic browser checks confirm initial DOM amounts are masked and chart bars absent; incorrect password stays locked; correct own password reveals accurate amounts. Further browser/lifecycle and production release evidence follow below.
+
+Browser follow-up passed real one-minute expiry, cleared password input, locked Details, normal Money & dues visibility, relocking after return/reload, verification from a metric and the original expense form from its new tile. English/Bengali phone layout has no horizontal overflow; all four quick tiles are 108px high with the supplied color scheme, and captured console warnings/errors are empty. No synthetic production entries. Release uses the existing production Git integrations; the transient isolated UI shop is cleaned after verification.
+
 ## Personal loan DUE section — release authorized, 2026-10-30
 
 The Owner approved and requested deployment of a dedicated person-based DUE page plus the pending optional expense-details change. Web/native expose total lent/repaid/outstanding per Person, name/phone search, unpaid/all including cleared filters, per-loan receipt shortcuts, repeat lending and dated Cash/Bank/actor/reason history. Existing PostingService commands/accounting and date permissions remain authoritative. Staff personal loans use Person contacts; salary advances remain separate. No migration or data rewrite. See [scope and checks](loan-dues-audit.md).

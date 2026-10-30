@@ -19,6 +19,31 @@ export const safeUser = (u: any): User => ({
 });
 @Injectable()
 export class AuthService {
+  async verifyPassword(user: User & { sessionHash: string }, password: string) {
+    // Account-wide persistent limit: opening another tab/session cannot reset it.
+    const key = digest("dashboard-reveal:" + user.id);
+    const [attempt] = await db.query(
+      `INSERT INTO auth_attempt(key,count,reset_at) VALUES($1,1,now()+interval '15 minutes') ON CONFLICT(key) DO UPDATE SET count=CASE WHEN auth_attempt.reset_at<now() THEN 1 ELSE auth_attempt.count+1 END,reset_at=CASE WHEN auth_attempt.reset_at<now() THEN now()+interval '15 minutes' ELSE auth_attempt.reset_at END RETURNING count`,
+      [key],
+    );
+    if (attempt.count > 5) fail("RATE_LIMIT", 429);
+    const [u] = await db.query(
+      "SELECT password_hash FROM app_user WHERE id=$1",
+      [user.id],
+    );
+    if (!u || !(await bcrypt.compare(password, u.password_hash)))
+      fail("CURRENT_PASSWORD_INVALID", 400);
+    return db.transaction(async (em) => {
+      const [fresh] = await em.query(
+        "SELECT u.password_hash FROM app_user u JOIN session s ON s.user_id=u.id WHERE u.id=$1 AND u.active AND s.token_hash=$2 AND s.expires_at>now() AND s.absolute_expires_at>now() FOR SHARE OF u,s",
+        [user.id, user.sessionHash],
+      );
+      if (!fresh || fresh.password_hash !== u.password_hash)
+        fail("SESSION_EXPIRED", 401);
+      await em.query("DELETE FROM auth_attempt WHERE key=$1", [key]);
+      return { ok: true, revealForSeconds: 60 };
+    });
+  }
   async login(identity: string, password: string, ip: string) {
     const normalized = identity.trim().toLowerCase().normalize("NFC");
     const key = digest(`${ip}:${normalized}`);
