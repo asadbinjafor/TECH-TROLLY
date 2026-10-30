@@ -13,6 +13,18 @@ const words: Record<string, [string, string]> = {
   presentAddress: ["Present address", "বর্তমান ঠিকানা"],
   permanentAddress: ["Permanent address", "স্থায়ী ঠিকানা"],
   dateOfBirth: ["Date of birth", "জন্মতারিখ"],
+  phoneType: ["Phone type", "ফোনের ধরন"],
+  android: ["Android", "অ্যান্ড্রয়েড"],
+  iphone: ["iPhone", "আইফোন"],
+  ram: ["RAM", "র‍্যাম"],
+  PHONE_SPEC_INVALID: [
+    "Choose the phone type, storage and Android RAM from the available options.",
+    "ফোনের ধরন, স্টোরেজ এবং অ্যান্ড্রয়েডের র‍্যাম তালিকা থেকে বেছে নিন।",
+  ],
+  emptyPhoneStockSelection: [
+    "No stock matches these phone specifications. Clear the filters to see all stock, including older unclassified phones.",
+    "এই বৈশিষ্ট্যের ফোন স্টকে নেই। আগের ধরন দেওয়া হয়নি এমন ফোনসহ সব স্টক দেখতে বাছাই খালি করুন।",
+  ],
   BIRTH_DATE_INVALID: [
     "Enter a valid date of birth that is not in the future.",
     "সঠিক জন্মতারিখ দিন; ভবিষ্যতের তারিখ দেওয়া যাবে না।",

@@ -69,6 +69,8 @@ export class DocumentsController {
         role: ["OWNER", "STAFF"].includes(s.actorRole) ? s.actorRole : null,
       },
       unit: {
+        phoneType: s.phoneType || undefined,
+        ram: s.ram || undefined,
         model: s.model,
         brand: s.brand,
         variant: s.variant,

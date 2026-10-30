@@ -165,6 +165,10 @@ export class PostingService {
             const before = Object.fromEntries(
               metadataKeys.map((k) => [k, unit[k]]),
             );
+            Object.assign(before, {
+              phoneType: unit.phone_type,
+              ram: unit.ram,
+            });
             snapshot.purchaseId = purchase.id;
             snapshot.originalNumber = purchase.number;
             snapshot.partyName = purchase.snapshot.partyName;
@@ -183,9 +187,30 @@ export class PostingService {
               snapshot.after = Object.fromEntries(
                 metadataKeys.map((k) => [k, data[k]]),
               );
+              const specs = {
+                phoneType:
+                  data.category === "accessory"
+                    ? null
+                    : Object.hasOwn(data, "phoneType")
+                      ? data.phoneType
+                      : unit.phone_type,
+                ram:
+                  data.category === "accessory"
+                    ? null
+                    : Object.hasOwn(data, "ram")
+                      ? data.ram
+                      : unit.ram,
+              };
+              commands.stockEdit.parse({ ...data, ...specs });
+              Object.assign(snapshot.after, specs);
               await tx.query(
-                `UPDATE inventory_unit SET model=$2,brand=$3,storage=$4,color=$5,variant=$6,category=$7,condition=$8,imei=$9,battery=$10,box=$11,revision=revision+1 WHERE id=$1`,
-                [unit.id, ...metadataKeys.map((k) => data[k])],
+                `UPDATE inventory_unit SET model=$2,brand=$3,storage=$4,color=$5,variant=$6,category=$7,condition=$8,imei=$9,battery=$10,box=$11,phone_type=$12,ram=$13,revision=revision+1 WHERE id=$1`,
+                [
+                  unit.id,
+                  ...metadataKeys.map((k) => data[k]),
+                  specs.phoneType,
+                  specs.ram,
+                ],
               );
             } else {
               const credit = minor(data.returnValue);
@@ -325,6 +350,8 @@ export class PostingService {
               actorRole: actor.role,
               invoiceShop: invoiceShop(shop),
               model: u.model,
+              phoneType: u.phone_type,
+              ram: u.ram,
               brand: u.brand,
               variant: u.variant,
               storage: u.storage,
@@ -628,7 +655,7 @@ export class PostingService {
               "SELECT nextval('unit_number') AS seq",
             );
             await tx.query(
-              `INSERT INTO inventory_unit(id,internal_id,model,brand,variant,category,condition,imei,battery,box,cost,status,purchase_id,storage,color,previous_unit_id) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'IN_STOCK',$12,$13,$14,$15)`,
+              `INSERT INTO inventory_unit(id,internal_id,model,brand,variant,category,condition,imei,battery,box,cost,status,purchase_id,storage,color,previous_unit_id,phone_type,ram) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'IN_STOCK',$12,$13,$14,$15,$16,$17)`,
               [
                 unitId,
                 `ST-${String(unitNumber).padStart(6, "0")}`,
@@ -645,6 +672,8 @@ export class PostingService {
                 data.storage || "",
                 data.color || "",
                 previousUnitId,
+                data.phoneType || null,
+                data.ram || null,
               ],
             );
             await tx.query(

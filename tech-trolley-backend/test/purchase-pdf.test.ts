@@ -86,6 +86,25 @@ test(
     };
     const wideBytes = await service.renderPurchase(wide);
     assert.equal((await PDFDocument.load(wideBytes)).getPageCount(), 1);
+    const android = {
+      ...samplePurchase,
+      number: "ANDROID-PURCHASE-QA",
+      unit: {
+        ...samplePurchase.unit,
+        brand: "Samsung",
+        model: "Galaxy QA",
+        phoneType: "android" as const,
+        ram: "16 GB",
+        storage: "2 TB",
+      },
+    };
+    assert.ok(renderPurchaseBody(android).includes("RAM 16 GB"));
+    assert.equal(
+      (
+        await PDFDocument.load(await service.renderPurchase(android))
+      ).getPageCount(),
+      1,
+    );
     const legacy = {
       ...samplePurchase,
       number: "LEGACY-PURCHASE-QA",

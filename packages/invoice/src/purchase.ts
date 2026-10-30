@@ -68,6 +68,7 @@ export function renderPurchaseBody(d: PurchaseDeclaration, sample = false) {
     : `${u.brand} ${u.model}`;
   const description = [
     model,
+    u.phoneType === "android" && u.ram ? "RAM " + u.ram : "",
     u.storage,
     u.color,
     u.variant,

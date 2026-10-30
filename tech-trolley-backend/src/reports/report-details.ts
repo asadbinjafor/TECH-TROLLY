@@ -72,6 +72,8 @@ export function reportDetails(
         brand,
         model,
         storage: s.storage || "",
+        phoneType: s.phoneType || null,
+        ram: s.ram || null,
         color: s.color || "",
         variant: s.variant || "",
         serial: s.imei || s.internalId || "",

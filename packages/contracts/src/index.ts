@@ -1,5 +1,14 @@
 import { z } from "zod";
 import { individualSellerSchema } from "./purchase-declaration";
+import {
+  phoneSpecFields,
+  validatePhoneSpecs,
+  storageOptions,
+  ramOptions,
+  normalizeCapacity,
+  type PhoneType,
+} from "./phone-specs";
+export * from "./phone-specs";
 export * from "./purchase-declaration";
 export { z };
 export { ZodError } from "zod";
@@ -132,6 +141,7 @@ export const commands = {
     .strictObject({
       unitId: id,
       revision: z.number().int().min(0),
+      ...phoneSpecFields,
       model: text,
       brand: text,
       storage: z.string().trim().max(60),
@@ -148,6 +158,7 @@ export const commands = {
       note: text,
     })
     .superRefine((v, c) => {
+      validatePhoneSpecs(v, c);
       if (v.category === "phone" && !v.imei)
         c.addIssue({
           code: "custom",
@@ -175,6 +186,7 @@ export const commands = {
   }),
   purchase: z
     .strictObject({
+      ...phoneSpecFields,
       model: text,
       brand: text,
       variant: z.string().max(120).default(""),
@@ -198,6 +210,7 @@ export const commands = {
       note,
     })
     .superRefine((v, c) => {
+      validatePhoneSpecs(v, c);
       if (v.category === "phone" && !v.imei)
         c.addIssue({
           code: "custom",
@@ -214,6 +227,7 @@ export const commands = {
   individualPurchase: z
     .strictObject({
       ...individualSellerSchema.shape,
+      ...phoneSpecFields,
       supplierId: id.optional(),
       brand: text.max(60).regex(/^[^\r\n\t]+$/),
       model: text.max(100).regex(/^[^\r\n\t]+$/),
@@ -252,6 +266,7 @@ export const commands = {
       note,
     })
     .superRefine((value, context) => {
+      validatePhoneSpecs(value, context);
       if (!value.supplierId && !value.dateOfBirth)
         context.addIssue({
           code: "custom",
@@ -335,6 +350,8 @@ export type CommandKind = keyof typeof commands;
 export type CommandInput<K extends CommandKind> = z.input<(typeof commands)[K]>;
 export type CommandData<K extends CommandKind> = z.output<(typeof commands)[K]>;
 export interface Unit {
+  phoneType?: PhoneType | null;
+  ram?: string | null;
   id: string;
   internal_id: string;
   model: string;
@@ -421,6 +438,8 @@ export interface ProductProfit {
   grossProfit: string;
 }
 export interface ProfitEntry {
+  phoneType?: PhoneType | null;
+  ram?: string | null;
   id: string;
   number: string;
   sourceNumber: string;
@@ -510,6 +529,7 @@ export interface Field {
   optional?: boolean;
   default?: string;
   emptyValue?: string;
+  uiOnly?: boolean;
 }
 const f = (
   key: string,
@@ -525,13 +545,26 @@ const a = f("account", "select", {
 // Blank input is a UI choice. Financial payloads still carry decimal strings.
 const optionalMoney = (key: string, extra: Partial<Field> = {}) =>
   f(key, "money", { optional: true, emptyValue: "0", ...extra });
+const phoneFields = (uiOnly = false): Field[] => [
+  f("phoneType", "select", {
+    options: ["android", "iphone"],
+    optional: true,
+    uiOnly,
+  }),
+  f("ram", "select", { options: [...ramOptions], optional: true, uiOnly }),
+  f("storage", "select", {
+    options: [...storageOptions],
+    optional: true,
+    uiOnly,
+  }),
+];
 export const forms: Record<CommandKind, Field[]> = {
   stockEdit: [
     f("unitId", "select", { source: "editableUnits" }),
     f("revision", "number"),
+    ...phoneFields(),
     f("model"),
     f("brand"),
-    f("storage", "text", { optional: true }),
     f("color", "text", { optional: true }),
     f("variant", "text", { optional: true }),
     f("category", "select", {
@@ -567,9 +600,9 @@ export const forms: Record<CommandKind, Field[]> = {
     optionalMoney("bank", { label: "openingBank" }),
   ],
   purchase: [
+    ...phoneFields(),
     f("model"),
     f("brand"),
-    f("storage", "text", { optional: true }),
     f("color", "text", { optional: true }),
     f("variant", "text", { optional: true }),
     f("category", "select", {
@@ -611,9 +644,9 @@ export const forms: Record<CommandKind, Field[]> = {
     f("dateOfBirth", "date"),
     f("nomineeName"),
     f("nomineePhone"),
+    ...phoneFields(),
     f("model"),
     f("brand"),
-    f("storage", "text", { optional: true }),
     f("color", "text", { optional: true }),
     f("variant", "text", { optional: true }),
     f("condition", "select", {
@@ -630,6 +663,7 @@ export const forms: Record<CommandKind, Field[]> = {
     n,
   ],
   sale: [
+    ...phoneFields(true),
     f("unitId", "select", { source: "units" }),
     f("customerId", "select", { source: "customers", optional: true }),
     f("customerName", "text", { optional: true }),
@@ -710,16 +744,28 @@ export function saleNeedsCustomer(values: {
   }
 }
 export function formFields(kind: CommandKind, values: Record<string, string>) {
-  return forms[kind].filter(
-    (f) =>
-      f.key !== "revision" &&
-      (f.key !== "expenseName" || values.categoryId === "custom") &&
-      !(
-        ["purchase", "stockEdit"].includes(kind) &&
-        f.key === "imei" &&
-        values.category === "accessory"
-      ),
-  );
+  return forms[kind]
+    .filter(
+      (f) =>
+        f.key !== "revision" &&
+        (f.key !== "expenseName" || values.categoryId === "custom") &&
+        (f.key !== "ram" || values.phoneType === "android") &&
+        (!["phoneType", "ram"].includes(f.key) ||
+          values.category !== "accessory") &&
+        (!(kind === "sale" && f.key === "storage") || !!values.phoneType) &&
+        !(
+          ["purchase", "stockEdit"].includes(kind) &&
+          f.key === "imei" &&
+          values.category === "accessory"
+        ),
+    )
+    .map((field) =>
+      field.key === "storage" &&
+      ((kind === "stockEdit" && !values.phoneType) ||
+        values.category === "accessory")
+        ? { ...field, type: "text" as const, options: undefined }
+        : field,
+    );
 }
 export function formDefaults(kind: CommandKind, today: string) {
   return Object.fromEntries(
@@ -733,9 +779,21 @@ export function restoreFormDraft(
   kind: CommandKind,
   draft: Record<string, string> | null,
   today: string,
+  state?: State | null,
 ) {
   const values = { ...formDefaults(kind, today), ...draft };
   if (kind === "individualPurchase") delete values.supplierId;
+  if (values.phoneType && values.storage)
+    values.storage = normalizeCapacity(values.storage);
+  if (kind === "sale" && state && values.unitId) {
+    const unit = state.units.find((u) => u.id === values.unitId);
+    if (unit)
+      Object.assign(values, {
+        phoneType: unit.phoneType || "",
+        ram: unit.ram || "",
+        storage: unit.storage || "",
+      });
+  }
   // Replace old seeded zeros only in ordinary drafts, never pending commands.
   for (const field of forms[kind])
     if (
@@ -752,6 +810,14 @@ export function fieldRequired(
   values: Record<string, string>,
   state: State,
 ) {
+  if (["purchase", "individualPurchase", "stockEdit"].includes(kind)) {
+    if (field.key === "phoneType")
+      return kind !== "stockEdit" && values.category !== "accessory";
+    if (field.key === "ram")
+      return values.phoneType === "android" && values.category !== "accessory";
+    if (field.key === "storage")
+      return !!values.phoneType && values.category !== "accessory";
+  }
   if (kind === "sale" && field.key === "customerId")
     return saleNeedsCustomer(values);
   if (["purchase", "stockEdit"].includes(kind) && field.key === "imei")
@@ -838,7 +904,12 @@ export function fieldMaxLength(kind: CommandKind, field: Field) {
     )[field.key] ?? (field.key === "note" && !field.optional ? 180 : 300)
   );
 }
-export function emptySelectionMessage(field: Field) {
+export function emptySelectionMessage(
+  field: Field,
+  values?: Record<string, string>,
+) {
+  if (field.source === "units" && values?.phoneType)
+    return "emptyPhoneStockSelection";
   return (
     (
       {
@@ -864,9 +935,9 @@ export function selectionBlockers(
   for (const field of formFields(kind, values).filter(
     (f) => f.type === "select",
   )) {
-    const options = choices(field, state, "en");
+    const options = choices(field, state, "en", values);
     if (!options.length && fieldRequired(kind, field, values, state))
-      issues[field.key] = emptySelectionMessage(field);
+      issues[field.key] = emptySelectionMessage(field, values);
     else if (
       values[field.key] &&
       !options.some((o) => o.value === values[field.key])
@@ -881,6 +952,13 @@ export function prepareForm(
   state: State,
 ) {
   const blocked = selectionBlockers(kind, values, state);
+  for (const field of formFields(kind, values))
+    if (
+      ["phoneType", "storage", "ram"].includes(field.key) &&
+      fieldRequired(kind, field, values, state) &&
+      !values[field.key]
+    )
+      blocked[field.key] = "PHONE_SPEC_INVALID";
   if (
     ["supplierRefund", "loanRepayment"].includes(kind) &&
     money.safeParse(values.amount).success
@@ -940,6 +1018,22 @@ export function prepare(kind: CommandKind, raw: Record<string, string>) {
     if (field.type === "number" && data[field.key] !== null)
       data[field.key] = Number(data[field.key]);
   }
+  for (const field of forms[kind]) if (field.uiOnly) delete data[field.key];
+  if (["purchase", "individualPurchase", "stockEdit"].includes(kind)) {
+    if (data.category === "accessory" || !data.phoneType) {
+      if (kind === "stockEdit") {
+        data.phoneType = null;
+        data.ram = null;
+      } else {
+        delete data.phoneType;
+        delete data.ram;
+      }
+    } else {
+      if (typeof data.storage === "string")
+        data.storage = normalizeCapacity(data.storage);
+      if (data.phoneType === "iphone" || !data.ram) data.ram = null;
+    }
+  }
   const zero = (value: unknown) =>
     money.safeParse(value).success && minor(String(value)) === 0n;
   if (kind === "purchase") {
@@ -998,6 +1092,7 @@ export function choices(
   field: Field,
   state: State,
   lang: Language,
+  values: Record<string, string> = {},
 ): { value: string; label: string }[] {
   if (field.options)
     return field.options.map((value) => ({
@@ -1016,11 +1111,12 @@ export function choices(
       .filter(
         (u) =>
           u.status === "IN_STOCK" &&
+          (field.source !== "units" || matchesPhoneFilter(u, values)) &&
           (field.source !== "editableUnits" || canChangeStock(u, state)),
       )
       .map((u) => ({
         value: u.id,
-        label: `${u.model} · ${u.imei || u.internal_id}`,
+        label: `${u.model}${productDetails(u) ? " · " + productDetails(u) : ""} · ${u.imei || u.internal_id}`,
       }));
   if (field.source === "categories")
     return state.categories
@@ -1173,10 +1269,22 @@ export function unitFormValues(
   kind: CommandKind,
   unit?: Unit,
 ): Record<string, string> {
-  if (kind === "sale") return { price: "", discount: "", cash: "", bank: "" };
+  if (kind === "sale")
+    return {
+      price: "",
+      discount: "",
+      cash: "",
+      bank: "",
+      phoneType: unit?.phoneType || "",
+      ram: unit?.ram || "",
+      storage: unit?.storage || "",
+    };
   if (!["stockEdit", "purchaseReturn"].includes(kind)) return {};
   const values: Record<string, string> = {
     revision: String(unit?.revision ?? 0),
+    ...(kind === "stockEdit"
+      ? { phoneType: unit?.phoneType || "", ram: unit?.ram || "" }
+      : {}),
   };
   if (kind === "stockEdit")
     for (const key of [
@@ -1193,6 +1301,63 @@ export function unitFormValues(
     ] as const)
       values[key] = unit?.[key] == null ? "" : String(unit[key]);
   return values;
+}
+
+function matchesPhoneFilter(unit: Unit, values: Record<string, string>) {
+  return (
+    (!values.phoneType || unit.phoneType === values.phoneType) &&
+    (!values.phoneType ||
+      !values.storage ||
+      normalizeCapacity(unit.storage) === values.storage) &&
+    (values.phoneType !== "android" || !values.ram || unit.ram === values.ram)
+  );
+}
+export function changeFormValue(
+  kind: CommandKind,
+  before: Record<string, string>,
+  key: string,
+  value: string,
+  state: State,
+) {
+  let next = { ...before, [key]: value };
+  if (key === "unitId")
+    return {
+      ...next,
+      ...unitFormValues(
+        kind,
+        state.units.find((u) => u.id === value),
+      ),
+    };
+  if (key === "customerId")
+    return {
+      ...next,
+      ...customerInvoiceFields(state.parties.find((p) => p.id === value)),
+    };
+  if (key === "phoneType") {
+    if (value !== "android") next.ram = "";
+    if (next.storage) next.storage = normalizeCapacity(next.storage);
+  }
+  if (key === "category" && value === "accessory") {
+    next.phoneType = "";
+    next.ram = "";
+  }
+  if (
+    kind === "sale" &&
+    ["phoneType", "storage", "ram"].includes(key) &&
+    next.unitId
+  ) {
+    const unit = state.units.find((u) => u.id === next.unitId);
+    if (!unit || !matchesPhoneFilter(unit, next))
+      next = {
+        ...next,
+        unitId: "",
+        price: "",
+        discount: "",
+        cash: "",
+        bank: "",
+      };
+  }
+  return next;
 }
 
 export function returnPreview(state: State, values: Record<string, string>) {
@@ -1316,9 +1481,18 @@ export function loanAccounts(
   );
 }
 export function productDetails(unit: {
+  phoneType?: string | null;
+  ram?: string | null;
   storage?: string;
   color?: string;
   variant?: string;
 }) {
-  return [unit.storage, unit.color, unit.variant].filter(Boolean).join(" · ");
+  return [
+    unit.phoneType === "android" && unit.ram ? "RAM " + unit.ram : "",
+    unit.storage,
+    unit.color,
+    unit.variant,
+  ]
+    .filter(Boolean)
+    .join(" · ");
 }

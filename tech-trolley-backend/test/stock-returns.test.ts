@@ -65,6 +65,9 @@ test("stock edits and supplier returns preserve immutable accounting and actual 
     await db.query(
       "ALTER TABLE inventory_unit ADD COLUMN previous_unit_id uuid",
     );
+    await db.query(
+      "ALTER TABLE inventory_unit ADD COLUMN phone_type text, ADD COLUMN ram text",
+    );
     app = await createApp();
     await app.init();
     const http = app.getHttpServer();
@@ -160,6 +163,9 @@ test("stock edits and supplier returns preserve immutable accounting and actual 
         await db.query(
           "ALTER TABLE inventory_unit DROP COLUMN previous_unit_id",
         );
+        await db.query(
+          "ALTER TABLE inventory_unit DROP COLUMN phone_type, DROP COLUMN ram",
+        );
         await migrate();
         assert.deepEqual(
           await db.query("SELECT * FROM document ORDER BY number"),
@@ -190,6 +196,8 @@ test("stock edits and supplier returns preserve immutable accounting and actual 
     const editData = (u: any, extra = {}) => ({
       unitId: u.id,
       ...unitFormValues("stockEdit", u),
+      phoneType: u.phoneType || null,
+      ram: u.ram || null,
       revision: u.revision,
       note: "Corrected physical label",
       ...extra,
@@ -311,9 +319,11 @@ test("stock edits and supplier returns preserve immutable accounting and actual 
         );
         assert.deepEqual(await doc(u.purchase_id), original);
         assert.ok(
-          !choices(forms.sale[0], await state(), "en").some(
-            (o) => o.value === u.id,
-          ),
+          !choices(
+            forms.sale.find((f) => f.key === "unitId")!,
+            await state(),
+            "en",
+          ).some((o) => o.value === u.id),
         );
         assert.equal(
           (

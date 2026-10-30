@@ -15,6 +15,7 @@ import {
   customerInvoiceFields,
   partyKindForSource,
   unitFormValues,
+  changeFormValue,
   returnPreview,
   sellerFormValues,
   purchaseDeclarationTerms,
@@ -68,6 +69,7 @@ export function CommandForm({
           kind,
           JSON.parse(sessionStorage.getItem(storage) || "null"),
           state?.today || "",
+          state,
         );
         if (initialUnit && v.unitId !== initialUnit)
           Object.assign(v, {
@@ -321,25 +323,15 @@ export function CommandForm({
                       kind === "individualPurchase" &&
                       field.key === "supplierId"
                         ? selectSeller(e.target.value)
-                        : setValues((v) => ({
-                            ...v,
-                            [field.key]: e.target.value,
-                            ...(field.key === "unitId"
-                              ? unitFormValues(
-                                  kind,
-                                  state.units.find(
-                                    (u) => u.id === e.target.value,
-                                  ),
-                                )
-                              : {}),
-                            ...(field.key === "customerId"
-                              ? customerInvoiceFields(
-                                  state.parties.find(
-                                    (p) => p.id === e.target.value,
-                                  ),
-                                )
-                              : {}),
-                          }))
+                        : setValues((v) =>
+                            changeFormValue(
+                              kind,
+                              v,
+                              field.key,
+                              e.target.value,
+                              state,
+                            ),
+                          )
                     }
                   >
                     <option value="">
@@ -347,7 +339,7 @@ export function CommandForm({
                         ? t("walkIn", lang)
                         : t("select", lang)}
                     </option>
-                    {choices(field, state, lang).map((o) => (
+                    {choices(field, state, lang, values).map((o) => (
                       <option key={o.value} value={o.value}>
                         {field.options ? t(o.label, lang) : o.label}
                       </option>
@@ -389,7 +381,7 @@ export function CommandForm({
                 )}
                 {partyKindForSource(field.source) && !review && !pending && (
                   <>
-                    {!choices(field, state, lang).length && (
+                    {!choices(field, state, lang, values).length && (
                       <small className="notice">
                         {t(
                           field.key === "customerId" &&
@@ -414,9 +406,9 @@ export function CommandForm({
                 )}
                 {field.type === "select" &&
                   !partyKindForSource(field.source) &&
-                  !choices(field, state, lang).length && (
+                  !choices(field, state, lang, values).length && (
                     <small className="notice" role="status">
-                      {t(emptySelectionMessage(field), lang)}
+                      {t(emptySelectionMessage(field, values), lang)}
                     </small>
                   )}
                 {!pending &&

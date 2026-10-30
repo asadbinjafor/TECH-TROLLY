@@ -410,6 +410,12 @@ export function NativePage({ navigation, route, section: initial }: any) {
                       <Txt>
                         {tr("color")}: {u.color || "—"}
                       </Txt>
+                      {u.phoneType && (
+                        <Txt>
+                          {tr(u.phoneType)}
+                          {u.ram ? ` · RAM ${u.ram}` : ""}
+                        </Txt>
+                      )}
                       <Txt>
                         {tr("variant")}: {u.variant || "—"}
                       </Txt>

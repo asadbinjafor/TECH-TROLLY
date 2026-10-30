@@ -1,5 +1,9 @@
 # নিজে deployment করার নির্দেশনা
 
+**Android/iPhone ও RAM/Storage update (৩১ অক্টোবর):** New purchase ও ব্যক্তির কাছ থেকে ক্রয়ে ফোনের ধরন বাছুন; আসল Model নামও লিখবেন। Android হলে RAM 4/8/12/16 GB এবং Storage 64/128/256/512 GB বা 1/2 TB বাছুন। iPhone হলে RAM লাগবে না। New sale-এ এই বাছাইগুলো দিয়ে stock খুঁজবেন; নির্দিষ্ট stock বাছলে তার তথ্য আসবে। পুরোনো stock-এর ধরন দেওয়া না থাকলে Phone type খালি রেখে সেটি বাছুন, অথবা Inventory → Edit stock details দিয়ে সঠিক ধরন/RAM/Storage দিন। অনুমান করে পুরোনো তথ্য বদলানো হয়নি।
+
+এই update-এ migration **010_phone_type_and_ram.sql** আছে। স্বাভাবিক Git push → CI pass → Render startup runner সেটি চালাবে; তখন মোট **১০টি migration**, আগের মতো **১৯টি RLS table** থাকবে। Supabase-এ হাতে SQL/reset নয়। Release-এর পরে `/api/health` revision ও live ফল পরীক্ষা করবেন।
+
 **একসঙ্গে release live হয়েছে (৩১ অক্টোবর):** নতুন seller form/PDF পরিবর্তনের সঙ্গে মোবাইল login zoom ও PDF Download feedback-এর fix প্রকাশ হয়েছে, commit `0d0bc99`। [সফল CI](https://github.com/asadbinjafor/TECH-TROLLY/actions/runs/41115047376), Vercel ও Render-এর একই API revision যাচাই হয়েছে। Download চাপলে progress দেখাবে; PDF প্রস্তুত হলে প্রয়োজনমতো **ফাইল সেভ করুন** চাপবেন। Purchases-এ **নমুনা A4 ফর্ম** থেকেও sample পাওয়া যাবে। নতুন migration লাগেনি; মোট ৯টি migration-ই আছে। পুরোনো হিসাব ও journal মিলেছে; পরীক্ষামূলক production কেনাবেচা করা হয়নি। নিচের Git → CI → Vercel/Render পদ্ধতিতেই ভবিষ্যৎ release করবেন।
 
 ব্যক্তির কাছ থেকে ফোন ক্রয় / পরিচয় / এক পৃষ্ঠার A4 ক্রয়পত্র update-এর deployment অনুমোদিত। পরীক্ষিত পরিবর্তন `codex/tech-trolley-production`-এ push করলে নিচের স্বাভাবিক automatic deployment চলবে। নতুন migration **009** Render-এর স্বাভাবিক startup runner চালাবে; পুরোনো আটটি migration অক্ষত থাকবে। Supabase reset বা হাতে SQL চালাবেন না।

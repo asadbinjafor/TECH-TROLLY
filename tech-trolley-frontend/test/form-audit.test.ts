@@ -17,6 +17,9 @@ import {
   correctableDocument,
   unitFormValues,
   returnPreview,
+  changeFormValue,
+  ramOptions,
+  storageOptions,
   type State,
   type CommandKind,
 } from "@tech-trolley/contracts";
@@ -123,6 +126,8 @@ const scenarios: Record<CommandKind, Record<string, string>> = {
   supplierRefund: { documentId: id(13), amount: "1" },
   opening: { cash: "0", bank: "0" },
   purchase: {
+    phoneType: "iphone",
+    storage: "128 GB",
     model: "Phone",
     brand: "Brand",
     imei: "123456789012345",
@@ -131,6 +136,8 @@ const scenarios: Record<CommandKind, Record<string, string>> = {
     paid: "0",
   },
   individualPurchase: {
+    phoneType: "iphone",
+    storage: "128 GB",
     sellerName: "Seller",
     sellerPhone: "01700000000",
     fatherName: "Father",
@@ -286,6 +293,8 @@ test("every required input rejects a blank and every fixed dropdown option remai
         );
       }
       for (const value of field.options || []) {
+        if (field.uiOnly || ["phoneType", "ram", "storage"].includes(field.key))
+          continue;
         assert.ok(
           prepareForm(kind, { ...raw, [field.key]: value }, populated),
           `${kind}.${field.key}=${value}`,
@@ -293,6 +302,76 @@ test("every required input rejects a blank and every fixed dropdown option remai
       }
     }
   }
+});
+test("phone selection shows only Android RAM, uses exact capacities and filters sale stock without posting UI metadata", () => {
+  for (const kind of ["purchase", "individualPurchase"] as const) {
+    const base = fields(kind, scenarios[kind]);
+    assert.ok(!formFields(kind, base).some((f) => f.key === "ram"));
+    for (const storage of storageOptions)
+      assert.ok(prepareForm(kind, { ...base, storage }, populated));
+    for (const ram of ramOptions)
+      assert.ok(
+        prepareForm(kind, { ...base, phoneType: "android", ram }, populated),
+      );
+    assert.throws(() =>
+      prepareForm(kind, { ...base, phoneType: "android", ram: "" }, populated),
+    );
+    assert.throws(() =>
+      prepareForm(kind, { ...base, storage: "32 GB" }, populated),
+    );
+    const iphone = changeFormValue(
+      kind,
+      { ...base, phoneType: "android", ram: "8 GB" },
+      "phoneType",
+      "iphone",
+      populated,
+    );
+    assert.equal(iphone.ram, "");
+    assert.ok(!formFields(kind, iphone).some((f) => f.key === "ram"));
+  }
+  const android = {
+    ...populated.units[0],
+    phoneType: "android" as const,
+    ram: "8 GB",
+    storage: "256 GB",
+  };
+  const iphone = {
+    ...android,
+    id: id(22),
+    phoneType: "iphone" as const,
+    ram: null,
+  };
+  const state = { ...populated, units: [android, iphone] };
+  const unitField = forms.sale.find((f) => f.key === "unitId")!;
+  assert.deepEqual(
+    choices(unitField, state, "en", {
+      phoneType: "android",
+      ram: "8 GB",
+      storage: "256 GB",
+    }).map((o) => o.value),
+    [android.id],
+  );
+  const selected = {
+    ...fields("sale", scenarios.sale),
+    ...unitFormValues("sale", android),
+    unitId: android.id,
+    price: "10",
+    cash: "10",
+  };
+  const payload = prepareForm("sale", selected, state) as any;
+  for (const key of ["phoneType", "ram", "storage"])
+    assert.equal(payload[key], undefined);
+  const changed = changeFormValue(
+    "sale",
+    selected,
+    "phoneType",
+    "iphone",
+    state,
+  );
+  assert.equal(changed.unitId, "");
+  assert.equal(changed.price, "");
+  assert.equal(changed.ram, "");
+  assert.equal(choices(unitField, state, "en").length, 2);
 });
 test("all numeric inputs start empty; old optional-zero drafts reopen empty without losing real input", () => {
   for (const kind of Object.keys(forms) as CommandKind[])

@@ -898,6 +898,109 @@ test(
           );
         },
       );
+      await t.test(
+        "Android RAM and phone storage survive stock correction, sale and frozen declarations with unchanged money rules",
+        async () => {
+          const base = {
+            ...data,
+            phoneType: "android",
+            ram: "8 GB",
+            storage: "256 GB",
+            imei: "860000000000090",
+            cost: "100",
+            cash: "60",
+            bank: "40",
+          };
+          for (const extra of [
+            { ram: null },
+            { ram: "6 GB" },
+            { storage: "32 GB" },
+            { phoneType: "iphone", ram: "8 GB" },
+          ])
+            assert.equal(
+              (await post("individualPurchase", { ...base, ...extra })).status,
+              400,
+            );
+          const oldBalances = (await state()).balances;
+          const acquisition = await cmd("individualPurchase", base);
+          let stock = (await state()).units.find(
+            (u: any) => u.purchase_id === acquisition.id,
+          );
+          assert.equal(stock.phoneType, "android");
+          assert.equal(stock.ram, "8 GB");
+          const edit = {
+            unitId: stock.id,
+            revision: stock.revision,
+            phoneType: "android",
+            ram: "12 GB",
+            model: stock.model,
+            brand: stock.brand,
+            storage: stock.storage,
+            color: stock.color,
+            variant: stock.variant,
+            category: stock.category,
+            condition: stock.condition,
+            imei: stock.imei,
+            battery: stock.battery,
+            box: stock.box,
+            note: "Correct physical RAM",
+          };
+          await cmd("stockEdit", edit);
+          stock = (await state()).units.find((u: any) => u.id === stock.id);
+          assert.equal(stock.ram, "12 GB");
+          assert.equal(stock.cost, "100.00");
+          const original = await api(
+            "get",
+            `/purchases/${acquisition.id}/declaration`,
+          );
+          assert.equal(
+            original.body.unit.ram,
+            "8 GB",
+            "Original signed purchase must not be rewritten by stock edits",
+          );
+          const sale = await cmd("sale", {
+            unitId: stock.id,
+            price: "120",
+            cash: "120",
+            bank: "0",
+            discount: "0",
+            note: "Synthetic Android sale",
+          });
+          const receipt = await api("get", `/documents/${sale.id}/receipt`);
+          assert.equal(receipt.body.unit.phoneType, "android");
+          assert.equal(receipt.body.unit.ram, "12 GB");
+          assert.equal(receipt.body.unit.storage, "256 GB");
+          const balances = (await state()).balances;
+          assert.equal(minor(balances.cash), minor(oldBalances.cash) + 6000n);
+          assert.equal(minor(balances.bank), minor(oldBalances.bank) - 4000n);
+          assert.equal(balances.inventory, oldBalances.inventory);
+          assert.equal(balances.payable, oldBalances.payable);
+          const iphone = await cmd("individualPurchase", {
+            ...base,
+            phoneType: "iphone",
+            ram: null,
+            storage: "1 TB",
+            imei: "860000000000091",
+            cost: "1",
+            cash: "0",
+            bank: "0",
+          });
+          const apple = (await state()).units.find(
+            (u: any) => u.purchase_id === iphone.id,
+          );
+          assert.equal(apple.phoneType, "iphone");
+          assert.equal(apple.ram, null);
+          assert.equal(apple.storage, "1 TB");
+          assert.equal(
+            (
+              await db.query(
+                "SELECT count(*) FROM (SELECT document_id FROM journal_line GROUP BY document_id HAVING sum(amount)<>0) x",
+              )
+            )[0].count,
+            "0",
+          );
+        },
+      );
     } finally {
       await app?.close();
       if (db.isInitialized) await db.destroy();

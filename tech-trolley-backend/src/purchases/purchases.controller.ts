@@ -62,6 +62,8 @@ export class PurchasesController {
       buyer: { name: d.actor_name, role: privateData.buyer_role },
       seller: individualSellerSchema.parse(privateData.seller),
       unit: {
+        phoneType: s.phoneType || undefined,
+        ram: s.ram || undefined,
         brand: s.brand,
         model: s.model,
         storage: s.storage || "",

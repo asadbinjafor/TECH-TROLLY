@@ -26,6 +26,7 @@ import {
   customerInvoiceFields,
   partyKindForSource,
   unitFormValues,
+  changeFormValue,
   returnPreview,
   sellerFormValues,
   purchaseDeclarationTerms,
@@ -84,6 +85,7 @@ export function NativeCommand({ navigation, route }: any) {
             kind,
             draft ? JSON.parse(draft) : null,
             state?.today || "",
+            state,
           );
       if (!p && route.params.unitId && initial.unitId !== route.params.unitId) {
         initial.unitId = route.params.unitId;
@@ -325,23 +327,15 @@ export function NativeCommand({ navigation, route }: any) {
                       onValueChange={(v) =>
                         kind === "individualPurchase" && f.key === "supplierId"
                           ? selectSeller(String(v))
-                          : setValues((prev) => ({
-                              ...prev,
-                              [f.key]: String(v),
-                              ...(f.key === "unitId"
-                                ? unitFormValues(
-                                    kind,
-                                    state.units.find((u) => u.id === String(v)),
-                                  )
-                                : {}),
-                              ...(f.key === "customerId"
-                                ? customerInvoiceFields(
-                                    state.parties.find(
-                                      (p) => p.id === String(v),
-                                    ),
-                                  )
-                                : {}),
-                            }))
+                          : setValues((prev) =>
+                              changeFormValue(
+                                kind,
+                                prev,
+                                f.key,
+                                String(v),
+                                state,
+                              ),
+                            )
                       }
                     >
                       <Picker.Item
@@ -350,7 +344,7 @@ export function NativeCommand({ navigation, route }: any) {
                         }
                         value=""
                       />
-                      {choices(f, state, lang).map((o) => (
+                      {choices(f, state, lang, values).map((o) => (
                         <Picker.Item
                           key={o.value}
                           label={f.options ? tr(o.label) : o.label}
@@ -413,7 +407,7 @@ export function NativeCommand({ navigation, route }: any) {
               )}
               {partyKindForSource(f.source) && !review && !pending && (
                 <>
-                  {!choices(f, state, lang).length && (
+                  {!choices(f, state, lang, values).length && (
                     <Txt>
                       {tr(
                         f.key === "customerId" &&
@@ -431,8 +425,8 @@ export function NativeCommand({ navigation, route }: any) {
               )}
               {f.type === "select" &&
                 !partyKindForSource(f.source) &&
-                !choices(f, state, lang).length && (
-                  <Txt>{tr(emptySelectionMessage(f))}</Txt>
+                !choices(f, state, lang, values).length && (
+                  <Txt>{tr(emptySelectionMessage(f, values))}</Txt>
                 )}
               {!pending && blockers[f.key] === "SELECTION_UNAVAILABLE" && (
                 <Txt style={{ color: "#b95050" }}>

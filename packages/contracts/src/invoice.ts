@@ -80,6 +80,8 @@ export interface Receipt {
     nameMissing?: boolean;
   };
   unit: {
+    phoneType?: "android" | "iphone" | null;
+    ram?: string | null;
     model: string;
     brand: string;
     variant: string;

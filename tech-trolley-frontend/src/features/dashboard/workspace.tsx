@@ -770,6 +770,12 @@ export function Workspace({ section }: { section: string }) {
                                   <small>
                                     {u.brand} · {u.internal_id}
                                   </small>
+                                  {u.phoneType && (
+                                    <small>
+                                      {tr(u.phoneType)}
+                                      {u.ram ? ` · RAM ${u.ram}` : ""}
+                                    </small>
+                                  )}
                                 </td>
                                 <td data-label={tr("storage")}>
                                   {u.storage || "—"}

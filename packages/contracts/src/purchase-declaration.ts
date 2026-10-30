@@ -78,6 +78,8 @@ export interface PurchaseDeclaration {
   buyer: { name: string; role: "OWNER" | "STAFF" };
   seller: IndividualSeller;
   unit: {
+    phoneType?: "android" | "iphone" | null;
+    ram?: string | null;
     brand: string;
     model: string;
     storage: string;

@@ -48,7 +48,11 @@ export class ShopController {
           await em.query(
             "SELECT * FROM inventory_unit ORDER BY internal_id DESC",
           )
-        ).map((u: any) => ({ ...u, cost: decimal(u.cost) })),
+        ).map(({ phone_type, ...u }: any) => ({
+          ...u,
+          phoneType: phone_type,
+          cost: decimal(u.cost),
+        })),
         documents: (
           await em.query(
             `${documentsSql} WHERE ($1::boolean OR d.business_date=$2::date) ORDER BY d.created_at DESC,d.id`,

@@ -92,6 +92,7 @@ export function invoiceProductDescription(unit: Receipt["unit"]) {
   const capacity =
     storage && /^\d+(?:\.\d+)?$/.test(storage) ? storage + " GB" : storage;
   const specs = [
+    unit.phoneType === "android" && unit.ram ? "RAM: " + unit.ram : "",
     capacity ? "Storage: " + capacity : "",
     unit.color?.trim() ? "Color: " + unit.color.trim() : "",
   ]
