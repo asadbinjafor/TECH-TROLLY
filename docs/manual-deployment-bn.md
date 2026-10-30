@@ -1,6 +1,6 @@
 # নিজে deployment করার নির্দেশনা
 
-**একসঙ্গে release অনুমোদিত (৩১ অক্টোবর):** নতুন seller form/PDF পরিবর্তনের সঙ্গে মোবাইল login zoom ও PDF Download feedback-এর fix প্রকাশের নির্দেশ দিয়েছেন। Download চাপলে progress দেখাবে; PDF প্রস্তুত হলে প্রয়োজনমতো **ফাইল সেভ করুন** চাপবেন। Purchases-এ **নমুনা A4 ফর্ম** থেকেও sample পাওয়া যাবে। এই পরিবর্তনে নতুন migration লাগবে না; মোট ৯টি migration-ই থাকবে। নিচের Git → CI → Vercel/Render পদ্ধতিতেই release হবে।
+**একসঙ্গে release live হয়েছে (৩১ অক্টোবর):** নতুন seller form/PDF পরিবর্তনের সঙ্গে মোবাইল login zoom ও PDF Download feedback-এর fix প্রকাশ হয়েছে, commit `0d0bc99`। [সফল CI](https://github.com/asadbinjafor/TECH-TROLLY/actions/runs/41115047376), Vercel ও Render-এর একই API revision যাচাই হয়েছে। Download চাপলে progress দেখাবে; PDF প্রস্তুত হলে প্রয়োজনমতো **ফাইল সেভ করুন** চাপবেন। Purchases-এ **নমুনা A4 ফর্ম** থেকেও sample পাওয়া যাবে। নতুন migration লাগেনি; মোট ৯টি migration-ই আছে। পুরোনো হিসাব ও journal মিলেছে; পরীক্ষামূলক production কেনাবেচা করা হয়নি। নিচের Git → CI → Vercel/Render পদ্ধতিতেই ভবিষ্যৎ release করবেন।
 
 ব্যক্তির কাছ থেকে ফোন ক্রয় / পরিচয় / এক পৃষ্ঠার A4 ক্রয়পত্র update-এর deployment অনুমোদিত। পরীক্ষিত পরিবর্তন `codex/tech-trolley-production`-এ push করলে নিচের স্বাভাবিক automatic deployment চলবে। নতুন migration **009** Render-এর স্বাভাবিক startup runner চালাবে; পুরোনো আটটি migration অক্ষত থাকবে। Supabase reset বা হাতে SQL চালাবেন না।
 
