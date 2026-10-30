@@ -2,7 +2,9 @@
 
 ## Contact dropdown ID display — 2026-10-30
 
-Removed the UUID-prefix fallback shown beside a Supplier name when its phone is empty. The shared Supplier/Customer/Person choices now show only the name and, when provided, phone. Stable internal IDs remain selection values and preserve existing transaction links. No generation/storage/authentication/accounting/schema change. Shared/web builds and 19 existing hosting/form checks pass. A direct selector check confirms `Smart Switch` without phone, the supplied-phone label when present, and an unchanged internal selection value. Deployment verification follows.
+Removed the UUID-prefix fallback shown beside a Supplier name when its phone is empty. The shared Supplier/Customer/Person choices now show only the name and, when provided, phone. Stable internal IDs remain selection values and preserve existing transaction links. No generation/storage/authentication/accounting/schema change. Shared/web builds and 19 existing hosting/form checks pass. A direct selector check confirms `Smart Switch` without phone, the supplied-phone label when present, and an unchanged internal selection value.
+
+Released [3ebf54d](https://github.com/asadbinjafor/TECH-TROLLY/commit/3ebf54d98085fd196e09db2d09dcc12130e33baf). [Verify 41039127659](https://github.com/asadbinjafor/TECH-TROLLY/actions/runs/41039127659) passed all builds/typechecks, 19 hosting checks, 22 isolated PostgreSQL checks, native exports and Expo Doctor. Vercel deployment `8MnedRJ4t8zcfZCMeY9XhHQD3k9E` succeeded. Render deployed automatically because shared contracts match its dependency filter; both direct/proxied readiness report this exact revision. The public web bundle contains the verified name-and-supplied-phone expression. Local readiness also passes. No new migration, production authentication or business test writes were needed.
 
 ## Owner / Staff profile editing — 2026-10-30
 
