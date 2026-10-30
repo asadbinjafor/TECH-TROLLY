@@ -14,6 +14,8 @@ DUE / ধার-পাওনা update এখন live: feature commit `dbd6d6f`,
 
 Dashboard-এর টাকার অঙ্ক শুরুতে ঢাকা থাকবে। **টাকার অঙ্ক দেখতে চাপুন / Tap to see balance** থেকে নিজের account-এর বর্তমান password দিন। সঠিক হলে এক মিনিট Dashboard-এর অঙ্ক দেখা যাবে; Hide চাপলে, অন্য পাতায় গেলে, refresh করলে বা অ্যাপ থেকে বের হলে আবার ঢাকবে। অন্য পাতার access আগের মতো। Quick actions-এর বড় রঙিন কার্ডে চাপলে আগের কেনাকাটা/খরচ/স্থানান্তর/ধার ফর্মই খুলবে। এই code update-এ নতুন migration লাগবে না; Vercel ও Render দুটোই স্বাভাবিক Git/CI পথে update হবে।
 
+এই update live: API `68cc508`, website `0f41923`; [final CI verification](https://github.com/asadbinjafor/TECH-TROLLY/actions/runs/41094873527) পাস। [স্থায়ী অ্যাপ](https://tech-trolley-internal.vercel.app/) একবার refresh দিন। Website-এর শেষ সংশোধন শুধু frontend-এর হওয়ায় API health-এ `68cc508` থাকাই ঠিক; version mismatch error নয়।
+
 ## DUE / ধার-পাওনা ব্যবহার
 
 মেনু অথবা **টাকা ও বাকি → DUE · ধার-পাওনা** খুলুন। **ধার দিন** থেকে ব্যক্তির নাম নির্বাচন করুন; নাম না থাকলে যোগ করুন। Staff-কে ব্যক্তিগত ধার দিলেও এখানে Person হিসেবে নাম রাখবেন; বেতন অগ্রিম আলাদা। টাকা, Cash/Bank ও বিবরণ দিয়ে Review → Confirm করুন। একই ব্যক্তিকে আবার দিলে তার কার্ডের **আবার ধার দিন** ব্যবহার করুন।
