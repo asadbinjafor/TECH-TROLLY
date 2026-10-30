@@ -2,6 +2,8 @@
 
 Stock Edit / Supplier Return update-এর deployment আপনি এখন অনুমোদন করেছেন। পরীক্ষিত `codex/stock-returns-review` পরিবর্তন production branch-এ merge/push করলে নিচের স্বাভাবিক automatic deployment চলবে। Render startup runner migration `008_stock_edits_and_supplier_returns.sql` apply করবে; Supabase reset বা পুরোনো SQL edit করবেন না। ব্যক্তির কাছ থেকে ফোন কেনার পূর্ণ পরিচয়/ঘোষণাপত্রের আলোচনা এই release-এর অংশ নয়।
 
+এই release এখন live: API version 1.1, migration 008-সহ মোট ৮টি migration। CI ও live login/report/CSV/পুরোনো রেকর্ড যাচাই পাস করেছে। Dashboard-এ Manual Deploy চাপতে হয়নি। API-সহ পরিবর্তন release করার সময় শুধু docs-এ শেষ commit দিয়ে roll-out হয়েছে ধরে নেবেন না; `/api/health`-এ প্রত্যাশিত revision মিলিয়ে নিশ্চিত হবেন।
+
 এই update-এ Stock → স্টকের তথ্য সম্পাদনা দিয়ে অবিক্রীত পণ্যের তথ্য ও কারণ দিন। বাস্তবে supplier-কে ফেরত দিলে “Supplier-কে পণ্য ফেরত” থেকে supplier-এর অনুমোদিত ফেরতমূল্য দিন। Review-তে বাকি সমন্বয়, ফেরত পাওনা ও কাটতি দেখুন। টাকা হাতে এলে টাকা ও বাকি → “Supplier-এর ফেরত টাকা আদায়” থেকে প্রকৃত পরিমাণ এবং Cash/Bank দিন। আংশিক আদায় করা যাবে; মূল history মুছবে না।
 
 আপনি বন্ধ করতে না বলা পর্যন্ত Codex app update-এর পরে প্রয়োজনীয় deployment ও live verification করে দেবে। এই নির্দেশনাটি নিজে শেখা ও প্রয়োজনে কাজ করার জন্য।

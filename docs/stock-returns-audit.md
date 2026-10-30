@@ -1,6 +1,6 @@
 # Stock edits and supplier returns — 2026-10-30
 
-The Owner initially approved implementation/local checks with a deployment hold, then explicitly requested deployment of the reviewed update. The normal production-branch/CI/hosting pipeline is now authorized. See progress.md for release verification. The individual-seller declaration discussion is excluded.
+The Owner initially approved implementation/local checks with a deployment hold, then explicitly requested deployment of the reviewed update. The normal production-branch/CI/hosting pipeline released 8242007 and migration 008; live login/state/report/CSV and preserved-record/RLS checks pass. See progress.md for release evidence. The individual-seller declaration discussion is excluded.
 
 ## Posting and history
 
@@ -20,4 +20,4 @@ The isolated tests exercise a version-7-to-8 upgrade with existing records; meta
 
 Final checks: 34 backend and 28 hosting/form checks; API/web builds, all workspace typechecks and Android/iOS exports pass. One native export command was initially run from the workspace root and failed to find the mobile entry point; rerunning from tech-trolley-mobile produced both final bundles. Local backup/migration checks preserve all prior record hashes, and the persistent server remains ready. Temporary UI database/processes were cleaned up after verification.
 
-Scope is supplier returns of unsold single units. Customer returns, warranty repair/exchange, arbitrary purchase-money edits, reversing an accepted return and reacquiring a returned phone under the same globally unique IMEI remain excluded. Native exports do not claim installed physical-device testing. Production push/deploy/migration remains pending explicit instruction; local backup and upgrade evidence are recorded in progress.md.
+Scope is supplier returns of unsold single units. Customer returns, warranty repair/exchange, arbitrary purchase-money edits, reversing an accepted return and reacquiring a returned phone under the same globally unique IMEI remain excluded. Native exports do not claim installed physical-device testing. Production release was explicitly authorized and verified without synthetic business transactions; local/production backup and upgrade evidence are recorded in progress.md.
