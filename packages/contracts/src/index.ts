@@ -240,7 +240,7 @@ export const commands = {
       expenseName: z.string().trim().max(180).optional(),
       amount: money,
       account,
-      note: text,
+      note,
     })
     .superRefine((v, c) => {
       if (v.categoryId === "custom" && !v.expenseName)
@@ -568,7 +568,7 @@ export const forms: Record<CommandKind, Field[]> = {
     f("expenseName"),
     amount,
     a,
-    f("note"),
+    n,
   ],
   transfer: [
     f("from", "select", { options: ["cash", "bank"], default: "cash" }),
@@ -774,7 +774,10 @@ export function prepareForm(
   state: State,
 ) {
   const blocked = selectionBlockers(kind, values, state);
-  if (kind === "supplierRefund" && money.safeParse(values.amount).success) {
+  if (
+    ["supplierRefund", "loanRepayment"].includes(kind) &&
+    money.safeParse(values.amount).success
+  ) {
     const target = state.documents.find((d) => d.id === values.documentId);
     if (target && minor(values.amount) > minor(target.due))
       blocked.amount = "DUE_EXCEEDED";
@@ -1074,11 +1077,84 @@ export const pages = [
   "purchases",
   "transactions",
   "money",
+  "dues",
   "staff",
   "reports",
   "profit",
   "settings",
 ] as const;
+export interface LoanAccount {
+  partyId: string;
+  name: string;
+  phone: string;
+  active: boolean;
+  given: string;
+  received: string;
+  due: string;
+  loans: Document[];
+  history: Document[];
+}
+// A read projection of the caller's authorized documents. PostingService remains
+// authoritative; never group by mutable names or turn salary advances into loans.
+export function loanAccounts(
+  state: Pick<State, "documents" | "parties">,
+): LoanAccount[] {
+  const accounts = new Map<string, LoanAccount>();
+  for (const d of [...state.documents].sort(
+    (a, b) =>
+      b.created_at.localeCompare(a.created_at) ||
+      b.number.localeCompare(a.number),
+  )) {
+    if (d.kind !== "loan" || !d.party_id) continue;
+    let group = accounts.get(d.party_id);
+    if (!group) {
+      const party = state.parties.find((p) => p.id === d.party_id);
+      group = {
+        partyId: d.party_id,
+        name: party?.name || String(d.snapshot.partyName || ""),
+        phone: party?.phone || String(d.snapshot.partyPhone || ""),
+        active: party?.active !== false,
+        given: "0.00",
+        received: "0.00",
+        due: "0.00",
+        loans: [],
+        history: [],
+      };
+      accounts.set(d.party_id, group);
+    }
+    group.loans.push(d);
+    if (!d.reversed_by) {
+      group.given = decimal(minor(group.given) + minor(d.total));
+      group.due = decimal(minor(group.due) + minor(d.due));
+      group.received = decimal(
+        minor(group.received) + minor(d.total) - minor(d.due),
+      );
+    }
+  }
+  for (const group of accounts.values())
+    group.history = state.documents
+      .filter(
+        (d) =>
+          d.party_id === group.partyId &&
+          (["loan", "loanRepayment"].includes(d.kind) ||
+            (d.kind === "reversal" &&
+              ["loan", "loanRepayment"].includes(
+                String(d.snapshot.originalKind),
+              ))),
+      )
+      .sort(
+        (a, b) =>
+          b.created_at.localeCompare(a.created_at) ||
+          b.number.localeCompare(a.number),
+      );
+  return [...accounts.values()].sort((a, b) =>
+    minor(a.due) === minor(b.due)
+      ? a.name.localeCompare(b.name)
+      : minor(a.due) > minor(b.due)
+        ? -1
+        : 1,
+  );
+}
 export function productDetails(unit: {
   storage?: string;
   color?: string;

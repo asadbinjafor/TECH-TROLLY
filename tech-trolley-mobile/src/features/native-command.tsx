@@ -81,12 +81,23 @@ export function NativeCommand({ navigation, route }: any) {
       if (
         !p &&
         route.params.documentId &&
-        kind === "supplierRefund" &&
+        ["supplierRefund", "loanRepayment"].includes(kind) &&
         initial.documentId !== route.params.documentId
       )
         Object.assign(initial, {
           documentId: route.params.documentId,
           amount: "",
+        });
+      if (
+        !p &&
+        kind === "loan" &&
+        route.params.partyId &&
+        initial.partyId !== route.params.partyId
+      )
+        Object.assign(initial, {
+          partyId: route.params.partyId,
+          amount: "",
+          note: "",
         });
       setValues(initial);
       setPending(p ? JSON.parse(p) : null);

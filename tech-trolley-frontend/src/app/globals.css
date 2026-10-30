@@ -1544,3 +1544,27 @@ td b {
 .party-modal {
   z-index: 110;
 }
+.loan-tools,
+.loan-open-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+.loan-open-row {
+  justify-content: space-between;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--line);
+}
+.loan-accounts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+  gap: 16px;
+}
+.loan-search {
+  max-width: 380px;
+  min-width: 0;
+}
+.loan-person-heading {
+  overflow-wrap: anywhere;
+}

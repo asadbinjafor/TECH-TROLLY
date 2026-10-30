@@ -43,12 +43,14 @@ import { CommandForm } from "@/features/transactions/command-form";
 import { Administration } from "@/features/settings/administration";
 import { Invoice } from "@/features/transactions/invoice";
 import { ReportAnalysis } from "./report-analysis";
+import { LoanDues } from "@/features/accounts/loan-dues";
 const icons = [
   LayoutDashboard,
   CalendarDays,
   Package,
   ShoppingBag,
   ReceiptText,
+  Wallet,
   Wallet,
   Users,
   ChartNoAxesCombined,
@@ -72,6 +74,7 @@ export function Workspace({ section }: { section: string }) {
     [command, setCommand] = useState<CommandKind | null>(null),
     [selectedUnit, setSelectedUnit] = useState<string | undefined>(),
     [selectedDocument, setSelectedDocument] = useState<string | undefined>(),
+    [selectedParty, setSelectedParty] = useState<string | undefined>(),
     [historyUnit, setHistoryUnit] = useState<string | null>(null),
     [search, setSearch] = useState(""),
     [stockTab, setStockTab] = useState("inStock"),
@@ -146,6 +149,7 @@ export function Workspace({ section }: { section: string }) {
   const action = (kind: CommandKind) => {
     setSelectedUnit(undefined);
     setSelectedDocument(undefined);
+    setSelectedParty(undefined);
     setCommand(kind);
   };
   const fetchReceipt = async (id: string) => {
@@ -770,6 +774,9 @@ export function Workspace({ section }: { section: string }) {
                 )}
               </div>
               <section className="quick-actions">
+                <Link className="button primary" href="/dues">
+                  {tr("dues")}
+                </Link>
                 <div>
                   {actions([
                     "collection",
@@ -789,6 +796,17 @@ export function Workspace({ section }: { section: string }) {
               )}
               <Administration mode="parties" />
             </>
+          )}
+          {section === "dues" && (
+            <LoanDues
+              onDetails={setDetail}
+              onCommand={(kind, partyId, documentId) => {
+                setSelectedUnit(undefined);
+                setSelectedDocument(documentId);
+                setSelectedParty(partyId);
+                setCommand(kind);
+              }}
+            />
           )}
           {section === "staff" && (
             <>
@@ -1037,6 +1055,7 @@ export function Workspace({ section }: { section: string }) {
           kind={command}
           initialUnit={selectedUnit}
           initialDocument={selectedDocument}
+          initialParty={selectedParty}
           onClose={() => setCommand(null)}
           onSaved={(id, kind) => {
             setCommand(null);

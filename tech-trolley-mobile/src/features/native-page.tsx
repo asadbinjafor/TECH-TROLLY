@@ -15,6 +15,7 @@ import {
   type Document,
 } from "@tech-trolley/contracts";
 import { NativeReportAnalysis } from "./native-report-analysis";
+import { NativeLoanDues } from "./native-loan-dues";
 import { useShop } from "../contexts/shop-context";
 import { Button, Txt, Panel, Input, Empty, useColors } from "../components/ui";
 import { api, tokenKey } from "../services/api";
@@ -457,6 +458,11 @@ export function NativePage({ navigation, route, section: initial }: any) {
         )}
         {section === "money" && (
           <>
+            <Button
+              primary
+              label={tr("dues")}
+              onPress={() => navigation.navigate("Page", { section: "dues" })}
+            />
             <View
               style={{
                 flexDirection: "row",
@@ -491,6 +497,7 @@ export function NativePage({ navigation, route, section: initial }: any) {
             {docList(state.documents.filter((d) => Number(d.due) > 0))}
           </>
         )}
+        {section === "dues" && <NativeLoanDues navigation={navigation} />}
         {section === "staff" && (
           <>
             {actions(["advance", "advanceRepayment", "salary"])}
@@ -721,6 +728,7 @@ export function NativePage({ navigation, route, section: initial }: any) {
               "purchases",
               "transactions",
               "money",
+              "dues",
               "staff",
               "reports",
               "profit",

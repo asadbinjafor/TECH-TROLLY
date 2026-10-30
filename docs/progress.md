@@ -1,5 +1,17 @@
 # Progress and release handover
 
+## Personal loan DUE section — release authorized, 2026-10-30
+
+The Owner approved and requested deployment of a dedicated person-based DUE page plus the pending optional expense-details change. Web/native expose total lent/repaid/outstanding per Person, name/phone search, unpaid/all including cleared filters, per-loan receipt shortcuts, repeat lending and dated Cash/Bank/actor/reason history. Existing PostingService commands/accounting and date permissions remain authoritative. Staff personal loans use Person contacts; salary advances remain separate. No migration or data rewrite. See [scope and checks](loan-dues-audit.md).
+
+Local API/web builds, all workspace typechecks, 43 backend/PDF/isolated PostgreSQL checks, 28 form/hosting checks and both native exports pass. Actual synthetic UI verified Cash partial repayment, unchanged other loans, person selection for repeat lending, retained cleared accounts and Bengali phone-width layout. Production release/live checks follow through normal Git/CI hosting; no production business test entries are authorized or needed.
+
+## Optional expense details — local change, 2026-10-30
+
+The Owner requested making the marked Expense reason / details field optional and deferred push/deployment while collecting more fixes. Shared form metadata now displays Optional on web/native and permits blank details; the API contract defaults missing/blank/whitespace details to an empty string. Applies to predefined and custom expenses. Custom expense name, positive amount and account remain required; other reason requirements and posted history are unchanged. No migration or database writes.
+
+API build, all workspace typechecks and 10 existing form-audit checks pass. Direct shared API/form validation confirms both category types accept omitted/empty/whitespace details, retain supplied details, reject notes beyond 300 characters and still require a custom expense name. No production push/deploy or runtime browser check was performed for this local code change.
+
 ## Stock-return production release authorized — 2026-10-30
 
 The Owner explicitly requested deployment of the reviewed stock-edit / supplier-return / refund-collection update (95cb295). This supersedes the earlier local-review deployment hold for that scope. The subsequently discussed individual-seller identity/declaration form remains analysis-only and is not included. Release uses the existing production branch, Vercel Git integration, Render After CI Checks Pass and normal migration 008 startup runner. A TLS-verified 55,600-byte public-schema backup was saved privately before release, with original immutable-record fingerprints for read-only comparisons.

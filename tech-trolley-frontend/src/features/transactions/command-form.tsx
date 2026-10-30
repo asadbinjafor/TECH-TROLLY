@@ -29,10 +29,12 @@ export function CommandForm({
   onSaved,
   initialUnit,
   initialDocument,
+  initialParty,
 }: {
   kind: CommandKind;
   initialUnit?: string;
   initialDocument?: string;
+  initialParty?: string;
   onClose: () => void;
   onSaved: (id: string, kind: CommandKind) => void;
 }) {
@@ -64,10 +66,12 @@ export function CommandForm({
           });
         if (
           initialDocument &&
-          kind === "supplierRefund" &&
+          ["supplierRefund", "loanRepayment"].includes(kind) &&
           v.documentId !== initialDocument
         )
           Object.assign(v, { documentId: initialDocument, amount: "" });
+        if (initialParty && kind === "loan" && v.partyId !== initialParty)
+          Object.assign(v, { partyId: initialParty, amount: "", note: "" });
         return v;
       } catch {
         return {};
