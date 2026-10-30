@@ -1,5 +1,9 @@
 # Progress and release handover
 
+## Contact dropdown ID display — 2026-10-30
+
+Removed the UUID-prefix fallback shown beside a Supplier name when its phone is empty. The shared Supplier/Customer/Person choices now show only the name and, when provided, phone. Stable internal IDs remain selection values and preserve existing transaction links. No generation/storage/authentication/accounting/schema change. Shared/web builds and 19 existing hosting/form checks pass. A direct selector check confirms `Smart Switch` without phone, the supplied-phone label when present, and an unchanged internal selection value. Deployment verification follows.
+
 ## Owner / Staff profile editing — 2026-10-30
 
 Added My profile → Edit profile for both business roles on web/native: name, User ID and optional email, alongside the existing password form. Owner account management gains the same metadata editor. Identity changes require the actor's current password and force fresh login; name-only edits retain sessions. Strict self-service fields preserve roles/access controls. Atomic alias replacement, duplicate handling, login-race protection, safe responses and audit metadata retain stable UUIDs and immutable historical seller names. No new database migration. See [implementation and checks](profile-editing.md).

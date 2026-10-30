@@ -709,7 +709,7 @@ export function choices(
       .filter((p) => p.kind === pk && p.active !== false)
       .map((p) => ({
         value: p.id,
-        label: `${p.name} · ${p.phone || p.id.slice(0, 8)}`,
+        label: [p.name, p.phone].filter(Boolean).join(" · "),
       }));
   const dk = (
     {
