@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   LayoutDashboard,
   CalendarDays,
@@ -95,6 +95,11 @@ export function Workspace({ section }: { section: string }) {
     [detail, setDetail] = useState<Document | null>(null),
     [toast, setToast] = useState("");
   const privacy = useBalancePrivacy(`${user?.id || ""}:${section}`);
+  const privacyContext = useRef({ key: "", visible: false });
+  privacyContext.current = {
+    key: `${user?.id || ""}:${section}`,
+    visible: privacy.visible,
+  };
   const [revealOpen, setRevealOpen] = useState(false);
   useEffect(() => {
     if (section === "overview" && !privacy.visible) {
@@ -185,12 +190,21 @@ export function Workspace({ section }: { section: string }) {
     setSelectedParty(undefined);
     setCommand(kind);
   };
-  const fetchReceipt = async (id: string) => {
+  const fetchReceipt = async (
+    id: string,
+    requiresReveal = section === "overview",
+  ) => {
+    const context = privacyContext.current.key;
     try {
-      setReceipt({
-        ...(await api.request<object>(`/documents/${id}/receipt?lang=${lang}`)),
-        id,
-      });
+      const receipt = await api.request<object>(
+        `/documents/${id}/receipt?lang=${lang}`,
+      );
+      if (
+        privacyContext.current.key !== context ||
+        (requiresReveal && !privacyContext.current.visible)
+      )
+        return;
+      setReceipt({ ...receipt, id });
     } catch (e: any) {
       setToast(tr(e.code));
     }
@@ -1106,7 +1120,7 @@ export function Workspace({ section }: { section: string }) {
           onSaved={(id, kind) => {
             setCommand(null);
             setToast(tr("saved"));
-            if (kind === "sale") void fetchReceipt(id);
+            if (kind === "sale") void fetchReceipt(id, false);
           }}
         />
       )}
