@@ -53,7 +53,11 @@ export async function createApp() {
   server.get("/health", async (_req: any, res: any) => {
     try {
       await db.query("SELECT 1 FROM schema_migration LIMIT 1");
-      res.json({ status: "ok" });
+      const revision = process.env.RENDER_GIT_COMMIT;
+      res.json({
+        status: "ok",
+        ...(revision && /^[a-f0-9]{40}$/i.test(revision) ? { revision } : {}),
+      });
     } catch {
       res.status(503).json({ status: "unavailable" });
     }

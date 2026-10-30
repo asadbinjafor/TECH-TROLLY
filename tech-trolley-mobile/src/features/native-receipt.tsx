@@ -31,12 +31,8 @@ export function NativeReceipt({ route }: any) {
     const asset = Asset.fromModule(require("../../assets/NotoSansBengali.ttf"));
     await asset.downloadAsync();
     const font = await new File(asset.localUri || asset.uri).base64();
-    const logoAsset = Asset.fromModule(require("../../assets/icon.png"));
-    await logoAsset.downloadAsync();
-    const logo = await new File(logoAsset.localUri || logoAsset.uri).base64();
     return renderInvoiceHtml(receipt!, lang, {
       font: "data:font/ttf;base64," + font,
-      logo: "data:image/png;base64," + logo,
     });
   };
   const print = async (share: boolean) => {

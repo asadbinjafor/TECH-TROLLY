@@ -213,6 +213,10 @@ const words: Record<string, [string, string]> = {
   customerAddress: ["Customer address for invoice", "ইনভয়েসে গ্রাহকের ঠিকানা"],
   partyAddress: ["Address", "ঠিকানা"],
   soldBy: ["Sold by", "বিক্রয় করেছেন"],
+  invoicePrintHint: [
+    "A4 - 2 pages. For one sheet, print both sides and flip on the long edge.",
+    "A4 - ২ পৃষ্ঠা। একই কাগজের সামনে-পেছনে ছাপাতে Print both sides / Flip on long edge বেছে নিন।",
+  ],
   documentId: ["Original document", "মূল ডকুমেন্ট"],
   amount: ["Amount", "টাকার পরিমাণ"],
   categoryId: ["Expense category", "খরচের ধরন"],

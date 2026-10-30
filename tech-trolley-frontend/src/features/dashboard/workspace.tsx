@@ -995,6 +995,7 @@ export function Workspace({ section }: { section: string }) {
             </header>
             <Invoice receipt={receipt} lang={lang} />
             <footer>
+              <p className="receipt-print-hint">{tr("invoicePrintHint")}</p>
               <button className="button primary" onClick={() => window.print()}>
                 {tr("print")}
               </button>

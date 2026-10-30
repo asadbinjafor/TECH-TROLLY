@@ -847,6 +847,12 @@ td b {
 .receipt {
   width: min(900px, 96vw);
 }
+.receipt-print-hint {
+  margin: 0 auto 0 0;
+  max-width: 70%;
+  font-size: 12px;
+  color: var(--muted);
+}
 .login-screen {
   min-height: 100vh;
   display: grid;
@@ -1493,6 +1499,6 @@ td b {
   }
   @page {
     size: A4 portrait;
-    margin: 10mm;
+    margin: 6mm;
   }
 }

@@ -69,6 +69,20 @@ test("isolated PostgreSQL acceptance, authorization, accounting and retry safety
     await t.test(
       "fresh bootstrap, optional password change, no public signup and persistent credentials",
       async () => {
+        const previousRevision = process.env.RENDER_GIT_COMMIT;
+        try {
+          process.env.RENDER_GIT_COMMIT = "a".repeat(40);
+          const health = await request(http).get("/health");
+          assert.equal(health.status, 200);
+          assert.equal(health.body.status, "ok");
+          assert.equal(health.body.revision, "a".repeat(40));
+          process.env.RENDER_GIT_COMMIT = "invalid-not-a-git-revision";
+          assert.ok(!("revision" in (await request(http).get("/health")).body));
+        } finally {
+          if (previousRevision === undefined)
+            delete process.env.RENDER_GIT_COMMIT;
+          else process.env.RENDER_GIT_COMMIT = previousRevision;
+        }
         assert.equal(
           (await db.query("SELECT count(*) FROM app_user"))[0].count,
           "1",
@@ -810,6 +824,15 @@ test("isolated PostgreSQL acceptance, authorization, accounting and retry safety
           assert.equal(saved.unit.condition, "used");
           assert.equal(saved.paid, "100.00");
           assert.equal(saved.originalDue, "90.00");
+          assert.equal(
+            saved.shop.qrUrl,
+            "https://www.facebook.com/share/1CWzbVs5hb/?mibextid=wwXIfr",
+          );
+          assert.equal(saved.shop.afterSalesTerms.length, 12);
+          assert.equal(
+            saved.shop.afterSalesTerms[0],
+            "বিক্রিত পণ্য অফেরতযোগ্য।",
+          );
           assert.ok(!("cogs" in saved));
           assert.ok(!("cost" in saved.unit));
         } finally {

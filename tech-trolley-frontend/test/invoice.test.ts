@@ -1,7 +1,9 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { invoiceShop, type Receipt } from "@tech-trolley/contracts";
 import { renderInvoiceBody, renderInvoiceHtml } from "@tech-trolley/invoice";
+import { memoQrSvg, memoQrUrl } from "../../packages/invoice/src/artwork";
 
 const receipt: Receipt = {
   shop: invoiceShop({ name: "Tech Trolley", address: "", phone: "" }),
@@ -16,7 +18,9 @@ const receipt: Receipt = {
   unit: {
     model: "iPad (A16)",
     brand: "Apple",
-    variant: "128 GB / Blue",
+    storage: "128 GB",
+    color: "Blue",
+    variant: "International",
     imei: "000000000000167",
     internalId: "ST-000167",
     battery: null,
@@ -43,8 +47,8 @@ test("memo contains customer, original seller, serial, exact totals and approved
     "Staff",
     "30 / 10 / 2026",
     "SUB TOTAL",
-    "ADVANCE / PAID",
-    "DUE AT SALE",
+    "ADVANCE",
+    "DUE",
     "CURRENT DUE",
     "57,000",
     "56,000",
@@ -54,6 +58,11 @@ test("memo contains customer, original seller, serial, exact totals and approved
     "25%",
     "2 Years Service Warranty",
     "<svg",
+    "128 GB · Blue · International",
+    "TERMS &amp; CONDITIONS FOR AFTER SALES SERVICE",
+    "CUSTOMER SIGNATURE",
+    "DELIVERY TYPE",
+    "বিক্রিত পণ্য অফেরতযোগ্য।",
   ])
     assert.ok(html.includes(value), "Missing invoice detail: " + value);
   assert.ok(!html.includes("SAMPLE DATA"));
@@ -82,8 +91,46 @@ test("invoice escapes customer input and tolerates older API receipts without gu
   delete old.paid;
   delete old.shop.warrantyPolicy;
   delete old.shop.qrUrl;
+  delete old.shop.afterSalesTerms;
   const compatible = renderInvoiceBody(old);
   assert.ok(compatible.includes("SOLD BY"));
   assert.ok(compatible.includes("50,000"));
   assert.ok(!compatible.includes("undefined"));
+});
+
+test("two A4 sides retain the supplied memo headings and all 12 policy clauses in either UI language", () => {
+  const html = renderInvoiceBody(receipt, "bn");
+  assert.equal((html.match(/<article /g) || []).length, 2);
+  assert.equal((html.match(/<li>/g) || []).length, 16);
+  assert.ok(html.includes("INVOICE NO:"));
+  assert.ok(html.includes("OUR WARRANTY POLICY:"));
+  assert.ok(!html.includes("tech-trolley-logo.png"));
+  const escaped = renderInvoiceBody({
+    ...receipt,
+    shop: { ...receipt.shop, afterSalesTerms: ["<script>bad()</script>"] },
+  });
+  assert.ok(escaped.includes("&lt;script&gt;bad()&lt;/script&gt;"));
+  assert.ok(!escaped.includes("<script>"));
+});
+
+test("new-sale QR preserves the supplied scan destination and every source module", () => {
+  assert.equal(
+    memoQrUrl,
+    "https://www.facebook.com/share/1CWzbVs5hb/?mibextid=wwXIfr",
+  );
+  assert.equal(receipt.shop.qrUrl, memoQrUrl);
+  const cells = Array.from({ length: 37 }, () => Array(37).fill("0"));
+  for (const match of memoQrSvg.matchAll(/M(\d+),(\d+)h1v1h-1z/g)) {
+    const x = Number(match[1]) - 4,
+      y = Number(match[2]) - 4;
+    assert.ok(x >= 0 && x < 37 && y >= 0 && y < 37);
+    cells[y][x] = "1";
+  }
+  const hash = createHash("sha256")
+    .update(cells.map((row) => row.join("")).join("\n"))
+    .digest("hex");
+  assert.equal(
+    hash,
+    "3dfa5a614eb2d6ab2727e567a02e02e919322bbe370b0ec15800d42652a43454",
+  );
 });

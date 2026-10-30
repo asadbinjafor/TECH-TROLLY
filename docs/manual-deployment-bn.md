@@ -89,8 +89,15 @@ Automatic deploy না চললে আগে branch, CI result ও Build Filte
 
 1. [Website](https://tech-trolley-internal.vercel.app/) খুলুন। Startup screen এলে সেটি খোলা রাখুন; server/database প্রস্তুত হলে login/dashboard নিজে থেকে আসবে।
 2. [Web API health](https://tech-trolley-internal.vercel.app/api/health) এবং [Render health](https://tech-trolley-internal-api.onrender.com/health) প্রস্তুত অবস্থায় `{"status":"ok"}` দেবে।
+   Render-এ এখন `revision`-ও থাকবে: এটি চলমান backend-এর Git commit SHA। GitHub-এর প্রত্যাশিত commit-এর সঙ্গে মিললে শুধু পুরোনো Live badge দেখে ভুল হওয়ার সুযোগ কমে। Frontend-only update হলে backend-এর আগের commit থাকাই স্বাভাবিক।
 3. নিজের account দিয়ে login করে dashboard, stock ও প্রয়োজনীয় report দেখুন। শুধু পরীক্ষা করার জন্য আসল shop-এ নকল sale/খরচ post করবেন না।
 4. Website-এ আগের screen থাকলে refresh করুন। Build/Live/health/ব্যবহার—সব ধাপ মিললেই update শেষ।
+
+## দোকানের দুই-পৃষ্ঠার memo / PDF
+
+Receipt খুলে **Print / Save PDF** চাপুন। Paper **A4**, Scale **100%**, browser Headers and footers **Off** রাখুন; template-এর default margin ব্যবহার করুন। PDF-এর প্রথম পৃষ্ঠা invoice front, দ্বিতীয় পৃষ্ঠা শর্তাবলি/back। Printer-এ একই কাগজের দুই পাশে ছাপাতে **Print both sides → Flip on long edge** বেছে নিন। Duplex না থাকলে আগে এক কাগজে orientation পরীক্ষা করে উল্টো পিঠ ছাপান।
+
+Customer, product এবং আসল বিক্রয়কারীর নাম/Owner বা Staff role সংরক্ষিত sale থেকে আসে। শুধু পরীক্ষা করার জন্য live দোকানে নকল sale লিখবেন না; sample PDF আলাদা synthetic preview।
 
 ## Sleep ও অপেক্ষার screen
 

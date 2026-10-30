@@ -55,7 +55,6 @@ test("unavailable startup stops at its deadline, cancellation stops probes, and 
   let hits = 0,
     mode = "unavailable";
   const server = await serverFor((_req, res) => {
-    hits++;
     res.setHeader("content-type", "application/json");
     res.statusCode = 503;
     res.end(
@@ -66,6 +65,13 @@ test("unavailable startup stops at its deadline, cancellation stops probes, and 
       ),
     );
   });
+  // An already-dispatched HTTP request can reach the server after cancellation.
+  // Count actual fetch starts to verify that the client schedules no new probes.
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = (...args: Parameters<typeof fetch>) => {
+    hits++;
+    return originalFetch(...args);
+  };
   try {
     await assert.rejects(
       waitForApi(server.base, { timeoutMs: 70, retryDelayMs: 10 }),
@@ -97,6 +103,7 @@ test("unavailable startup stops at its deadline, cancellation stops probes, and 
     );
     assert.equal(hits, afterCancel + 1);
   } finally {
+    globalThis.fetch = originalFetch;
     await server.close();
   }
 });
