@@ -135,6 +135,13 @@ const cases: Record<string, Receipt> = {
 const source = process.argv[2];
 if (source) cases.corrected = JSON.parse(fs.readFileSync(source, "utf8"));
 for (const [name, receipt] of Object.entries(cases)) {
+  const title = `${receipt.number} - ${receipt.shop.name}`.replace(
+    /[&<>"']/g,
+    (c) =>
+      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[
+        c
+      ]!,
+  );
   const body = renderToStaticMarkup(
     React.createElement(Invoice, { receipt, lang: "en" }),
   );
@@ -142,7 +149,7 @@ for (const [name, receipt] of Object.entries(cases)) {
     name === "corrected"
       ? ""
       : '<div style="position:absolute;top:1mm;left:60mm;font-size:7pt;color:#99701c;z-index:5">PREVIEW / SAMPLE DATA - NOT A REAL SALE</div>';
-  const html = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Invoice print QA</title><style>@font-face{font-family:InvoiceBangla;src:url("${font}") format("truetype");font-weight:100 900}${css}</style></head><body><div class="app"><aside class="sidebar">App navigation</aside><main class="workspace">Workspace</main><div class="modal-backdrop receipt-backdrop"><section class="modal receipt"><header>Invoice controls</header>${watermark}${body}<footer>Print controls</footer></section></div></div></body></html>`;
+  const html = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title><style>@font-face{font-family:InvoiceBangla;src:url("${font}") format("truetype");font-weight:100 900}${css}</style></head><body><div class="app"><aside class="sidebar">App navigation</aside><main class="workspace">Workspace</main><div class="modal-backdrop receipt-backdrop"><section class="modal receipt"><header>Invoice controls</header>${watermark}${body}<footer>Print controls</footer></section></div></div></body></html>`;
   fs.writeFileSync(path.join(directory, `invoice-${name}-web.html`), html);
 }
 fs.writeFileSync(
