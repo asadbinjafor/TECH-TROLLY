@@ -2,6 +2,8 @@
 
 ব্যক্তির কাছ থেকে ফোন ক্রয় / পরিচয় / এক পৃষ্ঠার A4 ক্রয়পত্র update-এর deployment অনুমোদিত। পরীক্ষিত পরিবর্তন `codex/tech-trolley-production`-এ push করলে নিচের স্বাভাবিক automatic deployment চলবে। নতুন migration **009** Render-এর স্বাভাবিক startup runner চালাবে; পুরোনো আটটি migration অক্ষত থাকবে। Supabase reset বা হাতে SQL চালাবেন না।
 
+এই update এখন live: feature commit `c058300`, [সফল CI verification](https://github.com/asadbinjafor/TECH-TROLLY/actions/runs/41109102107)। [কেনাকাটা পাতা](https://tech-trolley-internal.vercel.app/purchases) খুলে refresh দিন। Vercel/Render স্বয়ংক্রিয় deployment ও migration 009 যাচাই হয়েছে; আগের হিসাব backup-এর সঙ্গে মিলেছে।
+
 নতুন release-এর পর CI ও `/api/health`-এ প্রত্যাশিত API revision মিলিয়ে নিশ্চিত হবেন। এই release-এ মোট **৯টি migration** ও **১৯টি RLS-সুরক্ষিত app table** হবে। শুধু docs-এর শেষ commit দিয়ে API roll-out হয়েছে ধরে নেবেন না। Dashboard-এর Manual Deploy সাধারণ update-এর জন্য লাগবে না।
 
 ব্যবহার: **কেনাকাটা → ব্যক্তির কাছ থেকে ফোন ক্রয়**। বিক্রেতা নির্বাচন/যোগ করুন, পরিচয়ের সব তথ্য পূরণ ও যাচাই করুন, ফোনের তথ্য ও বক্সসহ/বক্স ছাড়া বাছুন। শুধু বাস্তবে দেওয়া Cash/Bank লিখুন; অব্যবহৃত ঘর খালি থাকবে। Review-তে মোট/বাকি মিলিয়ে নিশ্চিত করুন। Save-এর পরে **ফোন ক্রয়পত্র → PDF খুলুন / প্রিন্ট** থেকে A4, Actual size / 100% দিয়ে এক পৃষ্ঠা প্রিন্ট নিন। দুইটি স্বাক্ষর হাতে দেবেন। পরে Purchases-এর Details থেকে একই মূল ক্রয়পত্র আবার খুলতে পারবেন। পরের বাকি পরিশোধ বা Stock Edit মূল স্বাক্ষরিত তথ্য বদলাবে না; লেনদেনের history-তে থাকবে।
