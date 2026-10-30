@@ -139,3 +139,10 @@ Render service-এর paid compute plan-এ এই idle spin-down থাকে �
 Shared invoice/contracts, API ও web/native বদলেছে, তাই একই production branch-এ push → CI → Vercel/Render auto-deploy হবে। Supabase-এর নতুন migration নেই। পুরোনো sale খুলে Print / Save as PDF-তে A4 portrait, scale 100%, background graphics on এবং browser headers/footers off রাখুন। PDF দুই পৃষ্ঠা হবে; পৃষ্ঠা ১-এ gold thank-you এবং পৃষ্ঠা ২-এ TECH TROLLEY footer থাকবে। Seller-এর নামের জায়গা খালি ও সতর্কবার্তা এলে Settings-এ ওই বিক্রেতার প্রকৃত নাম দিন। ইতিমধ্যে সংরক্ষিত প্রকৃত নাম পাল্টানো হবে না।
 
 পরীক্ষার HTML তৈরি: `npx tsx scripts/prepare-invoice-print-qa.ts`। এতে শুধু synthetic data ব্যবহার হয়, কোনো database record তৈরি হয় না। আসল customer data বা local receipt JSON Git-এ commit করবেন না।
+
+
+### iPhone সহ সবার জন্য প্রস্তুত PDF
+
+রসিদ খুলে **PDF খুলুন / প্রিন্ট** অথবা **PDF ডাউনলোড** চাপুন। অ্যাপের দেওয়া প্রস্তুত দুই পৃষ্ঠার A4 ফাইল থেকে print/share করুন। ফাইলের নাম invoice number দিয়ে হবে, যেমন `TT-000008.pdf`। Seller-এর display name সেই বিক্রেতার saved record/profile থেকে মাঝখানে আসবে। Profile-এ Owner নাম থাকলে Owner, Taki থাকলে Taki; demo নাম hardcode করা নেই।
+
+API এখন shared invoice package ব্যবহার করে এবং নিজস্ব licensed Bengali font রাখে। Template source (`packages/invoice/src`) বদলালে commit/push-এর আগে `npm run prepare:invoice-release` চালান এবং তৈরি backend `invoice-version.ts` commit করুন। CI ভুলে যাওয়া fingerprint ধরবে; বর্তমান Render backend-path filter এই ফাইলের পরিবর্তন দেখে API-ও auto-deploy করবে। Dashboard filter এখন বদলাতে হবে না; render.yaml-এর existing paths একই আছে। নতুন migration বা paid upgrade লাগেনি।

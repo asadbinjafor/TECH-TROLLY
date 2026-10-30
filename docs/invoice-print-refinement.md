@@ -1,5 +1,7 @@
 # Invoice print refinement — 2026-10-30
 
+The later [iPhone PDF delivery correction](invoice-pdf-delivery-audit.md) supersedes the browser HTML export path and the rule that legacy Owner/Staff display names render blank. The Owner supplied a new iOS Quartz file showing that the prior desktop-only checks were insufficient for their actual export.
+
 The supplied original PDF has four A4 pages: front on 1, detached thank-you on 2, terms on 3 and detached vector wordmark on 4. That is the observed production failure. The older standalone/wrapper baseline on the current desktop renderer produced two pages, so the audit does not claim every old environment reproduces four. The source also exposed screen-relative container units in print and a broad `.modal footer` rule applying control padding/margins/alignment to the document footers.
 
 ## Implementation

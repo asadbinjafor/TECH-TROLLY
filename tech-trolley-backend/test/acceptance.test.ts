@@ -95,6 +95,14 @@ test("isolated PostgreSQL acceptance, authorization, accounting and retry safety
         assert.equal(owner.user.must_change, false);
         assert.equal((await api("get", "/shop/state")).status, 200);
         assert.equal(
+          (
+            await request(http).get(
+              "/documents/00000000-0000-4000-8000-000000000001/pdf",
+            )
+          ).status,
+          401,
+        );
+        assert.equal(
           (await request(http).post("/auth/register").send({})).status,
           404,
         );
@@ -1217,6 +1225,11 @@ test("isolated PostgreSQL acceptance, authorization, accounting and retry safety
               staff.token,
             )
           ).status,
+          404,
+        );
+        assert.equal(
+          (await api("get", `/documents/${oldId}/pdf`, undefined, staff.token))
+            .status,
           404,
         );
         for (const [kind, data] of [

@@ -1,4 +1,5 @@
 import { Module } from "@nestjs/common";
 import { DocumentsController } from "./documents.controller";
-@Module({ controllers: [DocumentsController] })
+import { InvoicePdfService } from "./invoice-pdf.service";
+@Module({ controllers: [DocumentsController], providers: [InvoicePdfService] })
 export class DocumentsModule {}

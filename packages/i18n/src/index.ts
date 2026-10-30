@@ -234,8 +234,22 @@ const words: Record<string, [string, string]> = {
   partyAddress: ["Address", "ঠিকানা"],
   soldBy: ["Sold by", "বিক্রয় করেছেন"],
   invoicePrintHint: [
-    "A4 - 2 pages. For one sheet, print both sides and flip on the long edge.",
-    "A4 - ২ পৃষ্ঠা। একই কাগজের সামনে-পেছনে ছাপাতে Print both sides / Flip on long edge বেছে নিন।",
+    "Open the two-page A4 PDF to print or share. For one sheet, print both sides and flip on the long edge.",
+    "দুই পৃষ্ঠার A4 PDF খুলে print বা share করুন। একই কাগজের সামনে-পেছনে ছাপাতে Print both sides / Flip on long edge বেছে নিন।",
+  ],
+  openInvoicePdf: ["Open PDF / Print", "PDF খুলুন / প্রিন্ট"],
+  downloadInvoicePdf: ["Download PDF", "PDF ডাউনলোড"],
+  PDF_BUSY: [
+    "Another invoice PDF is being prepared. Please try again shortly.",
+    "আরেকটি invoice-এর PDF তৈরি হচ্ছে। একটু পরে আবার চেষ্টা করুন।",
+  ],
+  PDF_GENERATION_FAILED: [
+    "The PDF could not be prepared. Please try again.",
+    "PDF তৈরি করা যায়নি। আবার চেষ্টা করুন।",
+  ],
+  PDF_LAYOUT_ERROR: [
+    "The invoice needs a layout check before PDF export.",
+    "PDF তৈরির আগে invoice-এর layout যাচাই প্রয়োজন।",
   ],
   documentId: ["Original document", "মূল ডকুমেন্ট"],
   amount: ["Amount", "টাকার পরিমাণ"],

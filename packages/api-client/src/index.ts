@@ -66,6 +66,39 @@ export function createClient(
   }
   return {
     request,
+    receiptPdf: async (id: string) => {
+      const bearer = await token?.();
+      let response: Response;
+      try {
+        response = await fetch(
+          `${base}/documents/${encodeURIComponent(id)}/pdf?download=1`,
+          {
+            credentials: "include",
+            headers: {
+              Accept: "application/pdf",
+              ...(bearer ? { Authorization: `Bearer ${bearer}` } : {}),
+              ...(token ? { "X-Native-Client": "1" } : {}),
+            },
+            signal: AbortSignal.timeout(60000),
+          },
+        );
+      } catch {
+        throw new ApiError("NETWORK_ERROR", 0);
+      }
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        throw new ApiError(
+          error.code || "UPSTREAM_UNAVAILABLE",
+          response.status,
+        );
+      }
+      if (!response.headers.get("content-type")?.startsWith("application/pdf"))
+        throw new ApiError("UPSTREAM_UNAVAILABLE", 502);
+      const bytes = new Uint8Array(await response.arrayBuffer());
+      if (String.fromCharCode(...bytes.slice(0, 5)) !== "%PDF-")
+        throw new ApiError("UPSTREAM_UNAVAILABLE", 502);
+      return bytes;
+    },
     login: (identity: string, password: string) =>
       request<{ user: User; token?: string }>("/auth/login", "POST", {
         identity,

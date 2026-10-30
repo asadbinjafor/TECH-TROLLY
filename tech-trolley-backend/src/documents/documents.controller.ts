@@ -1,4 +1,13 @@
-import { Controller, Get, Param, Query, Req, UseGuards } from "@nestjs/common";
+import {
+  Controller,
+  Get,
+  Param,
+  Query,
+  Req,
+  Res,
+  UseGuards,
+} from "@nestjs/common";
+import type { Response } from "express";
 import {
   z,
   decimal,
@@ -10,9 +19,11 @@ import { db } from "../database/database";
 import { AuthGuard } from "../auth/auth.guard";
 import { documentsSql, documentView } from "../accounts/posting.service";
 import { fail } from "../common/errors";
+import { InvoicePdfService } from "./invoice-pdf.service";
 @Controller("documents")
 @UseGuards(AuthGuard)
 export class DocumentsController {
+  constructor(private readonly pdfs: InvoicePdfService) {}
   @Get(":id/receipt") async receipt(
     @Param("id") id: string,
     @Query("lang") lang: string,
@@ -30,13 +41,19 @@ export class DocumentsController {
       "SELECT name,address,phone FROM shop WHERE id=1",
     );
     let sellerName = invoiceSellerName(d.actor_name);
-    if (!sellerName) {
+    if (
+      !sellerName ||
+      /^(owner|staff|shop owner|shop staff|মালিক|স্টাফ|কর্মী)$/iu.test(
+        sellerName,
+      )
+    ) {
       const [seller] = await db.query("SELECT name FROM app_user WHERE id=$1", [
         d.actor_id,
       ]);
       sellerName = invoiceSellerName(d.actor_name, seller?.name);
     }
     return {
+      id: d.id,
       shop: s.invoiceShop || invoiceShop(shop),
       number: d.number,
       createdAt: d.created_at,
@@ -76,5 +93,24 @@ export class DocumentsController {
         String(BigInt(raw.original_due) % 100n).padStart(2, "0"),
       outstandingDue: d.due,
     };
+  }
+
+  @Get(":id/pdf") async pdf(
+    @Param("id") id: string,
+    @Query("lang") lang: string,
+    @Query("download") download: string,
+    @Req() req: any,
+    @Res() res: Response,
+  ) {
+    // Reuse the authenticated/date-scoped read before consulting any PDF cache.
+    const receipt = await this.receipt(id, lang, req);
+    const bytes = await this.pdfs.render(receipt);
+    const filename = receipt.number.replace(/[^A-Za-z0-9_-]/g, "_") + ".pdf";
+    res.setHeader("Cache-Control", "private, no-store");
+    res.setHeader(
+      "Content-Disposition",
+      `${download === "1" ? "attachment" : "inline"}; filename="${filename}"`,
+    );
+    return res.type("application/pdf").send(bytes);
   }
 }

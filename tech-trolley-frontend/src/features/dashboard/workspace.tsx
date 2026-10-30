@@ -146,7 +146,10 @@ export function Workspace({ section }: { section: string }) {
   };
   const fetchReceipt = async (id: string) => {
     try {
-      setReceipt(await api.request(`/documents/${id}/receipt?lang=${lang}`));
+      setReceipt({
+        ...(await api.request<object>(`/documents/${id}/receipt?lang=${lang}`)),
+        id,
+      });
     } catch (e: any) {
       setToast(tr(e.code));
     }
@@ -996,9 +999,21 @@ export function Workspace({ section }: { section: string }) {
             <Invoice receipt={receipt} lang={lang} />
             <footer>
               <p className="receipt-print-hint">{tr("invoicePrintHint")}</p>
-              <button className="button primary" onClick={() => window.print()}>
-                {tr("print")}
-              </button>
+              <a
+                className="button primary"
+                href={`${apiBase}/documents/${encodeURIComponent(receipt.id)}/pdf`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {tr("openInvoicePdf")}
+              </a>
+              <a
+                className="button"
+                href={`${apiBase}/documents/${encodeURIComponent(receipt.id)}/pdf?download=1`}
+                download
+              >
+                {tr("downloadInvoicePdf")}
+              </a>
             </footer>
           </section>
         </div>

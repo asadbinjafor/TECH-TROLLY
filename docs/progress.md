@@ -1,5 +1,11 @@
 # Progress and release handover
 
+## iPhone PDF delivery correction — 2026-10-30
+
+The Owner's new real TT-000008 file is still four pages and explicitly identifies iOS 27.2 Quartz PDFContext / Chrome. It already contains the refined layout; the earlier desktop HTML exports did not verify this device's export path. Replace web window.print with protected Open PDF / Print and Download PDF links. Nest renders the existing inline template/font in an isolated server PDF worker, validates layout, exactly two pages and A4 dimensions, and returns binary bytes through the existing same-origin cookie proxy. Native saves/prints/shares those same bytes. No financial command or migration change. The latest seller clarification keeps the associated profile display name centered for legacy defaults, so a profile still named Owner/Staff now prints that value instead of an empty name. Actual historical names remain frozen.
+
+A disposable shop verified the actual application Download button through Next proxy/authenticated Nest: downloaded two-page file, complete footer, synthetic Owner name Taki centered with 0.0 pt error against AUTHORISED SIGN. Native binary client/Staff flow produced two pages with the distinct Staff name centered within 0.007 pt. No captured browser errors or production test business writes. Both tests use fake records in a uniquely named isolated database. See [root cause, path and release checks](invoice-pdf-delivery-audit.md).
+
 ## Two-page invoice print refinement — 2026-10-30
 
 The Owner supplied a real four-page export, annotated seller/table screenshots, a revised watermark demo and explicit pasted requirements. Confirmed detached footer content in supplied pages 2/4. Reworked print geometry to literal millimetres with 1 mm page headroom, an intentional between-page break, and properly scoped modal footer controls. The gray table body is continuous with two vertical separators, larger/labeled product text and one complete inline transparent logo centered across the entire body at 68% width/11% opacity. Signature prints only the centered original seller name. Legacy role placeholders resolve only from that seller's profile; missing names are blank with a UI explanation. Existing non-placeholder names and all financial snapshots/terms/QR remain unchanged.

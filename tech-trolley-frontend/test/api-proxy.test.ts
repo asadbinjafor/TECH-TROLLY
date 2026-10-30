@@ -172,3 +172,68 @@ test("same-origin proxy preserves cookies, command keys, CSV and uncertain resul
     await new Promise<void>((resolve) => server.close(() => resolve()));
   }
 });
+
+test("same-origin receipt PDFs retain binary bytes and cookies, reject fake PDFs and keep authorization errors", async () => {
+  const pdf = Buffer.concat([
+    Buffer.from("%PDF-1.7\n"),
+    Buffer.from([0, 255, 254, 128, 13, 10]),
+  ]);
+  const seen: Record<string, any>[] = [];
+  const server = createServer((req, res) => {
+    seen.push(req.headers);
+    if (req.url?.includes("denied")) {
+      res.writeHead(401, { "content-type": "application/json" });
+      res.end('{"code":"UNAUTHORIZED"}');
+      return;
+    }
+    res.writeHead(200, {
+      "content-type": "application/pdf",
+      "content-disposition": 'inline; filename="TT-000008.pdf"',
+    });
+    res.end(req.url?.includes("bad") ? Buffer.from("not a pdf") : pdf);
+  });
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  const upstream = `http://127.0.0.1:${(server.address() as any).port}`;
+  const call = (path: string[], query = "", method = "GET") =>
+    proxyApi(
+      new Request("https://shop.example/api/" + path.join("/") + query, {
+        method,
+        headers: {
+          Cookie: "other=ignore; tt_session=private-session",
+          Authorization: "Bearer do-not-forward",
+          "X-Native-Client": "1",
+        },
+      }),
+      path,
+      { upstream, production: false },
+    );
+  try {
+    const response = await call(["documents", "saved-invoice", "pdf"]);
+    assert.equal(response.status, 200);
+    assert.deepEqual(Buffer.from(await response.arrayBuffer()), pdf);
+    assert.match(response.headers.get("content-disposition")!, /TT-000008.pdf/);
+    assert.equal(response.headers.get("cache-control"), "no-store");
+    assert.equal(seen[0].cookie, "tt_session=private-session");
+    assert.equal(seen[0].authorization, undefined);
+    assert.equal(seen[0]["x-native-client"], undefined);
+    assert.equal(
+      (await call(["documents", "saved-invoice", "pdf"], "?bad=1")).status,
+      502,
+    );
+    assert.equal((await call(["auth", "pdf"])).status, 502);
+    const denied = await call(
+      ["documents", "saved-invoice", "pdf"],
+      "?denied=1",
+    );
+    assert.equal(denied.status, 401);
+    assert.equal((await denied.json()).code, "UNAUTHORIZED");
+    assert.equal(
+      (await call(["documents", "saved-invoice", "pdf"], "", "HEAD")).status,
+      200,
+    );
+  } finally {
+    server.closeAllConnections();
+    await new Promise<void>((r) => server.close(() => r()));
+  }
+});

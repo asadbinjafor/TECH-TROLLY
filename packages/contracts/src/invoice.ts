@@ -1,6 +1,6 @@
 import type { Role } from "./index";
 
-/** Prefer immutable seller names. Only legacy role placeholders use that seller's profile. */
+/** Preserve real saved names; legacy role defaults use that seller's saved profile display name. */
 export function invoiceSellerName(
   saved?: string | null,
   profile?: string | null,
@@ -13,7 +13,12 @@ export function invoiceSellerName(
       ? ""
       : value;
   };
-  return actual(saved) || actual(profile);
+  return (
+    actual(saved) ||
+    actual(profile) ||
+    (profile?.trim() && !/^[—-]$/.test(profile.trim()) ? profile.trim() : "") ||
+    (saved?.trim() && !/^[—-]$/.test(saved.trim()) ? saved.trim() : "")
+  );
 }
 
 // Printed shop details and policy supplied and confirmed by the Owner.
@@ -59,6 +64,7 @@ export function invoiceShop(shop: {
 }
 
 export interface Receipt {
+  id?: string;
   shop: ReturnType<typeof invoiceShop>;
   number: string;
   createdAt: string;

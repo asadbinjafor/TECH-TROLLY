@@ -18,11 +18,12 @@
     "test": "npm run build:shared && npm test -w @tech-trolley/backend",
     "db:migrate": "npm run migrate -w @tech-trolley/backend",
     "db:bootstrap": "npm run bootstrap -w @tech-trolley/backend",
-    "build:api": "npm run build --workspace @tech-trolley/contracts && npm run build --workspace @tech-trolley/i18n && npm run build --workspace @tech-trolley/backend",
+    "build:api": "npm run build --workspace @tech-trolley/contracts && npm run build --workspace @tech-trolley/i18n && npm run build --workspace @tech-trolley/invoice && npm run build --workspace @tech-trolley/backend",
     "build:web": "npm run build:shared && npm run build --workspace @tech-trolley/frontend",
     "release:api": "node scripts/release-api.mjs",
     "start:render": "node scripts/start-render.mjs",
-    "test:hosting": "tsx --test tech-trolley-frontend/test/*.test.ts tech-trolley-backend/test/hosting.test.ts scripts/*.test.mjs"
+    "test:hosting": "tsx --test tech-trolley-frontend/test/*.test.ts tech-trolley-backend/test/hosting.test.ts scripts/*.test.mjs",
+    "prepare:invoice-release": "node scripts/prepare-invoice-release.mjs"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",

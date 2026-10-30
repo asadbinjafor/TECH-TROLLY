@@ -506,8 +506,8 @@ test("profile editing keeps identities, sessions, permissions and invoice histor
         const missing = (await api("get", `/documents/${sale.id}/receipt`))
           .body;
         assert.equal(missing.seller.id, staffId);
-        assert.equal(missing.seller.name, "");
-        assert.equal(missing.seller.nameMissing, true);
+        assert.equal(missing.seller.name, "Staff");
+        assert.equal(missing.seller.nameMissing, false);
         const journal = await db.query(
           "SELECT * FROM journal_line ORDER BY id",
         );
@@ -523,6 +523,23 @@ test("profile editing keeps identities, sessions, permissions and invoice histor
           .body;
         assert.equal(resolved.seller.name, "Actual Legacy Seller");
         assert.equal(resolved.seller.nameMissing, false);
+        const pdfResponse = await api(
+          "get",
+          `/documents/${sale.id}/pdf?download=1`,
+        );
+        assert.equal(pdfResponse.status, 200);
+        assert.match(pdfResponse.headers["content-type"], /application\/pdf/);
+        assert.match(
+          pdfResponse.headers["content-disposition"],
+          /^attachment; filename="TT-/,
+        );
+        assert.equal(pdfResponse.headers["cache-control"], "private, no-store");
+        assert.equal(pdfResponse.body.subarray(0, 5).toString(), "%PDF-");
+        const { PDFDocument } = await import("pdf-lib");
+        assert.equal(
+          (await PDFDocument.load(pdfResponse.body)).getPageCount(),
+          2,
+        );
         assert.equal(
           (
             await db.query("SELECT actor_name FROM document WHERE id=$1", [

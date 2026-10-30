@@ -1,15 +1,13 @@
 import React, { useEffect, useState } from "react";
 import { ScrollView, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Asset } from "expo-asset";
-import { File } from "expo-file-system";
+import { File, Paths } from "expo-file-system";
 import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
 import { t, currency, dateLabel } from "@tech-trolley/i18n";
 import { useShop } from "../contexts/shop-context";
 import { Button, Txt, Panel, useColors } from "../components/ui";
 import { api } from "../services/api";
-import { renderInvoiceHtml } from "@tech-trolley/invoice";
 import type { Receipt } from "@tech-trolley/contracts";
 import { productDetails, invoiceSellerName } from "@tech-trolley/contracts";
 export function NativeReceipt({ route }: any) {
@@ -27,31 +25,23 @@ export function NativeReceipt({ route }: any) {
       .catch((e) => setError(e.code));
   };
   useEffect(load, [route.params.id]);
-  const html = async () => {
-    const asset = Asset.fromModule(require("../../assets/NotoSansBengali.ttf"));
-    await asset.downloadAsync();
-    const font = await new File(asset.localUri || asset.uri).base64();
-    return renderInvoiceHtml(receipt!, lang, {
-      font: "data:font/ttf;base64," + font,
-    });
-  };
   const print = async (share: boolean) => {
     setBusy(true);
     try {
-      const content = await html();
+      const bytes = await api.receiptPdf(route.params.id);
+      const file = new File(
+        Paths.cache,
+        receipt!.number.replace(/[^A-Za-z0-9_-]/g, "_") + ".pdf",
+      );
+      file.create({ overwrite: true });
+      file.write(bytes);
       if (share) {
-        const file = await Print.printToFileAsync({
-          html: content,
-          width: 595,
-          height: 842,
-          base64: false,
-        });
         if (await Sharing.isAvailableAsync())
           await Sharing.shareAsync(file.uri, {
             mimeType: "application/pdf",
             UTI: "com.adobe.pdf",
           });
-      } else await Print.printAsync({ html: content });
+      } else await Print.printAsync({ uri: file.uri });
     } catch (e: any) {
       setError(e.code || "SERVER_ERROR");
     } finally {

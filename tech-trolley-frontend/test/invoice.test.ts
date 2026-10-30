@@ -119,13 +119,13 @@ test("seller names preserve real history and only legacy role placeholders use t
   );
   for (const saved of ["Owner", "STAFF", " মালিক ", "", "—", undefined]) {
     assert.equal(invoiceSellerName(saved, "Actual Seller"), "Actual Seller");
-    assert.equal(invoiceSellerName(saved, "Owner"), "");
+    assert.equal(invoiceSellerName(saved, "Owner"), "Owner");
   }
   const html = renderInvoiceBody({
     ...receipt,
     seller: { ...receipt.seller, name: "Owner" },
   });
-  assert.ok(html.includes('class="tt-memo__seller"><strong></strong>'));
+  assert.ok(html.includes('class="tt-memo__seller"><strong>Owner</strong>'));
 });
 
 test("product descriptions label supplied specifications, normalize capacity and avoid duplicate brands", () => {

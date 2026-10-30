@@ -72,6 +72,11 @@ export async function proxyApi(
     .find((value) => value.startsWith("tt_session="));
   if (sessionCookie) headers.set("Cookie", sessionCookie);
   const method = request.method;
+  const pdfRoute =
+    ["GET", "HEAD"].includes(method) &&
+    path.length === 3 &&
+    path[0] === "documents" &&
+    path[2] === "pdf";
   try {
     const response = await fetch(target, {
       method,
@@ -84,7 +89,8 @@ export async function proxyApi(
       signal: AbortSignal.any([
         request.signal,
         AbortSignal.timeout(
-          options.timeoutMs ?? (path[0] === "health" ? 6000 : 20000),
+          options.timeoutMs ??
+            (pdfRoute ? 55000 : path[0] === "health" ? 6000 : 20000),
         ),
       ]),
     });
@@ -97,7 +103,11 @@ export async function proxyApi(
       path[0] === "reports" &&
       path[1] === "export" &&
       contentType.includes("text/csv");
-    if (!contentType.includes("application/json") && !csvExport)
+    const pdfExport =
+      response.ok &&
+      pdfRoute &&
+      contentType.split(";")[0].trim() === "application/pdf";
+    if (!contentType.includes("application/json") && !csvExport && !pdfExport)
       return error(
         ["GET", "HEAD"].includes(method)
           ? "UPSTREAM_UNAVAILABLE"
@@ -111,6 +121,18 @@ export async function proxyApi(
     }
     for (const cookie of response.headers.getSetCookie())
       outgoing.append("Set-Cookie", cookie);
+    if (pdfExport && method === "GET") {
+      const bytes = await response.arrayBuffer();
+      if (
+        bytes.byteLength > 10 * 1024 * 1024 ||
+        new TextDecoder().decode(bytes.slice(0, 5)) !== "%PDF-"
+      )
+        return error("UPSTREAM_UNAVAILABLE", 502);
+      return new Response(bytes, {
+        status: response.status,
+        headers: outgoing,
+      });
+    }
     return new Response(response.body, {
       status: response.status,
       headers: outgoing,
