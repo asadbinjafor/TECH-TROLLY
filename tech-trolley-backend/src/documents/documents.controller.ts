@@ -1,5 +1,11 @@
 import { Controller, Get, Param, Query, Req, UseGuards } from "@nestjs/common";
-import { z, decimal, minor, invoiceShop } from "@tech-trolley/contracts";
+import {
+  z,
+  decimal,
+  minor,
+  invoiceShop,
+  invoiceSellerName,
+} from "@tech-trolley/contracts";
 import { db } from "../database/database";
 import { AuthGuard } from "../auth/auth.guard";
 import { documentsSql, documentView } from "../accounts/posting.service";
@@ -23,6 +29,13 @@ export class DocumentsController {
     const [shop] = await db.query(
       "SELECT name,address,phone FROM shop WHERE id=1",
     );
+    let sellerName = invoiceSellerName(d.actor_name);
+    if (!sellerName) {
+      const [seller] = await db.query("SELECT name FROM app_user WHERE id=$1", [
+        d.actor_id,
+      ]);
+      sellerName = invoiceSellerName(d.actor_name, seller?.name);
+    }
     return {
       shop: s.invoiceShop || invoiceShop(shop),
       number: d.number,
@@ -34,7 +47,8 @@ export class DocumentsController {
       address: s.partyAddress || null,
       seller: {
         id: d.actor_id,
-        name: d.actor_name,
+        name: sellerName,
+        nameMissing: !sellerName,
         role: ["OWNER", "STAFF"].includes(s.actorRole) ? s.actorRole : null,
       },
       unit: {

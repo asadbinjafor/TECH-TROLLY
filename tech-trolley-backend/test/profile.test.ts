@@ -224,7 +224,7 @@ test("profile editing keeps identities, sessions, permissions and invoice histor
         assert.equal(
           (await api("get", `/documents/${originalOwnerSale.id}/receipt`)).body
             .seller.name,
-          "Owner",
+          "Renamed Owner",
         );
         assert.equal(
           (await api("get", `/documents/${originalStaffSale.id}/receipt`)).body
@@ -486,12 +486,59 @@ test("profile editing keeps identities, sessions, permissions and invoice histor
         assert.equal(
           (await api("get", `/documents/${originalOwnerSale.id}/receipt`)).body
             .seller.name,
-          "Owner",
+          "Renamed Owner",
         );
         assert.equal(
           (await api("get", `/documents/${originalStaffSale.id}/receipt`)).body
             .seller.name,
           "Original Staff",
+        );
+      },
+    );
+    await t.test(
+      "legacy placeholder seller receipts resolve only that seller's profile without rewriting history",
+      async () => {
+        assert.equal(
+          (await api("patch", `/users/${staffId}`, { name: "Staff" })).status,
+          200,
+        );
+        const sale = await sell(staffToken);
+        const missing = (await api("get", `/documents/${sale.id}/receipt`))
+          .body;
+        assert.equal(missing.seller.id, staffId);
+        assert.equal(missing.seller.name, "");
+        assert.equal(missing.seller.nameMissing, true);
+        const journal = await db.query(
+          "SELECT * FROM journal_line ORDER BY id",
+        );
+        assert.equal(
+          (
+            await api("patch", `/users/${staffId}`, {
+              name: "Actual Legacy Seller",
+            })
+          ).status,
+          200,
+        );
+        const resolved = (await api("get", `/documents/${sale.id}/receipt`))
+          .body;
+        assert.equal(resolved.seller.name, "Actual Legacy Seller");
+        assert.equal(resolved.seller.nameMissing, false);
+        assert.equal(
+          (
+            await db.query("SELECT actor_name FROM document WHERE id=$1", [
+              sale.id,
+            ])
+          )[0].actor_name,
+          "Staff",
+        );
+        assert.equal(
+          (await api("get", `/documents/${originalStaffSale.id}/receipt`)).body
+            .seller.name,
+          "Original Staff",
+        );
+        assert.deepEqual(
+          await db.query("SELECT * FROM journal_line ORDER BY id"),
+          journal,
         );
       },
     );

@@ -1,8 +1,17 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { invoiceShop, type Receipt } from "@tech-trolley/contracts";
-import { renderInvoiceBody, renderInvoiceHtml } from "@tech-trolley/invoice";
+import {
+  invoiceShop,
+  invoiceSellerName,
+  type Receipt,
+} from "@tech-trolley/contracts";
+import {
+  renderInvoiceBody,
+  renderInvoiceHtml,
+  invoiceProductDescription,
+  invoiceStyles,
+} from "@tech-trolley/invoice";
 import { memoQrSvg, memoQrUrl } from "../../packages/invoice/src/artwork";
 
 const receipt: Receipt = {
@@ -44,7 +53,6 @@ test("memo contains customer, original seller, serial, exact totals and approved
     receipt.phone!,
     receipt.address!,
     receipt.seller.name,
-    "Staff",
     "30 / 10 / 2026",
     "SUB TOTAL",
     "ADVANCE",
@@ -58,7 +66,9 @@ test("memo contains customer, original seller, serial, exact totals and approved
     "25%",
     "2 Years Service Warranty",
     "<svg",
-    "128 GB · Blue · International",
+    "Storage: 128 GB · Color: Blue",
+    "Variant: International",
+    "Box Included",
     "TERMS &amp; CONDITIONS FOR AFTER SALES SERVICE",
     "CUSTOMER SIGNATURE",
     "DELIVERY TYPE",
@@ -66,12 +76,15 @@ test("memo contains customer, original seller, serial, exact totals and approved
   ])
     assert.ok(html.includes(value), "Missing invoice detail: " + value);
   assert.ok(!html.includes("SAMPLE DATA"));
-  assert.ok(
+  assert.equal(
     renderInvoiceBody({
       ...receipt,
       seller: { ...receipt.seller, role: "OWNER" },
-    }).includes("Owner"),
+    }),
+    renderInvoiceBody(receipt),
   );
+  assert.ok(!html.includes("SOLD BY"));
+  assert.ok(!html.includes("data-seller-role"));
   const large = renderInvoiceBody({ ...receipt, price: "999999999999.99" });
   assert.ok(large.includes("999,999,999,999.99"));
 });
@@ -93,9 +106,93 @@ test("invoice escapes customer input and tolerates older API receipts without gu
   delete old.shop.qrUrl;
   delete old.shop.afterSalesTerms;
   const compatible = renderInvoiceBody(old);
-  assert.ok(compatible.includes("SOLD BY"));
+  assert.ok(!compatible.includes("SOLD BY"));
+  assert.ok(compatible.includes('class="tt-memo__seller"><strong></strong>'));
   assert.ok(compatible.includes("50,000"));
   assert.ok(!compatible.includes("undefined"));
+});
+
+test("seller names preserve real history and only legacy role placeholders use the same seller's profile", () => {
+  assert.equal(
+    invoiceSellerName("Original seller", "Renamed profile"),
+    "Original seller",
+  );
+  for (const saved of ["Owner", "STAFF", " মালিক ", "", "—", undefined]) {
+    assert.equal(invoiceSellerName(saved, "Actual Seller"), "Actual Seller");
+    assert.equal(invoiceSellerName(saved, "Owner"), "");
+  }
+  const html = renderInvoiceBody({
+    ...receipt,
+    seller: { ...receipt.seller, name: "Owner" },
+  });
+  assert.ok(html.includes('class="tt-memo__seller"><strong></strong>'));
+});
+
+test("product descriptions label supplied specifications, normalize capacity and avoid duplicate brands", () => {
+  const unit = {
+    ...receipt.unit,
+    brand: "Iphone",
+    model: "iphone 17 pro max",
+    storage: "512",
+    battery: 100,
+  };
+  assert.deepEqual(invoiceProductDescription(unit), {
+    name: "iphone 17 pro max",
+    lines: [
+      "Storage: 512 GB · Color: Blue",
+      "Variant: International",
+      "Battery Health: 100% · Box Included",
+    ],
+  });
+  assert.equal(
+    invoiceProductDescription({ ...unit, storage: "1tb" }).lines[0],
+    "Storage: 1 TB · Color: Blue",
+  );
+  assert.deepEqual(
+    invoiceProductDescription({
+      ...unit,
+      brand: "",
+      model: "Case",
+      storage: "",
+      color: "",
+      variant: "",
+      battery: null,
+      box: "unspecified",
+    }),
+    { name: "Case", lines: [] },
+  );
+  assert.ok(
+    invoiceProductDescription({ ...unit, battery: 0 })
+      .lines.at(-1)
+      ?.includes("0%"),
+  );
+});
+
+test("one merged body has one full-logo watermark while each supplied product retains its own aligned row", () => {
+  const html = renderInvoiceBody({
+    ...receipt,
+    items: [
+      { unit: receipt.unit, quantity: 1, price: "57000" },
+      {
+        unit: { ...receipt.unit, model: "Case", brand: "Test" },
+        quantity: 2,
+        price: "900",
+      },
+    ],
+  });
+  assert.equal((html.match(/class="tt-memo__watermark"/g) || []).length, 1);
+  assert.equal(
+    (html.match(/role="row" class="tt-memo__product-row"/g) || []).length,
+    2,
+  );
+  assert.ok(html.includes('tt-memo__quantity">2</div>'));
+  assert.ok(html.includes('tt-memo__price">900/=</div>'));
+  assert.ok(html.includes("Apple iPad (A16)"));
+  assert.ok(html.includes("Test Case"));
+  assert.ok(!html.includes('rowspan="4"'));
+  assert.ok(!invoiceStyles.includes("repeating-linear-gradient"));
+  assert.ok(invoiceStyles.includes("--mm:1mm"));
+  assert.ok(!invoiceStyles.includes("overflow:hidden"));
 });
 
 test("two A4 sides retain the supplied memo headings and all 12 policy clauses in either UI language", () => {

@@ -802,7 +802,7 @@ td b {
 .form-grid .wide {
   grid-column: 1/-1;
 }
-.modal footer {
+.modal > footer {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
@@ -1485,7 +1485,8 @@ td b {
     color: #111;
   }
   .receipt > header,
-  .receipt > footer {
+  .receipt > footer,
+  .invoice-name-warning {
     display: none;
   }
   .receipt-paper {

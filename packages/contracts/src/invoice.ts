@@ -1,5 +1,21 @@
 import type { Role } from "./index";
 
+/** Prefer immutable seller names. Only legacy role placeholders use that seller's profile. */
+export function invoiceSellerName(
+  saved?: string | null,
+  profile?: string | null,
+) {
+  const actual = (name?: string | null) => {
+    const value = name?.trim() || "";
+    return /^(?:owner|staff|shop owner|shop staff|মালিক|স্টাফ|কর্মী|—|-)?$/iu.test(
+      value,
+    )
+      ? ""
+      : value;
+  };
+  return actual(saved) || actual(profile);
+}
+
 // Printed shop details and policy supplied and confirmed by the Owner.
 export const memoProfile = {
   phone: "01607-683097",
@@ -51,7 +67,12 @@ export interface Receipt {
   customer: string | null;
   phone: string | null;
   address: string | null;
-  seller: { id: string; name: string; role: Role | null };
+  seller: {
+    id: string;
+    name: string;
+    role: Role | null;
+    nameMissing?: boolean;
+  };
   unit: {
     model: string;
     brand: string;
@@ -66,6 +87,8 @@ export interface Receipt {
     category: string | null;
   };
   price: string;
+  /** Print-only line collection when supplied; current sale posting tracks one unit. */
+  items?: { unit: Receipt["unit"]; quantity: number; price: string }[];
   discount: string;
   total: string;
   paid: string;

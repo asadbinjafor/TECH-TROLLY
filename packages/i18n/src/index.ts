@@ -1,5 +1,9 @@
 export type Language = "bn" | "en";
 const words: Record<string, [string, string]> = {
+  invoiceSellerNameMissing: [
+    "The original seller's actual name is missing. The invoice name area is blank. Update that seller's profile name in Settings.",
+    "এই বিক্রেতার প্রকৃত নাম সংরক্ষিত নেই, তাই ইনভয়েসে নামের জায়গা খালি রাখা হয়েছে। Settings থেকে সংশ্লিষ্ট বিক্রেতার profile-এ প্রকৃত নাম দিন।",
+  ],
   startupTitle: ["Opening your shop", "আপনার দোকানের অ্যাপ খুলছে"],
   startupWaking: ["Getting the server ready", "সার্ভার প্রস্তুত হচ্ছে"],
   startupAccount: ["Preparing your workspace", "আপনার হিসাব প্রস্তুত হচ্ছে"],

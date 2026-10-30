@@ -132,3 +132,10 @@ Render service-এর paid compute plan-এ এই idle spin-down থাকে �
 ### খালি টাকা ও optional payment field-এর আপডেট
 
 এই পরিবর্তন shared contracts/i18n এবং web/native form-এ। Production branch-এ push করলে আগের নিয়মেই Vercel deploy এবং CI পাসের পরে Render deploy হবে; নতুন Supabase migration নেই। Deploy শেষে নতুন বিক্রির form খুলে Discount/Cash/Bank খালি আছে কি না দেখুন। একটিতে পুরো টাকা লিখে Review করুন—অন্য ঘরে ০ দিতে হবে না। পরীক্ষার জন্য আসল বিক্রি Confirm করবেন না। কম টাকা পেলে Customer নির্বাচন করতে হবে; বাকি আলাদা হিসাব হবে।
+
+
+### Invoice print/PDF আপডেট
+
+Shared invoice/contracts, API ও web/native বদলেছে, তাই একই production branch-এ push → CI → Vercel/Render auto-deploy হবে। Supabase-এর নতুন migration নেই। পুরোনো sale খুলে Print / Save as PDF-তে A4 portrait, scale 100%, background graphics on এবং browser headers/footers off রাখুন। PDF দুই পৃষ্ঠা হবে; পৃষ্ঠা ১-এ gold thank-you এবং পৃষ্ঠা ২-এ TECH TROLLEY footer থাকবে। Seller-এর নামের জায়গা খালি ও সতর্কবার্তা এলে Settings-এ ওই বিক্রেতার প্রকৃত নাম দিন। ইতিমধ্যে সংরক্ষিত প্রকৃত নাম পাল্টানো হবে না।
+
+পরীক্ষার HTML তৈরি: `npx tsx scripts/prepare-invoice-print-qa.ts`। এতে শুধু synthetic data ব্যবহার হয়, কোনো database record তৈরি হয় না। আসল customer data বা local receipt JSON Git-এ commit করবেন না।

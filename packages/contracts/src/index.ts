@@ -1,7 +1,12 @@
 import { z } from "zod";
 export { z };
 export { ZodError } from "zod";
-export { invoiceShop, memoProfile, type Receipt } from "./invoice";
+export {
+  invoiceShop,
+  invoiceSellerName,
+  memoProfile,
+  type Receipt,
+} from "./invoice";
 export type Role = "OWNER" | "STAFF";
 export type Language = "bn" | "en";
 export interface User {

@@ -11,7 +11,7 @@ import { Button, Txt, Panel, useColors } from "../components/ui";
 import { api } from "../services/api";
 import { renderInvoiceHtml } from "@tech-trolley/invoice";
 import type { Receipt } from "@tech-trolley/contracts";
-import { productDetails } from "@tech-trolley/contracts";
+import { productDetails, invoiceSellerName } from "@tech-trolley/contracts";
 export function NativeReceipt({ route }: any) {
   const { lang } = useShop(),
     c = useColors(),
@@ -64,6 +64,9 @@ export function NativeReceipt({ route }: any) {
       edges={["left", "right", "bottom"]}
     >
       <ScrollView contentContainerStyle={{ padding: 20 }}>
+        {receipt && !invoiceSellerName(receipt.seller?.name) && (
+          <Txt accessibilityRole="alert">{tr("invoiceSellerNameMissing")}</Txt>
+        )}
         {error && (
           <>
             <Txt accessibilityRole="alert" style={{ color: "#b95050" }}>

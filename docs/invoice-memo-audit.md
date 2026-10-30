@@ -1,5 +1,7 @@
 # Two-sided shop memo audit — 2026-10-30
 
+The later [print refinement](invoice-print-refinement.md) supersedes the original filler rows, role label, signature alignment and 285 mm canvas. The Owner's actual four-page export exposed a footer split absent in earlier standalone QA. The updated real web-component wrapper is tested alongside standalone output.
+
 The Owner supplied a blank front photograph, a reverse-side photograph and a separate QR image, and confirmed A4. The shared web/native print renderer now reproduces the two-sided form: two A4 PDF pages, each with a 198 × 285 mm canvas inside 6 mm page margins. The preview scales as one fixed form on a narrow screen; it does not rearrange the print layout.
 
 ## Reference and data mapping

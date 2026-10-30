@@ -5,6 +5,7 @@ import { Client } from "pg";
 import request from "supertest";
 import { execFileSync } from "node:child_process";
 import { resolve } from "node:path";
+import { invoiceSellerName } from "@tech-trolley/contracts";
 
 test("isolated PostgreSQL acceptance, authorization, accounting and retry safety", async (t) => {
   const source = process.env.TEST_DATABASE_URL;
@@ -842,7 +843,10 @@ test("isolated PostgreSQL acceptance, authorization, accounting and retry safety
           assert.equal(saved.customer, "Invoice customer");
           assert.equal(saved.phone, "01700000000");
           assert.equal(saved.address, "Banasree, Dhaka");
-          assert.equal(saved.seller.name, owner.user.name);
+          assert.equal(
+            saved.seller.name,
+            invoiceSellerName(owner.user.name, "Renamed operator"),
+          );
           assert.equal(saved.seller.role, "OWNER");
           assert.equal(saved.unit.imei, "000000000000167");
           assert.equal(saved.unit.condition, "used");
