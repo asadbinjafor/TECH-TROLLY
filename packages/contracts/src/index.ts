@@ -133,18 +133,27 @@ export const commands = {
           message: "ACCESSORY_IMEI",
         });
     }),
-  sale: z.strictObject({
-    unitId: id,
-    price: money,
-    discount: money.default("0"),
-    cash: money,
-    bank: money,
-    customerId: id.nullable().default(null),
-    customerName: z.string().trim().max(180).optional(),
-    customerPhone: z.string().trim().max(30).optional(),
-    customerAddress: z.string().trim().max(300).optional(),
-    note,
-  }),
+  sale: z
+    .strictObject({
+      unitId: id,
+      price: money,
+      discount: money.default("0"),
+      cash: money,
+      bank: money,
+      customerId: id.nullable().default(null),
+      customerName: z.string().trim().max(180).optional(),
+      customerPhone: z.string().trim().max(30).optional(),
+      customerAddress: z.string().trim().max(300).optional(),
+      note,
+    })
+    .superRefine((v, c) => {
+      if (saleNeedsCustomer(v) && !v.customerId)
+        c.addIssue({
+          code: "custom",
+          path: ["customerId"],
+          message: "CUSTOMER_REQUIRED",
+        });
+    }),
   collection: z.strictObject({ documentId: id, amount: money, account, note }),
   supplierPayment: z.strictObject({
     documentId: id,
@@ -424,8 +433,8 @@ export const forms: Record<CommandKind, Field[]> = {
     f("customerAddress", "text", { optional: true }),
     f("price", "money"),
     f("discount", "money", { default: "0" }),
-    f("cash", "money", { label: "cashReceived" }),
-    f("bank", "money", { label: "bankReceived" }),
+    f("cash", "money", { label: "cashReceived", default: "0" }),
+    f("bank", "money", { label: "bankReceived", default: "0" }),
     n,
   ],
   collection: [f("documentId", "select", { source: "salesDue" }), amount, a, n],
@@ -481,8 +490,140 @@ export function customerInvoiceFields(customer?: Party) {
     customerAddress: customer?.address || "",
   };
 }
+export function saleNeedsCustomer(values: {
+  price?: string;
+  discount?: string;
+  cash?: string;
+  bank?: string;
+}) {
+  try {
+    return (
+      minor(values.price || "0") - minor(values.discount || "0") >
+      minor(values.cash || "0") + minor(values.bank || "0")
+    );
+  } catch {
+    return false;
+  }
+}
+export function formFields(kind: CommandKind, values: Record<string, string>) {
+  return forms[kind].filter(
+    (f) =>
+      (f.key !== "expenseName" || values.categoryId === "custom") &&
+      !(
+        kind === "purchase" &&
+        f.key === "imei" &&
+        values.category === "accessory"
+      ),
+  );
+}
+export function formDefaults(kind: CommandKind, today: string) {
+  return Object.fromEntries(
+    forms[kind].map((f) => [
+      f.key,
+      f.default ?? (f.type === "month" ? today.slice(0, 7) : ""),
+    ]),
+  );
+}
+export function fieldRequired(
+  kind: CommandKind,
+  field: Field,
+  values: Record<string, string>,
+  state: State,
+) {
+  if (kind === "sale" && field.key === "customerId")
+    return saleNeedsCustomer(values);
+  if (kind === "purchase" && field.key === "imei")
+    return values.category === "phone";
+  if (kind === "cashCount" && field.key === "note") {
+    try {
+      return minor(values.counted || "0") !== minor(state.balances.cash);
+    } catch {
+      return false;
+    }
+  }
+  return !field.optional;
+}
+export function fieldMaxLength(kind: CommandKind, field: Field) {
+  if (field.type === "money") return 15;
+  if (field.type === "month") return 7;
+  return (
+    (
+      {
+        imei: 15,
+        battery: 3,
+        model: 180,
+        brand: 180,
+        storage: 60,
+        color: 60,
+        variant: 120,
+        customerName: 180,
+        customerPhone: 30,
+        customerAddress: 300,
+        expenseName: 180,
+      } as Record<string, number>
+    )[field.key] ?? (field.key === "note" && !field.optional ? 180 : 300)
+  );
+}
+export function emptySelectionMessage(field: Field) {
+  return (
+    (
+      {
+        units: "emptyStockSelection",
+        staff: "emptyStaffSelection",
+        salesDue: "emptySalesDueSelection",
+        purchasesDue: "emptyPurchasesDueSelection",
+        loansDue: "emptyLoansDueSelection",
+        advancesDue: "emptyAdvancesDueSelection",
+        documents: "emptyCorrectionSelection",
+      } as Record<string, string>
+    )[field.source || ""] || "emptyPartySelection"
+  );
+}
+export function selectionBlockers(
+  kind: CommandKind,
+  values: Record<string, string>,
+  state: State,
+) {
+  const issues: Record<string, string> = {};
+  for (const field of formFields(kind, values).filter(
+    (f) => f.type === "select",
+  )) {
+    const options = choices(field, state, "en");
+    if (!options.length && fieldRequired(kind, field, values, state))
+      issues[field.key] = emptySelectionMessage(field);
+    else if (
+      values[field.key] &&
+      !options.some((o) => o.value === values[field.key])
+    )
+      issues[field.key] = "SELECTION_UNAVAILABLE";
+  }
+  return issues;
+}
+export function prepareForm(
+  kind: CommandKind,
+  values: Record<string, string>,
+  state: State,
+) {
+  const blocked = selectionBlockers(kind, values, state);
+  if (
+    kind === "cashCount" &&
+    fieldRequired(kind, forms.cashCount[1], values, state) &&
+    !values.note?.trim()
+  )
+    blocked.note = "REASON_REQUIRED";
+  if (Object.keys(blocked).length)
+    throw new z.ZodError(
+      Object.entries(blocked).map(([key, message]) => ({
+        code: "custom",
+        path: [key],
+        message,
+      })),
+    );
+  return prepare(kind, values);
+}
 export function prepare(kind: CommandKind, raw: Record<string, string>) {
   const data: Record<string, unknown> = { ...raw };
+  if (kind === "purchase" && raw.category === "accessory") data.imei = null;
   for (const field of forms[kind]) {
     if (field.optional && !data[field.key])
       data[field.key] =
@@ -557,12 +698,41 @@ export function choices(
   )[field.source || ""];
   return state.documents
     .filter(
-      (d) => !d.reversed_by && (!dk || (d.kind === dk && minor(d.due) > 0n)),
+      (d) =>
+        !d.reversed_by &&
+        (dk
+          ? d.kind === dk && minor(d.due) > 0n
+          : correctableDocument(d, state)),
     )
     .map((d) => ({
       value: d.id,
       label: `${d.number} · ${String(d.snapshot.model || d.snapshot.partyName || d.kind)} · ${d.due}`,
     }));
+}
+export function correctableDocument(d: Document, state: State) {
+  if (d.reversed_by || ["opening", "cashCount", "reversal"].includes(d.kind))
+    return false;
+  const unit = state.units.find((u) => u.id === d.unit_id);
+  if (d.kind === "purchase" && unit && unit.status !== "IN_STOCK") return false;
+  if (d.kind === "sale" && unit && unit.sale_id !== d.id) return false;
+  try {
+    const s = d.snapshot;
+    const originalDue =
+      d.kind === "purchase"
+        ? minor(String(s.cost)) - minor(String(s.paid))
+        : d.kind === "sale"
+          ? minor(String(s.price)) -
+            minor(String(s.discount)) -
+            minor(String(s.cash)) -
+            minor(String(s.bank))
+          : ["loan", "advance"].includes(d.kind)
+            ? minor(d.total)
+            : null;
+    if (originalDue !== null && originalDue > minor(d.due)) return false;
+  } catch {
+    /* Older incomplete snapshots still defer to the authoritative API. */
+  }
+  return true;
 }
 export function partyKindForSource(
   source?: string,

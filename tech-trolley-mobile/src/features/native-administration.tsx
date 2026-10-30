@@ -276,6 +276,19 @@ export function NativeAdministration({ route, navigation }: any) {
                           setValues((v) => ({ ...v, [f.key]: value }))
                         }
                         secure={f.secure}
+                        maxLength={
+                          f.secure
+                            ? 72
+                            : f.key === "address"
+                              ? 300
+                              : f.key === "phone"
+                                ? 30
+                                : f.key === "login"
+                                  ? 60
+                                  : f.key === "email"
+                                    ? 254
+                                    : 180
+                        }
                       />
                     ),
                   )}

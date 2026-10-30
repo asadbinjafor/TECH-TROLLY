@@ -235,6 +235,7 @@ const words: Record<string, [string, string]> = {
   createUser: ["Create account", "অ্যাকাউন্ট তৈরি"],
   users: ["User management", "ইউজার ব্যবস্থাপনা"],
   createParty: ["Add party", "ব্যক্তি যোগ করুন"],
+  parties: ["Contacts and names", "যোগাযোগ ও নামের তালিকা"],
   manageParties: ["Add / manage names", "নাম যোগ / পরিচালনা করুন"],
   searchParties: ["Search name, phone or address", "নাম, ফোন বা ঠিকানা খুঁজুন"],
   editParty: ["Edit details", "তথ্য সম্পাদনা"],
@@ -249,6 +250,42 @@ const words: Record<string, [string, string]> = {
   emptyPartySelection: [
     "No names yet. Add one below to continue.",
     "তালিকায় কোনো নাম নেই। নিচে নাম যোগ করে এগিয়ে যান।",
+  ],
+  emptyStockSelection: [
+    "No stock is available for sale. Record a purchase first.",
+    "বিক্রির জন্য স্টকে পণ্য নেই। আগে নতুন কেনাকাটা থেকে পণ্য যোগ করুন।",
+  ],
+  emptyOptionalCustomerSelection: [
+    "No saved customers yet. Fully paid sales can use Walk-in; add a customer for credit sales or saved contact details.",
+    "সংরক্ষিত গ্রাহক নেই। পুরো টাকা পরিশোধ হলে সাধারণ ক্রেতা ব্যবহার করতে পারবেন; বাকিতে বিক্রি বা যোগাযোগ সংরক্ষণ করতে গ্রাহক যোগ করুন।",
+  ],
+  emptyStaffSelection: [
+    "No Staff accounts exist. The Owner can create one in Settings → User management.",
+    "কোনো Staff অ্যাকাউন্ট নেই। মালিক সেটিংস → ইউজার ব্যবস্থাপনা থেকে তৈরি করতে পারবেন।",
+  ],
+  emptySalesDueSelection: [
+    "There are no unpaid sales available in your accessible dates.",
+    "আপনার অনুমোদিত তারিখে বাকি বিক্রি নেই।",
+  ],
+  emptyPurchasesDueSelection: [
+    "There are no unpaid purchases available in your accessible dates.",
+    "আপনার অনুমোদিত তারিখে পরিশোধযোগ্য কেনাকাটার বাকি নেই।",
+  ],
+  emptyLoansDueSelection: [
+    "There are no outstanding loans available in your accessible dates.",
+    "আপনার অনুমোদিত তারিখে ফেরতযোগ্য ধার নেই।",
+  ],
+  emptyAdvancesDueSelection: [
+    "There are no outstanding Staff advances available in your accessible dates.",
+    "আপনার অনুমোদিত তারিখে কর্মীর ফেরতযোগ্য অগ্রিম নেই।",
+  ],
+  emptyCorrectionSelection: [
+    "There are no correctable transactions in your accessible dates. Opening balances, cash counts and correction records cannot be selected.",
+    "আপনার অনুমোদিত তারিখে সংশোধনযোগ্য লেনদেন নেই। শুরুর হিসাব, ক্যাশ গণনা ও সংশোধনের রেকর্ড নির্বাচন করা যায় না।",
+  ],
+  SELECTION_UNAVAILABLE: [
+    "This selection is no longer available. Choose an available entry; your other fields are preserved.",
+    "নির্বাচিত এন্ট্রিটি এখন আর ব্যবহারযোগ্য নয়। অন্য এন্ট্রি বেছে নিন; বাকি লেখা তথ্য অক্ষত আছে।",
   ],
   partyListHelp: [
     "Add or edit names, phone numbers and addresses. Removing a name hides it from new entries; previous transactions and dues remain intact. You can restore it later.",

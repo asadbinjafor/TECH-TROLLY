@@ -394,8 +394,24 @@ test("isolated PostgreSQL acceptance, authorization, accounting and retry safety
           ).status,
           201,
         );
-        await api("patch", "/users/" + staffId, {
+        const reset = await api("patch", "/users/" + staffId, {
           password: "reset-staff-password",
+        });
+        assert.equal(reset.status, 200);
+        assert.equal(reset.body.id, staffId);
+        assert.equal(reset.body.role, "STAFF");
+        assert.equal(reset.body.active, true);
+        assert.ok(!("password_hash" in reset.body));
+        const updateAudit = (
+          await db.query(
+            "SELECT details FROM audit_event WHERE action='user_updated' AND subject_id=$1 ORDER BY id DESC LIMIT 1",
+            [staffId],
+          )
+        )[0].details;
+        assert.deepEqual(updateAudit, {
+          role: "STAFF",
+          active: true,
+          passwordReset: true,
         });
         assert.equal(
           (await api("get", "/auth/me", undefined, staffToken)).status,
@@ -486,11 +502,19 @@ test("isolated PostgreSQL acceptance, authorization, accounting and retry safety
           account: "cash",
           note: "Historical label",
         });
-        await api("patch", "/expense-categories/" + category.id, {
-          bn: "পরিবর্তিত",
-          en: "Renamed",
-          active: false,
-        });
+        const renamedCategory = await api(
+          "patch",
+          "/expense-categories/" + category.id,
+          {
+            bn: "পরিবর্তিত",
+            en: "Renamed",
+            active: false,
+          },
+        );
+        assert.equal(renamedCategory.status, 200);
+        assert.equal(renamedCategory.body.id, category.id);
+        assert.equal(renamedCategory.body.en, "Renamed");
+        assert.equal(renamedCategory.body.active, false);
         state = (await api("get", "/shop/state")).body;
         assert.equal(
           state.documents.find((d: any) => d.id === exp.id).snapshot

@@ -93,7 +93,7 @@ export class UsersController {
       )
         fail("LAST_OWNER", 409);
       const [result] = await em.query(
-        "UPDATE app_user SET role=$2,active=$3,password_hash=COALESCE($4,password_hash),must_change=CASE WHEN $4::text IS NULL THEN must_change ELSE false END WHERE id=$1 RETURNING *",
+        "WITH saved AS (UPDATE app_user SET role=$2,active=$3,password_hash=COALESCE($4,password_hash),must_change=CASE WHEN $4::text IS NULL THEN must_change ELSE false END WHERE id=$1 RETURNING *) SELECT * FROM saved",
         [id, v.role ?? u.role, v.active ?? u.active, hash],
       );
       await em.query("DELETE FROM session WHERE user_id=$1", [id]);

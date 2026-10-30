@@ -1,5 +1,11 @@
 # Progress and release handover
 
+## Final form / empty-field audit — 2026-10-30
+
+Audited all 16 transaction forms and supporting contact/category/user/shop/login/report inputs after the Owner requested a broader final check. Fixed empty-list guidance/blocking for stock, Staff and outstanding sources, optional walk-in messaging, credit Customer preflight, accessory IMEI switching, zero sale payment defaults/current salary month, invalid correction options, stale selections and field length mismatches. Fixed category/user PATCH object responses and missing user audit role/active details; added the missing translated contact heading. See [coverage, findings and limits](final-form-audit.md).
+
+Local API/web builds and workspace typechecks pass. Hosting has 18 checks with exhaustive valid/required-blank/fixed-option form coverage; 17 isolated PostgreSQL checks pass, including saved category/account response values and existing financial/authorization/retry protections. A task-created 390px browser shop verified successful accessory purchase and full-payment walk-in sale plus empty stock/Staff/dues/loan/advance guidance. No production business test writes. Native physical device verification remains pending. Cloud verification follows before handover.
+
 ## Custom contact selections — 2026-10-30
 
 Fixed the empty required Supplier selection reported in the mobile screenshots/voice note. Purchase/customer/person fields now open an inline contact manager: add/edit and automatic selection preserve the financial draft; Customer also fills invoice contact fields. Shared web/native Parties screens add search, edit, remove-from-list and restore. Migration 007 adds `party.active`; historical snapshots and settlement of existing dues remain intact. Both business roles retain operational contact management, with serialized duplicate checks and append-only audit events. See [audit](selection-management-audit.md).

@@ -43,7 +43,7 @@ export class CategoriesController {
       const [result] = await em.query(
         isNew
           ? "INSERT INTO expense_category(id,bn,en,active) VALUES($1,$2,$3,$4) RETURNING *"
-          : "UPDATE expense_category SET bn=$2,en=$3,active=$4 WHERE id=$1 RETURNING *",
+          : "WITH saved AS (UPDATE expense_category SET bn=$2,en=$3,active=$4 WHERE id=$1 RETURNING *) SELECT * FROM saved",
         [id, v.bn, v.en, v.active],
       );
       await em.query(

@@ -2,8 +2,13 @@
 import { useEffect, useState } from "react";
 import {
   choices,
-  forms,
-  prepare,
+  prepareForm,
+  formFields,
+  formDefaults,
+  fieldRequired,
+  fieldMaxLength,
+  selectionBlockers,
+  emptySelectionMessage,
   minor,
   decimal,
   customerInvoiceFields,
@@ -41,14 +46,14 @@ export function CommandForm({
           );
         const v =
           JSON.parse(sessionStorage.getItem(storage) || "null") ||
-          Object.fromEntries(forms[kind].map((f) => [f.key, f.default ?? ""]));
+          formDefaults(kind, state?.today || "");
         if (initialUnit && v.unitId !== initialUnit)
           Object.assign(v, {
             unitId: initialUnit,
             price: "",
             discount: "0",
-            cash: "",
-            bank: "",
+            cash: "0",
+            bank: "0",
           });
         return v;
       } catch {
@@ -71,6 +76,8 @@ export function CommandForm({
     sessionStorage.setItem(storage, JSON.stringify(values));
   }, [storage, values]);
   if (!state) return null;
+  const blockers = selectionBlockers(kind, values, state);
+  const blocked = !pending && Object.keys(blockers).length > 0;
   const persist = (p: typeof pending) => {
     setPending(p);
     if (p) sessionStorage.setItem(pendingKey, JSON.stringify(p));
@@ -93,7 +100,10 @@ export function CommandForm({
     let p = pending;
     try {
       if (!p) {
-        p = { key: crypto.randomUUID(), data: prepare(kind, values) };
+        p = {
+          key: crypto.randomUUID(),
+          data: prepareForm(kind, values, state),
+        };
         persist(p);
       }
       const result = await api.command(kind, p.data, p.key);
@@ -158,7 +168,7 @@ export function CommandForm({
             if (review || pending) void submit();
             else {
               try {
-                prepare(kind, values);
+                prepareForm(kind, values, state);
                 setIssues({});
                 setReview(true);
               } catch (e: any) {
@@ -173,140 +183,140 @@ export function CommandForm({
           }}
         >
           <div className="form-grid">
-            {forms[kind]
-              .filter(
-                (field) =>
-                  field.key !== "expenseName" || values.categoryId === "custom",
-              )
-              .map((field) => (
-                <label
-                  key={field.key}
-                  className={
-                    field.key === "note" || field.key === "customerAddress"
-                      ? "wide"
-                      : ""
-                  }
-                >
-                  {t(
-                    kind === "expense" && field.key === "note"
-                      ? "expenseDetails"
-                      : field.label,
-                    lang,
+            {formFields(kind, values).map((field) => (
+              <label
+                key={field.key}
+                className={
+                  field.key === "note" || field.key === "customerAddress"
+                    ? "wide"
+                    : ""
+                }
+              >
+                {t(
+                  kind === "expense" && field.key === "note"
+                    ? "expenseDetails"
+                    : field.label,
+                  lang,
+                )}
+                {field.optional &&
+                  !fieldRequired(kind, field, values, state) && (
+                    <small className="muted"> · {t("optional", lang)}</small>
                   )}
-                  {field.optional &&
-                    !(field.key === "imei" && values.category === "phone") && (
-                      <small className="muted"> · {t("optional", lang)}</small>
-                    )}
-                  {field.type === "select" ? (
-                    <select
-                      aria-label={t(field.label, lang)}
-                      value={values[field.key] || ""}
-                      required={
-                        !field.optional ||
-                        (field.key === "imei" && values.category === "phone")
-                      }
-                      disabled={!!pending || review}
-                      onChange={(e) =>
-                        setValues((v) => ({
-                          ...v,
-                          [field.key]: e.target.value,
-                          ...(field.key === "unitId"
-                            ? { price: "", discount: "0", cash: "", bank: "" }
-                            : {}),
-                          ...(field.key === "customerId"
-                            ? customerInvoiceFields(
-                                state.parties.find(
-                                  (p) => p.id === e.target.value,
-                                ),
-                              )
-                            : {}),
-                        }))
-                      }
-                    >
-                      <option value="">
-                        {field.key === "customerId"
-                          ? t("walkIn", lang)
-                          : t("select", lang)}
+                {field.type === "select" ? (
+                  <select
+                    aria-label={t(field.label, lang)}
+                    value={values[field.key] || ""}
+                    required={fieldRequired(kind, field, values, state)}
+                    disabled={!!pending || review}
+                    onChange={(e) =>
+                      setValues((v) => ({
+                        ...v,
+                        [field.key]: e.target.value,
+                        ...(field.key === "unitId"
+                          ? { price: "", discount: "0", cash: "0", bank: "0" }
+                          : {}),
+                        ...(field.key === "customerId"
+                          ? customerInvoiceFields(
+                              state.parties.find(
+                                (p) => p.id === e.target.value,
+                              ),
+                            )
+                          : {}),
+                      }))
+                    }
+                  >
+                    <option value="">
+                      {field.key === "customerId"
+                        ? t("walkIn", lang)
+                        : t("select", lang)}
+                    </option>
+                    {choices(field, state, lang).map((o) => (
+                      <option key={o.value} value={o.value}>
+                        {field.options ? t(o.label, lang) : o.label}
                       </option>
-                      {choices(field, state, lang).map((o) => (
-                        <option key={o.value} value={o.value}>
-                          {field.options ? t(o.label, lang) : o.label}
-                        </option>
-                      ))}
-                    </select>
-                  ) : (
-                    <input
-                      value={values[field.key] || ""}
-                      name={field.key}
-                      required={
-                        !field.optional ||
-                        (field.key === "imei" && values.category === "phone")
-                      }
-                      disabled={!!pending || review}
-                      type={
-                        field.type === "password"
-                          ? "password"
-                          : field.type === "month"
-                            ? "month"
-                            : "text"
-                      }
-                      inputMode={
-                        field.type === "money"
-                          ? "decimal"
-                          : field.key === "customerPhone"
-                            ? "tel"
-                            : field.type === "number" || field.key === "imei"
-                              ? "numeric"
-                              : undefined
-                      }
-                      maxLength={
-                        field.key === "imei"
-                          ? 15
-                          : field.key === "customerPhone"
-                            ? 30
-                            : field.type === "money"
-                              ? 15
-                              : 300
-                      }
-                      onChange={(e) =>
-                        setValues((v) => ({
-                          ...v,
-                          [field.key]: e.target.value,
-                        }))
-                      }
-                    />
-                  )}
-                  {partyKindForSource(field.source) && !review && !pending && (
-                    <>
-                      {!choices(field, state, lang).length && (
-                        <small className="notice">
-                          {t("emptyPartySelection", lang)}
-                        </small>
-                      )}
-                      <button
-                        type="button"
-                        className="text-button party-manage-button"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          setPartyField(field);
-                        }}
-                      >
-                        {t("manageParties", lang)}
-                      </button>
-                    </>
-                  )}
-                  {issues[field.key] && (
-                    <small className="error">
-                      {t(
-                        /^[A-Z_]+$/.test(issues[field.key])
-                          ? issues[field.key]
-                          : "VALIDATION_ERROR",
-                        lang,
-                      )}
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    value={values[field.key] || ""}
+                    name={field.key}
+                    required={fieldRequired(kind, field, values, state)}
+                    disabled={!!pending || review}
+                    type={
+                      field.type === "password"
+                        ? "password"
+                        : field.type === "month"
+                          ? "month"
+                          : "text"
+                    }
+                    inputMode={
+                      field.type === "money"
+                        ? "decimal"
+                        : field.key === "customerPhone"
+                          ? "tel"
+                          : field.type === "number" || field.key === "imei"
+                            ? "numeric"
+                            : undefined
+                    }
+                    maxLength={fieldMaxLength(kind, field)}
+                    onChange={(e) =>
+                      setValues((v) => ({
+                        ...v,
+                        [field.key]: e.target.value,
+                      }))
+                    }
+                  />
+                )}
+                {partyKindForSource(field.source) && !review && !pending && (
+                  <>
+                    {!choices(field, state, lang).length && (
+                      <small className="notice">
+                        {t(
+                          field.key === "customerId" &&
+                            !fieldRequired(kind, field, values, state)
+                            ? "emptyOptionalCustomerSelection"
+                            : "emptyPartySelection",
+                          lang,
+                        )}
+                      </small>
+                    )}
+                    <button
+                      type="button"
+                      className="text-button party-manage-button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setPartyField(field);
+                      }}
+                    >
+                      {t("manageParties", lang)}
+                    </button>
+                  </>
+                )}
+                {field.type === "select" &&
+                  !partyKindForSource(field.source) &&
+                  !choices(field, state, lang).length && (
+                    <small className="notice" role="status">
+                      {t(emptySelectionMessage(field), lang)}
                     </small>
                   )}
-                </label>
-              ))}
+                {!pending &&
+                  blockers[field.key] === "SELECTION_UNAVAILABLE" && (
+                    <small className="error" role="alert">
+                      {t("SELECTION_UNAVAILABLE", lang)}
+                    </small>
+                  )}
+                {issues[field.key] && (
+                  <small className="error">
+                    {t(
+                      /^[A-Z_]+$/.test(issues[field.key])
+                        ? issues[field.key]
+                        : "VALIDATION_ERROR",
+                      lang,
+                    )}
+                  </small>
+                )}
+              </label>
+            ))}
           </div>
           {preview && (
             <div className="review-strip">
@@ -371,7 +381,7 @@ export function CommandForm({
             </button>
             <button
               className="button primary"
-              disabled={busy || connection !== "ready"}
+              disabled={busy || connection !== "ready" || blocked}
             >
               {t(
                 busy ? "saving" : review || pending ? "confirm" : "review",

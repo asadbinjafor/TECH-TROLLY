@@ -336,10 +336,23 @@ export function Administration({ mode }: { mode: "parties" | "settings" }) {
                       </select>
                     ) : (
                       <input
-                        type={f.type || "text"}
+                        type={f.type || (f.key === "email" ? "email" : "text")}
                         value={values[f.key] || ""}
                         required={f.required}
                         minLength={f.type === "password" ? 8 : undefined}
+                        maxLength={
+                          f.type === "password"
+                            ? 72
+                            : f.key === "address"
+                              ? 300
+                              : f.key === "phone"
+                                ? 30
+                                : f.key === "login"
+                                  ? 60
+                                  : f.key === "email"
+                                    ? 254
+                                    : 180
+                        }
                         autoComplete={
                           f.type === "password" ? "new-password" : "off"
                         }

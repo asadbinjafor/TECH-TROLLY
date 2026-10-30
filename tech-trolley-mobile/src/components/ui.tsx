@@ -92,6 +92,7 @@ export function Input({
   secure = false,
   numeric = false,
   money = false,
+  maxLength,
 }: {
   label: string;
   value: string;
@@ -99,6 +100,7 @@ export function Input({
   secure?: boolean;
   numeric?: boolean;
   money?: boolean;
+  maxLength?: number;
 }) {
   const c = useColors();
   return (
@@ -107,6 +109,7 @@ export function Input({
       <TextInput
         accessibilityLabel={label}
         value={value}
+        maxLength={maxLength}
         onChangeText={onChange}
         secureTextEntry={secure}
         keyboardType={

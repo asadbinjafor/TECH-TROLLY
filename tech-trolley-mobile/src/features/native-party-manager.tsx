@@ -110,6 +110,7 @@ export function NativePartyManager({
             key={k}
             label={tr(k === "address" ? "partyAddress" : k)}
             value={values[k]}
+            maxLength={k === "name" ? 180 : k === "phone" ? 30 : 300}
             onChange={(v) => !busy && setValues((p) => ({ ...p, [k]: v }))}
           />
         ))}

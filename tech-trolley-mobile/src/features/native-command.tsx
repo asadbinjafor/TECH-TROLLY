@@ -12,8 +12,13 @@ import { Picker } from "@react-native-picker/picker";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   choices,
-  forms,
-  prepare,
+  prepareForm,
+  formFields,
+  formDefaults,
+  fieldRequired,
+  fieldMaxLength,
+  selectionBlockers,
+  emptySelectionMessage,
   minor,
   decimal,
   customerInvoiceFields,
@@ -57,15 +62,13 @@ export function NativeCommand({ navigation, route }: any) {
           )
         : draft
           ? JSON.parse(draft)
-          : Object.fromEntries(
-              forms[kind].map((f) => [f.key, f.default ?? ""]),
-            );
+          : formDefaults(kind, state?.today || "");
       if (!p && route.params.unitId && initial.unitId !== route.params.unitId) {
         initial.unitId = route.params.unitId;
         initial.price = "";
         initial.discount = "0";
-        initial.cash = "";
-        initial.bank = "";
+        initial.cash = "0";
+        initial.bank = "0";
       }
       setValues(initial);
       setPending(p ? JSON.parse(p) : null);
@@ -76,6 +79,8 @@ export function NativeCommand({ navigation, route }: any) {
     if (ready) void AsyncStorage.setItem(storage, JSON.stringify(values));
   }, [values, ready, storage]);
   if (!state || !ready) return <Txt>{tr("loading")}</Txt>;
+  const blockers = selectionBlockers(kind, values, state);
+  const blocked = !pending && Object.keys(blockers).length > 0;
   const persist = async (p: typeof pending) => {
     setPending(p);
     if (p) await AsyncStorage.setItem(pendingKey, JSON.stringify(p));
@@ -93,7 +98,10 @@ export function NativeCommand({ navigation, route }: any) {
     try {
       let p = pending;
       if (!p) {
-        p = { key: Crypto.randomUUID(), data: prepare(kind, values) };
+        p = {
+          key: Crypto.randomUUID(),
+          data: prepareForm(kind, values, state),
+        };
         await persist(p);
       }
       const result = await api.command(kind, p.data, p.key);
@@ -145,102 +153,116 @@ export function NativeCommand({ navigation, route }: any) {
           <Txt style={{ fontSize: 11, color: c.muted, marginBottom: 20 }}>
             {state.today} · Asia/Dhaka
           </Txt>
-          {forms[kind]
-            .filter(
-              (f) => f.key !== "expenseName" || values.categoryId === "custom",
-            )
-            .map((f) => (
-              <View key={f.key}>
-                {f.type === "select" ? (
-                  <View style={{ marginBottom: 14 }}>
-                    <Txt style={{ fontSize: 12 }}>{tr(f.label)}</Txt>
-                    <View
-                      style={{
-                        borderWidth: 1,
-                        borderColor: c.line,
-                        borderRadius: 8,
-                        backgroundColor: c.surface,
-                      }}
+          {formFields(kind, values).map((f) => (
+            <View key={f.key}>
+              {f.type === "select" ? (
+                <View style={{ marginBottom: 14 }}>
+                  <Txt style={{ fontSize: 12 }}>{tr(f.label)}</Txt>
+                  <View
+                    style={{
+                      borderWidth: 1,
+                      borderColor: c.line,
+                      borderRadius: 8,
+                      backgroundColor: c.surface,
+                    }}
+                  >
+                    <Picker
+                      accessibilityLabel={tr(f.label)}
+                      selectedValue={values[f.key] || ""}
+                      enabled={!review && !pending}
+                      style={{ color: c.text }}
+                      onValueChange={(v) =>
+                        setValues((prev) => ({
+                          ...prev,
+                          [f.key]: String(v),
+                          ...(f.key === "unitId"
+                            ? { price: "", discount: "0", cash: "0", bank: "0" }
+                            : {}),
+                          ...(f.key === "customerId"
+                            ? customerInvoiceFields(
+                                state.parties.find((p) => p.id === String(v)),
+                              )
+                            : {}),
+                        }))
+                      }
                     >
-                      <Picker
-                        accessibilityLabel={tr(f.label)}
-                        selectedValue={values[f.key] || ""}
-                        enabled={!review && !pending}
-                        style={{ color: c.text }}
-                        onValueChange={(v) =>
-                          setValues((prev) => ({
-                            ...prev,
-                            [f.key]: String(v),
-                            ...(f.key === "unitId"
-                              ? { price: "", discount: "0", cash: "", bank: "" }
-                              : {}),
-                            ...(f.key === "customerId"
-                              ? customerInvoiceFields(
-                                  state.parties.find((p) => p.id === String(v)),
-                                )
-                              : {}),
-                          }))
+                      <Picker.Item
+                        label={
+                          f.key === "customerId" ? tr("walkIn") : tr("select")
                         }
-                      >
+                        value=""
+                      />
+                      {choices(f, state, lang).map((o) => (
                         <Picker.Item
-                          label={
-                            f.key === "customerId" ? tr("walkIn") : tr("select")
-                          }
-                          value=""
+                          key={o.value}
+                          label={f.options ? tr(o.label) : o.label}
+                          value={o.value}
                         />
-                        {choices(f, state, lang).map((o) => (
-                          <Picker.Item
-                            key={o.value}
-                            label={f.options ? tr(o.label) : o.label}
-                            value={o.value}
-                          />
-                        ))}
-                      </Picker>
-                    </View>
+                      ))}
+                    </Picker>
                   </View>
-                ) : review || pending ? (
-                  <Panel>
-                    <Txt style={{ fontSize: 11, color: c.muted }}>
-                      {tr(f.label)}
-                    </Txt>
-                    <Txt>{values[f.key] || "—"}</Txt>
-                  </Panel>
-                ) : (
-                  <Input
-                    label={
-                      tr(f.label) + (f.optional ? " · " + tr("optional") : "")
-                    }
-                    value={values[f.key] || ""}
-                    onChange={(v) =>
-                      setValues((prev) => ({ ...prev, [f.key]: v }))
-                    }
-                    money={f.type === "money"}
-                    numeric={f.type === "number" || f.key === "imei"}
-                    secure={f.type === "password"}
-                  />
-                )}
-                {partyKindForSource(f.source) && !review && !pending && (
-                  <>
-                    {!choices(f, state, lang).length && (
-                      <Txt>{tr("emptyPartySelection")}</Txt>
-                    )}
-                    <Button
-                      label={tr("manageParties")}
-                      onPress={() => setPartyField(f)}
-                    />
-                  </>
-                )}
-                {issues[f.key] && (
-                  <Txt style={{ color: "#b95050", fontSize: 11 }}>
-                    {tr(
-                      /^[A-Z_]+$/.test(issues[f.key])
-                        ? issues[f.key]
-                        : "VALIDATION_ERROR",
-                    )}
+                </View>
+              ) : review || pending ? (
+                <Panel>
+                  <Txt style={{ fontSize: 11, color: c.muted }}>
+                    {tr(f.label)}
                   </Txt>
+                  <Txt>{values[f.key] || "—"}</Txt>
+                </Panel>
+              ) : (
+                <Input
+                  label={
+                    tr(f.label) + (f.optional ? " · " + tr("optional") : "")
+                  }
+                  value={values[f.key] || ""}
+                  onChange={(v) =>
+                    setValues((prev) => ({ ...prev, [f.key]: v }))
+                  }
+                  money={f.type === "money"}
+                  numeric={f.type === "number" || f.key === "imei"}
+                  maxLength={fieldMaxLength(kind, f)}
+                  secure={f.type === "password"}
+                />
+              )}
+              {partyKindForSource(f.source) && !review && !pending && (
+                <>
+                  {!choices(f, state, lang).length && (
+                    <Txt>
+                      {tr(
+                        f.key === "customerId" &&
+                          !fieldRequired(kind, f, values, state)
+                          ? "emptyOptionalCustomerSelection"
+                          : "emptyPartySelection",
+                      )}
+                    </Txt>
+                  )}
+                  <Button
+                    label={tr("manageParties")}
+                    onPress={() => setPartyField(f)}
+                  />
+                </>
+              )}
+              {f.type === "select" &&
+                !partyKindForSource(f.source) &&
+                !choices(f, state, lang).length && (
+                  <Txt>{tr(emptySelectionMessage(f))}</Txt>
                 )}
-              </View>
-            ))}
+              {!pending && blockers[f.key] === "SELECTION_UNAVAILABLE" && (
+                <Txt style={{ color: "#b95050" }}>
+                  {tr("SELECTION_UNAVAILABLE")}
+                </Txt>
+              )}
+              {issues[f.key] && (
+                <Txt style={{ color: "#b95050", fontSize: 11 }}>
+                  {tr(
+                    /^[A-Z_]+$/.test(issues[f.key])
+                      ? issues[f.key]
+                      : "VALIDATION_ERROR",
+                  )}
+                </Txt>
+              )}
+            </View>
+          ))}
           {preview && (
             <Panel>
               {Object.entries(preview).map(
@@ -304,12 +326,12 @@ export function NativeCommand({ navigation, route }: any) {
               busy ? "saving" : review || pending ? "confirm" : "review",
             )}
             primary
-            disabled={busy}
+            disabled={busy || blocked}
             onPress={() => {
               if (review || pending) void submit();
               else
                 try {
-                  prepare(kind, values);
+                  prepareForm(kind, values, state);
                   setIssues({});
                   setReview(true);
                 } catch (e: any) {
