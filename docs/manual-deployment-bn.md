@@ -12,6 +12,19 @@
 
 ব্যবহার করার স্থায়ী link: **https://tech-trolley-internal.vercel.app/**। Vercel-এর প্রতিবারের preview/deployment URL ব্যবহার করবেন না; সেগুলো app-এর production write origin নয়।
 
+## এখন push করলেই কী হয়
+
+Production branch **`codex/tech-trolley-production`**-এ commit/push করলে:
+
+1. GitHub **Verify** build, permission/accounting tests ও typecheck চালায়।
+2. **Vercel** connected Git integration দিয়ে website build/deploy করে। নতুন deployment **Ready** হলে স্থায়ী website update হয়।
+3. Backend-সম্পর্কিত file বদলালে **Render → Auto-Deploy: After CI Checks Pass** সব CI check পাস হওয়ার পরে API build/deploy করে। **Live** হলে নতুন backend চালু হয়।
+4. Render startup-এর versioned migration runner **Supabase database**-এ শুধু নতুন migration apply করে, তারপর existing Owner/bootstrap পরীক্ষা করে API চালায়। আগে apply করা SQL checksummed history থেকে skip হয়। Supabase-এ আলাদা Deploy চাপতে হয় না।
+
+অর্থাৎ সাধারণ update-এ শুধু commit/push করুন এবং **Verify → Vercel Ready → Render Live** দেখুন। একই push-এর automatic deployment চললে আবার Manual Deploy চাপবেন না। Website ও API একই মুহূর্তে বদলায় না; database/API পরিবর্তন আগের ও পরের client-এর সঙ্গে compatible রাখতে হবে।
+
+Render-এর Build Filters-এ backend/migrations, shared contracts/i18n, সব workspace package manifests, root lockfile/npm configuration ও API release/start scripts রাখা হয়েছে। শুধু frontend screen/CSS, mobile screen বা docs পাল্টালে backend আবার build হয় না। তখন Render-এ আগের Live commit থাকাই স্বাভাবিক। নতুন backend source/dependency directory যোগ করলে `render.yaml` এবং Render Settings-এর filter-ও মিলিয়ে update করুন।
+
 ## ১. নতুন code GitHub-এ দিন
 
 Codex ইতিমধ্যে commit/push করলে এই অংশ আবার লাগবে না। নিজের হাতে code পাল্টালে PowerShell-এ:
@@ -45,10 +58,10 @@ git rev-parse --short HEAD
 
 ## ৩. Render: API update
 
-Backend, shared API contract বা database migration বদলালে এই অংশও করুন। কেবল website-এর CSS/screen বা browser startup বদলালে API একই থাকতে পারে। Render-এর auto deploy বর্তমানে **Off**।
+Backend, shared API contract বা database migration বদলালে এখন **After CI Checks Pass** অনুযায়ী automatic deployment হবে। Settings → Build-এ repository/production branch এবং Deploy-এ Auto-Deploy **After CI Checks Pass** মিলিয়ে দেখতে পারেন। সাধারণ update-এ নিজে Deploy চাপতে হবে না। [Render-এর নিয়ম](https://render.com/docs/deploys#configuring-auto-deploys)।
 
 1. উপরের Render service খুলুন। নাম **tech-trolley-internal-api** কি না মিলিয়ে নিন।
-2. **Manual Deploy → Deploy latest commit** চাপুন।
+2. GitHub **Verify** পাস হওয়ার পরে নতুন automatic deployment দেখুন। Check fail করলে আগে সেটি ঠিক করে push দিন; zero checks বা failed check থাকলে Render auto deploy করে না।
 3. **Source**-এ নতুন commit এসেছে কি না দেখুন। আগে থেকেই দেখানো পুরোনো green Live-কে নতুন deployment-এর ফল ধরে নেবেন না।
 4. **Build successful**, তারপর **Deploy succeeded | Live** হওয়া পর্যন্ত অপেক্ষা করুন।
 5. Logs-এ failure থাকলে error দেখে সমাধান করুন। নতুন migration থাকলে normal startup সেটি একবার apply করে; পুরোনো হিসাব reset করে না।
@@ -61,7 +74,10 @@ Start: npm run start:render
 Health: /health
 Branch: codex/tech-trolley-production
 Root Directory: blank
+Auto-Deploy: After CI Checks Pass
 ```
+
+Automatic deploy না চললে আগে branch, CI result ও Build Filters মিলিয়ে নিন। প্রয়োজনীয় recovery/configuration-only redeploy করতে **Manual Deploy → Deploy latest commit** ব্যবহার করা যায়। **Deploy a specific commit** ব্যবহার করলে Render Auto-Deploy বন্ধ করে দেয়; পরে Settings-এ **After CI Checks Pass** আবার চালু করুন। Manual deploy CI gate এড়িয়ে চলে, তাই আগে verified commit নিশ্চিত করুন।
 
 ## ৪. Supabase: কখন কাজ করতে হবে
 

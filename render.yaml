@@ -8,7 +8,19 @@ services:
     buildCommand: npm ci --include=dev && npm run build:api
     startCommand: npm run start:render
     healthCheckPath: /health
-    autoDeployTrigger: "off"
+    autoDeployTrigger: checksPass
+    buildFilter:
+      paths:
+        - tech-trolley-backend/**
+        - packages/contracts/**
+        - packages/i18n/**
+        - package.json
+        - package-lock.json
+        - "**/package.json"
+        - .npmrc
+        - scripts/release-api.mjs
+        - scripts/start-render.mjs
+        - render.yaml
     envVars:
       - key: NODE_VERSION
         value: 24.17.0

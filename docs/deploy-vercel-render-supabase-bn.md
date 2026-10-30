@@ -76,10 +76,12 @@ Render URL এখনও না থাকলে প্রথম deploy-তে `AP
 | Build Command | **`npm ci --include=dev && npm run build:api`** |
 | Start Command | **`npm run start:render`** |
 | Health Check Path | **`/health`** |
-| Auto Deploy | প্রথমে Off/Manual |
+| Auto Deploy | **After CI Checks Pass**; production branch-এ GitHub Verify চালু থাকতে হবে |
 | Plan | Free দিয়ে পরীক্ষা করা যায়; আপনার প্রয়োজন অনুযায়ী পরে নির্বাচন করুন |
 
 **Root Directory-তে `tech-trolley-backend` বসাবেন না।** এই নতুন repository-তে shared packages এবং একটিমাত্র root lockfile আছে; পুরোনো repository-এর deployment settings এখানে হুবহু ব্যবহার করলে build fail হতে পারে।
+
+Render Settings-এর Build Filters `render.yaml`-এর included paths-এর সঙ্গে মিলিয়ে রাখুন। ফলে backend/migration/shared API dependency বদলালে CI পাসের পরে deploy হয়; docs বা শুধু frontend/mobile screen বদলালে backend rebuild লাগে না। বর্তমান service dashboard থেকে তৈরি, তাই শুধু `render.yaml` edit করলে dashboard setting নিজে sync হয় না—দুটো মিলিয়ে রাখতে হবে। Vercel Git integration website deploy করে; Supabase migration Render-এর existing startup runner apply করে। আলাদা Supabase GitHub/CLI migration pipeline যোগ করবেন না, তাতে দুই runner-এর history/ordering অমিল হতে পারে।
 
 বিকল্পভাবে **New → Blueprint** দিয়ে repository-root-এর `render.yaml` ব্যবহার করতে পারেন। এতে Supabase-এর বদলে নতুন Render database তৈরি হবে না। `sync: false` variables-এ আপনার বাস্তব values চাইবে। Blueprint-এ service name প্রস্তাব হিসেবে দেওয়া—আপনার service তৈরি না হওয়া পর্যন্ত কোনো নির্দিষ্ট `onrender.com` URL নিশ্চিত নয়। [Render Blueprint reference](https://render.com/docs/blueprint-spec)।
 
@@ -169,7 +171,7 @@ Custom domain যোগ করলে Render-এর `WEB_ORIGIN`-এ exact origin
 
 Free Render service ১৫ মিনিট idle থাকলে spin down হতে পারে; ফের চালু হতে প্রায় এক মিনিট লাগতে পারে। Website এখন static startup screen দেখিয়ে database-backed health-এর জন্য bounded retry করে; তৈরি হলে login/dashboard খোলে। Financial POST automatic replay হয় না। কোনো financial response হারালে একই key-এর status/retry ব্যবহার করুন। [Render Free limitations](https://render.com/docs/free#spinning-down-on-idle)।
 
-দৈনন্দিন update, Vercel auto deployment, Render manual deployment এবং paused Supabase restore-এর সহজ ধাপ: [নিজে deployment শেখার নির্দেশনা](manual-deployment-bn.md)।
+দৈনন্দিন update, push-এর পরে Vercel/Render automatic deployment, manual recovery এবং paused Supabase restore-এর সহজ ধাপ: [নিজে deployment শেখার নির্দেশনা](manual-deployment-bn.md)।
 
 ## Backup, update ও native app
 

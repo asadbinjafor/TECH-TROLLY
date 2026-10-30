@@ -1,5 +1,11 @@
 # Progress and release handover
 
+## Push-driven automatic deployment — 2026-10-30
+
+The Owner requested GitHub pushes to update hosting without manual dashboard deploys. Audited the existing Vercel Git integration, Render's connected GitHub source/production branch and the API migration/bootstrap startup path. Vercel was already automatic; Render was Off. Configure Render **After CI Checks Pass** with included build paths for backend/migrations, contracts/i18n, all workspace package manifests, root lockfile/npm configuration and API release/start scripts. `render.yaml` records the same policy. This dashboard-created service is not a Blueprint, so changing the manifest alone is insufficient. The existing checksummed, advisory-locked migration runner remains the only application schema-deployment path into Supabase; no new competing CLI pipeline or schema reset.
+
+Updated both Bengali hosting/runbook documents with the push → CI → web/API → database flow, relevant-file filters, manual recovery and the fact that a specific-commit manual Render deploy disables automatic deploys. Local YAML/branch/blank-root validation and 11 representative include/skip path cases pass. The controlled production push and cloud verification will be recorded after completion.
+
 ## Cold-start latency reduction — 2026-10-30
 
 The Owner reported about 70 seconds after idle and asked to reduce it while retaining the approved animation. Added a bounded, credential-free GitHub production health check scheduled every five minutes on the verified public default branch. It checks only the existing Render database-backed health endpoint and keeps normal inbound traffic ahead of user visits. Public standard-runner and exact-repository guards avoid private/fork execution. Reduced browser readiness backoff from a maximum eight-second gap to two seconds. No backend/schema/financial behavior or animation change. See [findings and limits](cold-start-audit.md) and the updated [Bengali operating guide](manual-deployment-bn.md).
