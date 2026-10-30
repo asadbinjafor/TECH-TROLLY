@@ -4,6 +4,7 @@ import { t } from "@tech-trolley/i18n";
 import { useShop } from "@/contexts/shop-context";
 import { api } from "@/services/api";
 import { PartyManager } from "./party-manager";
+import { FormField, FormGrid } from "@/components/forms/form-field";
 import {
   profileSchema,
   profileIdentityChanged,
@@ -382,7 +383,7 @@ export function Administration({ mode }: { mode: "parties" | "settings" }) {
                 }
               }}
             >
-              <div className="form-grid">
+              <FormGrid>
                 {editor.profile && (
                   <p className="notice wide">
                     {tr(
@@ -393,71 +394,83 @@ export function Administration({ mode }: { mode: "parties" | "settings" }) {
                     {tr("userIdHelp")}
                   </p>
                 )}
-                {editor.fields.map((f) => (
-                  <label key={f.key}>
-                    {tr(f.label || f.key)}
-                    {f.options ? (
-                      <select
-                        value={values[f.key] || ""}
-                        required={f.required}
-                        onChange={(e) =>
-                          setValues((v) => ({ ...v, [f.key]: e.target.value }))
-                        }
-                      >
-                        <option value="">{tr("select")}</option>
-                        {f.options.map((o) => (
-                          <option key={o} value={o}>
-                            {tr(o)}
-                          </option>
-                        ))}
-                      </select>
-                    ) : (
-                      <input
-                        type={f.type || (f.key === "email" ? "email" : "text")}
-                        value={values[f.key] || ""}
-                        required={
-                          f.key === "currentPassword" && editor.profile
-                            ? profileIdentityChanged(
-                                editor.initial || {},
-                                values,
-                              )
-                            : f.required
-                        }
-                        minLength={
-                          f.type === "password"
-                            ? f.key === "currentPassword"
-                              ? 1
-                              : 8
-                            : undefined
-                        }
-                        maxLength={
-                          f.type === "password"
-                            ? 72
-                            : f.key === "address"
-                              ? 300
-                              : f.key === "phone"
-                                ? 30
-                                : f.key === "login"
-                                  ? 60
-                                  : f.key === "email"
-                                    ? 254
-                                    : 180
-                        }
-                        autoComplete={
-                          f.type === "password"
-                            ? f.key === "currentPassword"
-                              ? "current-password"
-                              : "new-password"
-                            : "off"
-                        }
-                        onChange={(e) =>
-                          setValues((v) => ({ ...v, [f.key]: e.target.value }))
-                        }
-                      />
-                    )}
-                  </label>
-                ))}
-              </div>
+                {editor.fields.map((f) => {
+                  const required =
+                    f.key === "currentPassword" && editor.profile
+                      ? profileIdentityChanged(editor.initial || {}, values)
+                      : !!f.required;
+                  return (
+                    <FormField
+                      key={f.key}
+                      label={tr(f.label || f.key)}
+                      optional={!required}
+                      optionalText={tr("optional")}
+                      wide={f.key === "address"}
+                    >
+                      {f.options ? (
+                        <select
+                          value={values[f.key] || ""}
+                          required={required}
+                          onChange={(e) =>
+                            setValues((v) => ({
+                              ...v,
+                              [f.key]: e.target.value,
+                            }))
+                          }
+                        >
+                          <option value="">{tr("select")}</option>
+                          {f.options.map((o) => (
+                            <option key={o} value={o}>
+                              {tr(o)}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <input
+                          type={
+                            f.type || (f.key === "email" ? "email" : "text")
+                          }
+                          value={values[f.key] || ""}
+                          required={required}
+                          minLength={
+                            f.type === "password"
+                              ? f.key === "currentPassword"
+                                ? 1
+                                : 8
+                              : undefined
+                          }
+                          maxLength={
+                            f.type === "password"
+                              ? 72
+                              : f.key === "address"
+                                ? 300
+                                : f.key === "phone"
+                                  ? 30
+                                  : f.key === "login"
+                                    ? 60
+                                    : f.key === "email"
+                                      ? 254
+                                      : 180
+                          }
+                          autoComplete={
+                            f.type === "password"
+                              ? f.key === "currentPassword"
+                                ? "current-password"
+                                : "new-password"
+                              : "off"
+                          }
+                          onChange={(e) =>
+                            setValues((v) => ({
+                              ...v,
+                              [f.key]: e.target.value,
+                            }))
+                          }
+                        />
+                      )}
+                    </FormField>
+                  );
+                })}
+              </FormGrid>
               {error && (
                 <p className="error" role="alert">
                   {tr(error)}

@@ -1,4 +1,5 @@
 "use client";
+import { FormField } from "@/components/forms/form-field";
 import { useCallback, useEffect, useState, useRef } from "react";
 import { Eye, EyeOff, X } from "lucide-react";
 import { verifyPasswordSchema, type Language } from "@tech-trolley/contracts";
@@ -121,8 +122,10 @@ export function RevealBalances({
             }
           }}
         >
-          <label>
-            {t("currentPassword", lang)}
+          <FormField
+            label={t("currentPassword", lang)}
+            error={error ? t(error, lang) : undefined}
+          >
             <input
               type="password"
               name="password"
@@ -133,12 +136,7 @@ export function RevealBalances({
               disabled={busy}
               onChange={(e) => setPassword(e.target.value)}
             />
-          </label>
-          {error && (
-            <p className="error" role="alert">
-              {t(error, lang)}
-            </p>
-          )}
+          </FormField>
           <footer>
             <button className="button" type="button" onClick={onClose}>
               {t("cancel", lang)}

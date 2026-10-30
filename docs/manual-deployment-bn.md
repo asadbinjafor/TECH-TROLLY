@@ -188,3 +188,8 @@ Shared invoice/contracts, API ও web/native বদলেছে, তাই এ�
 রসিদ খুলে **PDF খুলুন / প্রিন্ট** অথবা **PDF ডাউনলোড** চাপুন। অ্যাপের দেওয়া প্রস্তুত দুই পৃষ্ঠার A4 ফাইল থেকে print/share করুন। ফাইলের নাম invoice number দিয়ে হবে, যেমন `TT-000008.pdf`। Seller-এর display name সেই বিক্রেতার saved record/profile থেকে মাঝখানে আসবে। Profile-এ Owner নাম থাকলে Owner, Taki থাকলে Taki; demo নাম hardcode করা নেই।
 
 API এখন shared invoice package ব্যবহার করে এবং নিজস্ব licensed Bengali font রাখে। Template source (`packages/invoice/src`) বদলালে commit/push-এর আগে `npm run prepare:invoice-release` চালান এবং তৈরি backend `invoice-version.ts` commit করুন। CI ভুলে যাওয়া fingerprint ধরবে; বর্তমান Render backend-path filter এই ফাইলের পরিবর্তন দেখে API-ও auto-deploy করবে। Dashboard filter এখন বদলাতে হবে না; render.yaml-এর existing paths একই আছে। নতুন migration বা paid upgrade লাগেনি।
+### পুরো web form-এর layout আপডেট যাচাই
+
+এই পরিবর্তন শুধু frontend-এর shared field/CSS ও screen markup-এ। Production branch-এ push করলে Vercel স্বাভাবিকভাবে deploy করবে; API dependency না বদলালে Render-এর আগের verified revision থাকাই ঠিক। Supabase-এ migration বা আলাদা কাজ নেই।
+
+Deploy শেষে refresh করে New sale/Purchases/Settings খুলুন। Label-এর পাশে `(Optional)`/`(ঐচ্ছিক)`, সমান উচ্চতার box এবং নিজের box-এর নিচে warning/error থাকবে। ছোট screen বা সরু dialog-এ এক কলাম হওয়া স্বাভাবিক। Android নিলে RAM এবং iPhone নিলে RAM ছাড়া storage থাকবে; আগের payment/due নিয়ম বজায় আছে। [সম্পূর্ণ audit ও আগে/পরের screenshot](form-layout-audit.md) দেখুন। বাস্তব দোকানে নকল লেনদেন Confirm করে পরীক্ষা করবেন না।

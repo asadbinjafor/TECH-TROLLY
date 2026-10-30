@@ -3,6 +3,7 @@ import { useState } from "react";
 import { t } from "@tech-trolley/i18n";
 import { api } from "@/services/api";
 import { useShop } from "@/contexts/shop-context";
+import { FormField, FormGrid } from "@/components/forms/form-field";
 export function Login() {
   const {
       user,
@@ -66,41 +67,42 @@ export function Login() {
             }
           }}
         >
-          {user?.must_change ? (
-            <label>
-              {t("currentPassword", lang)}
+          <FormGrid single>
+            {user?.must_change ? (
+              <FormField label={t("currentPassword", lang)}>
+                <input
+                  name="currentPassword"
+                  type="password"
+                  autoComplete="current-password"
+                  required
+                  maxLength={128}
+                />
+              </FormField>
+            ) : (
+              <FormField label={t("identity", lang)}>
+                <input
+                  name="identity"
+                  autoComplete="username"
+                  required
+                  maxLength={180}
+                />
+              </FormField>
+            )}
+            <FormField
+              label={t(user?.must_change ? "newPassword" : "password", lang)}
+            >
               <input
-                name="currentPassword"
+                name="password"
                 type="password"
-                autoComplete="current-password"
-                required
+                autoComplete={
+                  user?.must_change ? "new-password" : "current-password"
+                }
+                minLength={user?.must_change ? 8 : 1}
                 maxLength={128}
-              />
-            </label>
-          ) : (
-            <label>
-              {t("identity", lang)}
-              <input
-                name="identity"
-                autoComplete="username"
                 required
-                maxLength={180}
               />
-            </label>
-          )}
-          <label>
-            {t(user?.must_change ? "newPassword" : "password", lang)}
-            <input
-              name="password"
-              type="password"
-              autoComplete={
-                user?.must_change ? "new-password" : "current-password"
-              }
-              minLength={user?.must_change ? 8 : 1}
-              maxLength={128}
-              required
-            />
-          </label>
+            </FormField>
+          </FormGrid>
           {(error || networkError) && (
             <p role="alert" className="error">
               {t(error || networkError, lang)}

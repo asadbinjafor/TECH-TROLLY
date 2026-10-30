@@ -1,5 +1,6 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
+import { FormField, FormGrid } from "@/components/forms/form-field";
 import {
   choices,
   prepareForm,
@@ -46,6 +47,7 @@ export function CommandForm({
   onSaved: (id: string, kind: CommandKind) => void;
 }) {
   const { state, lang, user, refresh, connection } = useShop();
+  const formTitleId = useId();
   const sellerSelection = useRef(0);
   useEffect(
     () => () => {
@@ -225,12 +227,12 @@ export function CommandForm({
         inert={partyField ? true : undefined}
         role={embedded ? "region" : "dialog"}
         aria-modal={embedded ? undefined : true}
-        aria-labelledby="form-title"
+        aria-labelledby={formTitleId}
       >
         <header>
           <div>
             <span className="eyebrow">TECH TROLLEY</span>
-            <h2 id="form-title">{t(kind, lang)}</h2>
+            <h2 id={formTitleId}>{t(kind, lang)}</h2>
           </div>
           <button
             className="icon-button"
@@ -289,147 +291,144 @@ export function CommandForm({
             }
           }}
         >
-          <div className="form-grid">
-            {formFields(kind, values).map((field) => (
-              <label
-                key={field.key}
-                className={
-                  [
+          <FormGrid>
+            {formFields(kind, values).map((field) => {
+              const required = fieldRequired(kind, field, values, state);
+              const partySource = partyKindForSource(field.source);
+              const options =
+                field.type === "select"
+                  ? choices(field, state, lang, values)
+                  : [];
+              const empty = field.type === "select" && !options.length;
+              const help = empty
+                ? t(
+                    partySource
+                      ? field.key === "customerId" && !required
+                        ? "emptyOptionalCustomerSelection"
+                        : "emptyPartySelection"
+                      : emptySelectionMessage(field, values),
+                    lang,
+                  )
+                : field.key === "customerId" && required
+                  ? t("CUSTOMER_REQUIRED", lang)
+                  : undefined;
+              const issue =
+                issues[field.key] ||
+                (!pending && blockers[field.key] === "SELECTION_UNAVAILABLE"
+                  ? "SELECTION_UNAVAILABLE"
+                  : "");
+              return (
+                <FormField
+                  key={field.key}
+                  label={t(
+                    field.key === "customerId"
+                      ? "customer"
+                      : kind === "expense" && field.key === "note"
+                        ? "expenseDetails"
+                        : field.label,
+                    lang,
+                  )}
+                  optional={!required}
+                  optionalText={t("optional", lang)}
+                  wide={[
                     "note",
                     "customerAddress",
                     "presentAddress",
                     "permanentAddress",
-                  ].includes(field.key)
-                    ? "wide"
-                    : ""
-                }
-              >
-                {t(
-                  kind === "expense" && field.key === "note"
-                    ? "expenseDetails"
-                    : field.label,
-                  lang,
-                )}
-                {!fieldRequired(kind, field, values, state) && (
-                  <small className="muted"> · {t("optional", lang)}</small>
-                )}
-                {field.type === "select" ? (
-                  <select
-                    aria-label={t(field.label, lang)}
-                    value={values[field.key] || ""}
-                    required={fieldRequired(kind, field, values, state)}
-                    disabled={!!pending || review}
-                    onChange={(e) =>
-                      kind === "individualPurchase" &&
-                      field.key === "supplierId"
-                        ? selectSeller(e.target.value)
-                        : setValues((v) =>
-                            changeFormValue(
-                              kind,
-                              v,
-                              field.key,
-                              e.target.value,
-                              state,
-                            ),
-                          )
-                    }
-                  >
-                    <option value="">
-                      {field.key === "customerId"
-                        ? t("walkIn", lang)
-                        : t("select", lang)}
-                    </option>
-                    {choices(field, state, lang, values).map((o) => (
-                      <option key={o.value} value={o.value}>
-                        {field.options ? t(o.label, lang) : o.label}
-                      </option>
-                    ))}
-                  </select>
-                ) : (
-                  <input
-                    value={values[field.key] || ""}
-                    name={field.key}
-                    required={fieldRequired(kind, field, values, state)}
-                    disabled={!!pending || review}
-                    type={
-                      field.type === "password"
-                        ? "password"
-                        : field.type === "month"
-                          ? "month"
-                          : field.type === "date"
-                            ? "date"
-                            : "text"
-                    }
-                    max={field.type === "date" ? state.today : undefined}
-                    inputMode={
-                      field.type === "money"
-                        ? "decimal"
-                        : field.key === "customerPhone"
-                          ? "tel"
-                          : field.type === "number" || field.key === "imei"
-                            ? "numeric"
-                            : undefined
-                    }
-                    maxLength={fieldMaxLength(kind, field)}
-                    onChange={(e) =>
-                      setValues((v) => ({
-                        ...v,
-                        [field.key]: e.target.value,
-                      }))
-                    }
-                  />
-                )}
-                {partyKindForSource(field.source) && !review && !pending && (
-                  <>
-                    {!choices(field, state, lang, values).length && (
-                      <small className="notice">
+                  ].includes(field.key)}
+                  hint={help}
+                  hintRole={empty ? "status" : undefined}
+                  error={
+                    issue
+                      ? t(
+                          /^[A-Z_]+$/.test(issue) ? issue : "VALIDATION_ERROR",
+                          lang,
+                        )
+                      : undefined
+                  }
+                  action={
+                    partySource && !review && !pending ? (
+                      <button
+                        type="button"
+                        className="text-button party-manage-button"
+                        onClick={() => setPartyField(field)}
+                      >
+                        {t("manageParties", lang)}
+                      </button>
+                    ) : undefined
+                  }
+                >
+                  {field.type === "select" ? (
+                    <select
+                      name={field.key}
+                      value={values[field.key] || ""}
+                      required={required}
+                      disabled={!!pending || review}
+                      onChange={(e) =>
+                        kind === "individualPurchase" &&
+                        field.key === "supplierId"
+                          ? selectSeller(e.target.value)
+                          : setValues((v) =>
+                              changeFormValue(
+                                kind,
+                                v,
+                                field.key,
+                                e.target.value,
+                                state,
+                              ),
+                            )
+                      }
+                    >
+                      <option value="">
                         {t(
-                          field.key === "customerId" &&
-                            !fieldRequired(kind, field, values, state)
-                            ? "emptyOptionalCustomerSelection"
-                            : "emptyPartySelection",
+                          field.key === "customerId" ? "walkIn" : "select",
                           lang,
                         )}
-                      </small>
-                    )}
-                    <button
-                      type="button"
-                      className="text-button party-manage-button"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        setPartyField(field);
-                      }}
-                    >
-                      {t("manageParties", lang)}
-                    </button>
-                  </>
-                )}
-                {field.type === "select" &&
-                  !partyKindForSource(field.source) &&
-                  !choices(field, state, lang, values).length && (
-                    <small className="notice" role="status">
-                      {t(emptySelectionMessage(field, values), lang)}
-                    </small>
+                      </option>
+                      {options.map((o) => (
+                        <option key={o.value} value={o.value}>
+                          {field.options ? t(o.label, lang) : o.label}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      value={values[field.key] || ""}
+                      name={field.key}
+                      required={required}
+                      disabled={!!pending || review}
+                      type={
+                        field.type === "password"
+                          ? "password"
+                          : field.type === "month"
+                            ? "month"
+                            : field.type === "date"
+                              ? "date"
+                              : "text"
+                      }
+                      max={field.type === "date" ? state.today : undefined}
+                      inputMode={
+                        field.type === "money"
+                          ? "decimal"
+                          : field.key === "customerPhone"
+                            ? "tel"
+                            : field.type === "number" || field.key === "imei"
+                              ? "numeric"
+                              : undefined
+                      }
+                      maxLength={fieldMaxLength(kind, field)}
+                      onChange={(e) =>
+                        setValues((v) => ({
+                          ...v,
+                          [field.key]: e.target.value,
+                        }))
+                      }
+                    />
                   )}
-                {!pending &&
-                  blockers[field.key] === "SELECTION_UNAVAILABLE" && (
-                    <small className="error" role="alert">
-                      {t("SELECTION_UNAVAILABLE", lang)}
-                    </small>
-                  )}
-                {issues[field.key] && (
-                  <small className="error">
-                    {t(
-                      /^[A-Z_]+$/.test(issues[field.key])
-                        ? issues[field.key]
-                        : "VALIDATION_ERROR",
-                      lang,
-                    )}
-                  </small>
-                )}
-              </label>
-            ))}
-          </div>
+                </FormField>
+              );
+            })}
+          </FormGrid>
           {preview && (
             <div className="review-strip">
               <span>

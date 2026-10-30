@@ -1,4 +1,5 @@
 "use client";
+import { FormField } from "@/components/forms/form-field";
 import { useState } from "react";
 import {
   decimal,
@@ -202,13 +203,17 @@ export function LoanDues({
         <>
           {summary(totals as { given: string; received: string; due: string })}
           <div className="section-tools loan-tools">
-            <input
-              className="loan-search"
-              aria-label={tr("loanSearch")}
-              placeholder={tr("loanSearch")}
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
+            <FormField
+              label={tr("loanSearch")}
+              className="filter-field loan-search"
+            >
+              <input
+                aria-label={tr("loanSearch")}
+                placeholder={tr("loanSearch")}
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </FormField>
             <button
               className={!showAll ? "button primary" : "button"}
               aria-pressed={!showAll}

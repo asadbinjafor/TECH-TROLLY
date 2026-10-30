@@ -4,6 +4,7 @@ import { partySchema, type Party } from "@tech-trolley/contracts";
 import { t } from "@tech-trolley/i18n";
 import { useShop } from "@/contexts/shop-context";
 import { api } from "@/services/api";
+import { FormField, FormGrid } from "@/components/forms/form-field";
 
 export function PartyManager({
   kind,
@@ -90,9 +91,8 @@ export function PartyManager({
           {tr(editing ? "editParty" : "createParty")}
           {kind ? " · " + tr(kind) : ""}
         </h3>
-        <fieldset disabled={busy} className="form-grid party-fields">
-          <label>
-            {tr("name")}
+        <FormGrid as="fieldset" disabled={busy} className="party-fields">
+          <FormField label={tr("name")}>
             <input
               name="party-name"
               value={values.name}
@@ -102,10 +102,9 @@ export function PartyManager({
                 setValues((v) => ({ ...v, name: e.target.value }))
               }
             />
-          </label>
+          </FormField>
           {!kind && (
-            <label>
-              {tr("kind")}
+            <FormField label={tr("kind")}>
               <select
                 value={values.kind}
                 disabled={!!editing}
@@ -119,10 +118,9 @@ export function PartyManager({
                   </option>
                 ))}
               </select>
-            </label>
+            </FormField>
           )}
-          <label>
-            {tr("phone")}
+          <FormField label={tr("phone")} optional optionalText={tr("optional")}>
             <input
               name="party-phone"
               value={values.phone}
@@ -132,9 +130,13 @@ export function PartyManager({
                 setValues((v) => ({ ...v, phone: e.target.value }))
               }
             />
-          </label>
-          <label className="wide">
-            {tr("partyAddress")}
+          </FormField>
+          <FormField
+            label={tr("partyAddress")}
+            wide
+            optional
+            optionalText={tr("optional")}
+          >
             <input
               name="party-address"
               value={values.address}
@@ -143,8 +145,8 @@ export function PartyManager({
                 setValues((v) => ({ ...v, address: e.target.value }))
               }
             />
-          </label>
-        </fieldset>
+          </FormField>
+        </FormGrid>
         <div className="row-actions">
           <button className="button primary" disabled={busy}>
             {tr(busy ? "saving" : "save")}
@@ -169,14 +171,13 @@ export function PartyManager({
           {tr(error)}
         </p>
       )}
-      <label>
-        {tr("searchParties")}
+      <FormField label={tr("searchParties")}>
         <input
           type="search"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
-      </label>
+      </FormField>
       <label className="party-checkbox">
         <input
           type="checkbox"

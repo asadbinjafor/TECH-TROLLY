@@ -1,4 +1,5 @@
 "use client";
+import { FormField } from "@/components/forms/form-field";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -1017,13 +1018,15 @@ export function Workspace({ section }: { section: string }) {
                     >
                       <ChevronLeft size={19} />
                     </button>
-                    <input
-                      type="date"
-                      aria-label={tr("date")}
-                      max={state.today}
-                      value={date || state.today}
-                      onChange={(e) => setDate(e.target.value)}
-                    />
+                    <FormField label={tr("date")} className="filter-field">
+                      <input
+                        type="date"
+                        aria-label={tr("date")}
+                        max={state.today}
+                        value={date || state.today}
+                        onChange={(e) => setDate(e.target.value)}
+                      />
+                    </FormField>
                     <button
                       className="icon-button"
                       aria-label="Next day"
@@ -1075,17 +1078,15 @@ export function Workspace({ section }: { section: string }) {
                 section !== "daybook" &&
                 period === "range" && (
                   <div className="date-range-controls">
-                    <label>
-                      {tr("startDate")}
+                    <FormField label={tr("startDate")} className="filter-field">
                       <input
                         type="date"
                         max={rangeTo || state.today}
                         value={rangeFrom || state.today}
                         onChange={(e) => setRangeFrom(e.target.value)}
                       />
-                    </label>
-                    <label>
-                      {tr("endDate")}
+                    </FormField>
+                    <FormField label={tr("endDate")} className="filter-field">
                       <input
                         type="date"
                         min={rangeFrom || state.today}
@@ -1093,7 +1094,7 @@ export function Workspace({ section }: { section: string }) {
                         value={rangeTo || state.today}
                         onChange={(e) => setRangeTo(e.target.value)}
                       />
-                    </label>
+                    </FormField>
                   </div>
                 )}
               {reportError ? (
