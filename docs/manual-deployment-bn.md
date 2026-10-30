@@ -27,6 +27,8 @@ Render-এর Build Filters-এ backend/migrations, shared contracts/i18n, স�
 
 ## ১. নতুন code GitHub-এ দিন
 
+Supplier/Customer/ব্যক্তির নাম যোগ, সম্পাদনা বা তালিকা থেকে সরাতে code edit বা deployment লাগে না। ফর্মের **নাম যোগ / পরিচালনা করুন** অথবা ব্যক্তি/যোগাযোগের তালিকা ব্যবহার করুন। সরানো নাম পরে ফিরিয়ে আনা যায়; আগের লেনদেন ও বাকি থাকে। এই সুবিধার প্রথম code update-এ migration **007** Render startup থেকে স্বয়ংক্রিয়ভাবে হবে; Supabase-এ হাতে SQL চালাবেন না।
+
 Codex ইতিমধ্যে commit/push করলে এই অংশ আবার লাগবে না। নিজের হাতে code পাল্টালে PowerShell-এ:
 
 ```powershell

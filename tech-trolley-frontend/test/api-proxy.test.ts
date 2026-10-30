@@ -102,6 +102,22 @@ test("same-origin proxy preserves cookies, command keys, CSV and uncertain resul
     assert.equal(await csv.text(), "নাম,টাকা\nপরীক্ষা,10.00");
     assert.match(csv.headers.get("content-disposition")!, /report.csv/);
     assert.equal(seen[2].url, "/reports/export?period=week&lang=bn");
+    const removed = await proxyApi(
+      new Request("https://shop.example/api/parties/synthetic-id", {
+        method: "DELETE",
+        headers: {
+          Cookie: "tt_session=opaque-session",
+          Origin: "https://shop.example",
+        },
+      }),
+      ["parties", "synthetic-id"],
+      options,
+    );
+    assert.equal(removed.status, 200);
+    assert.equal(seen[3].url, "/parties/synthetic-id");
+    assert.equal(seen[3].headers.cookie, "tt_session=opaque-session");
+    assert.equal(seen[3].headers.origin, "https://shop.example");
+    assert.equal(seen[3].body, "");
     const missing = await proxyApi(
       new Request("https://shop.example/api/auth/me"),
       ["auth", "me"],

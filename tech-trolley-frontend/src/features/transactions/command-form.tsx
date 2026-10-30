@@ -7,11 +7,14 @@ import {
   minor,
   decimal,
   customerInvoiceFields,
+  partyKindForSource,
+  type Field,
   type CommandKind,
 } from "@tech-trolley/contracts";
 import { t, currency } from "@tech-trolley/i18n";
 import { api } from "@/services/api";
 import { useShop } from "@/contexts/shop-context";
+import { PartyManager } from "@/features/settings/party-manager";
 export function CommandForm({
   kind,
   onClose,
@@ -62,7 +65,8 @@ export function CommandForm({
     [error, setError] = useState(""),
     [issues, setIssues] = useState<Record<string, string>>({}),
     [review, setReview] = useState(false),
-    [busy, setBusy] = useState(false);
+    [busy, setBusy] = useState(false),
+    [partyField, setPartyField] = useState<Field | null>(null);
   useEffect(() => {
     sessionStorage.setItem(storage, JSON.stringify(values));
   }, [storage, values]);
@@ -129,6 +133,7 @@ export function CommandForm({
     <div className="modal-backdrop">
       <section
         className="modal"
+        inert={partyField ? true : undefined}
         role="dialog"
         aria-modal="true"
         aria-labelledby="form-title"
@@ -194,6 +199,7 @@ export function CommandForm({
                     )}
                   {field.type === "select" ? (
                     <select
+                      aria-label={t(field.label, lang)}
                       value={values[field.key] || ""}
                       required={
                         !field.optional ||
@@ -269,6 +275,25 @@ export function CommandForm({
                         }))
                       }
                     />
+                  )}
+                  {partyKindForSource(field.source) && !review && !pending && (
+                    <>
+                      {!choices(field, state, lang).length && (
+                        <small className="notice">
+                          {t("emptyPartySelection", lang)}
+                        </small>
+                      )}
+                      <button
+                        type="button"
+                        className="text-button party-manage-button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setPartyField(field);
+                        }}
+                      >
+                        {t("manageParties", lang)}
+                      </button>
+                    </>
                   )}
                   {issues[field.key] && (
                     <small className="error">
@@ -356,6 +381,49 @@ export function CommandForm({
           </footer>
         </form>
       </section>
+      {partyField && (
+        <div className="modal-backdrop party-modal">
+          <section
+            className="modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="party-title"
+          >
+            <header>
+              <h2 id="party-title">
+                {t("manageParties", lang)} ·{" "}
+                {t(partyKindForSource(partyField.source)!, lang)}
+              </h2>
+              <button
+                type="button"
+                className="icon-button"
+                aria-label={t("close", lang)}
+                onClick={() => setPartyField(null)}
+              >
+                ×
+              </button>
+            </header>
+            <PartyManager
+              kind={partyKindForSource(partyField.source)}
+              onSelect={(p) => {
+                setValues((v) => ({
+                  ...v,
+                  [partyField.key]: p.id,
+                  ...(partyField.key === "customerId"
+                    ? customerInvoiceFields(p)
+                    : {}),
+                }));
+                setPartyField(null);
+              }}
+              onArchive={(id) =>
+                setValues((v) =>
+                  v[partyField.key] === id ? { ...v, [partyField.key]: "" } : v,
+                )
+              }
+            />
+          </section>
+        </div>
+      )}
     </div>
   );
 }

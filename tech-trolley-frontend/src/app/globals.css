@@ -1502,3 +1502,40 @@ td b {
     margin: 6mm;
   }
 }
+
+.party-fields {
+  border: 0;
+  padding: 0;
+  margin: 0 0 16px;
+  min-width: 0;
+}
+.party-manager > form {
+  margin-bottom: 24px;
+}
+.party-manager .list-row {
+  flex-wrap: wrap;
+  overflow-wrap: anywhere;
+}
+.party-manager .list-row > div {
+  min-width: 0;
+}
+.party-manager .row-actions {
+  flex-wrap: wrap;
+}
+.party-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 12px 0;
+}
+.party-checkbox input {
+  width: 20px;
+  height: 20px;
+}
+.party-manage-button {
+  text-align: left;
+  margin-top: 8px;
+}
+.party-modal {
+  z-index: 110;
+}

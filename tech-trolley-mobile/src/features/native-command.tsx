@@ -1,6 +1,12 @@
 import * as Crypto from "expo-crypto";
 import React, { useEffect, useState } from "react";
-import { KeyboardAvoidingView, Platform, ScrollView, View } from "react-native";
+import {
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  View,
+  Modal,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Picker } from "@react-native-picker/picker";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -11,12 +17,15 @@ import {
   minor,
   decimal,
   customerInvoiceFields,
+  partyKindForSource,
+  type Field,
   type CommandKind,
 } from "@tech-trolley/contracts";
 import { t, currency } from "@tech-trolley/i18n";
 import { useShop } from "../contexts/shop-context";
 import { Button, Input, Txt, Panel, useColors } from "../components/ui";
 import { api } from "../services/api";
+import { NativePartyManager } from "./native-party-manager";
 export function NativeCommand({ navigation, route }: any) {
   const kind = route.params.kind as CommandKind,
     { state, user, lang, refresh } = useShop(),
@@ -27,7 +36,8 @@ export function NativeCommand({ navigation, route }: any) {
     [review, setReview] = useState(false),
     [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
-    [issues, setIssues] = useState<Record<string, string>>({});
+    [issues, setIssues] = useState<Record<string, string>>({}),
+    [partyField, setPartyField] = useState<Field | null>(null);
   const storage = `tt-${user!.id}-draft-${kind}`,
     pendingKey = `tt-${user!.id}-pending-${kind}`,
     tr = (k: string) =>
@@ -209,6 +219,17 @@ export function NativeCommand({ navigation, route }: any) {
                     secure={f.type === "password"}
                   />
                 )}
+                {partyKindForSource(f.source) && !review && !pending && (
+                  <>
+                    {!choices(f, state, lang).length && (
+                      <Txt>{tr("emptyPartySelection")}</Txt>
+                    )}
+                    <Button
+                      label={tr("manageParties")}
+                      onPress={() => setPartyField(f)}
+                    />
+                  </>
+                )}
                 {issues[f.key] && (
                   <Txt style={{ color: "#b95050", fontSize: 11 }}>
                     {tr(
@@ -309,6 +330,47 @@ export function NativeCommand({ navigation, route }: any) {
           />
         </ScrollView>
       </KeyboardAvoidingView>
+      <Modal
+        visible={!!partyField}
+        animationType="slide"
+        onRequestClose={() => setPartyField(null)}
+      >
+        <SafeAreaView style={{ flex: 1, backgroundColor: c.bg }}>
+          <KeyboardAvoidingView
+            style={{ flex: 1 }}
+            behavior={Platform.OS === "ios" ? "padding" : undefined}
+          >
+            <ScrollView
+              keyboardShouldPersistTaps="handled"
+              contentContainerStyle={{ padding: 20 }}
+            >
+              <Button label={tr("close")} onPress={() => setPartyField(null)} />
+              {partyField && (
+                <NativePartyManager
+                  kind={partyKindForSource(partyField.source)}
+                  onSelect={(p) => {
+                    setValues((v) => ({
+                      ...v,
+                      [partyField.key]: p.id,
+                      ...(partyField.key === "customerId"
+                        ? customerInvoiceFields(p)
+                        : {}),
+                    }));
+                    setPartyField(null);
+                  }}
+                  onArchive={(id) =>
+                    setValues((v) =>
+                      v[partyField.key] === id
+                        ? { ...v, [partyField.key]: "" }
+                        : v,
+                    )
+                  }
+                />
+              )}
+            </ScrollView>
+          </KeyboardAvoidingView>
+        </SafeAreaView>
+      </Modal>
     </SafeAreaView>
   );
 }

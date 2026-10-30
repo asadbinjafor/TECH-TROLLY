@@ -13,6 +13,7 @@ import { useShop } from "../contexts/shop-context";
 import { Button, Input, Txt, Panel, useColors } from "../components/ui";
 import { api, tokenKey } from "../services/api";
 import * as SecureStore from "expo-secure-store";
+import { NativePartyManager } from "./native-party-manager";
 type Editor = {
   title: string;
   path: string;
@@ -110,39 +111,7 @@ export function NativeAdministration({ route, navigation }: any) {
             )}
           </Panel>
         )}
-        {mode === "parties" && (
-          <>
-            <Button
-              label={tr("createParty")}
-              primary
-              onPress={() =>
-                open({
-                  title: "createParty",
-                  path: "/parties",
-                  method: "POST",
-                  fields: [
-                    { key: "name" },
-                    { key: "phone" },
-                    { key: "address", label: "partyAddress" },
-                    {
-                      key: "kind",
-                      options: ["customer", "supplier", "person"],
-                    },
-                  ],
-                })
-              }
-            />
-            {state.parties.map((p) => (
-              <Panel key={p.id}>
-                <Txt style={{ fontWeight: "600" }}>{p.name}</Txt>
-                <Txt style={{ fontSize: 12 }}>
-                  {tr(p.kind)} · {p.phone} · {p.id.slice(0, 8)}
-                </Txt>
-                {p.address && <Txt style={{ fontSize: 12 }}>{p.address}</Txt>}
-              </Panel>
-            ))}
-          </>
-        )}
+        {mode === "parties" && <NativePartyManager />}
         {mode === "categories" && (
           <>
             <Button

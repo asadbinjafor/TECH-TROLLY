@@ -90,7 +90,7 @@ export class PostingService {
           const amount = () => positive(minor(data.amount));
           const party = async (pid: string, kind: string) => {
             const [p] = await tx.query(
-              "SELECT * FROM party WHERE id=$1 AND kind=$2 AND NOT is_walk_in",
+              "SELECT * FROM party WHERE id=$1 AND kind=$2 AND active AND NOT is_walk_in",
               [pid, kind],
             );
             if (!p) fail("NOT_FOUND", 404);

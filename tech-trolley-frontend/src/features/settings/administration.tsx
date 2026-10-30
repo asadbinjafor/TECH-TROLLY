@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { t } from "@tech-trolley/i18n";
 import { useShop } from "@/contexts/shop-context";
 import { api } from "@/services/api";
+import { PartyManager } from "./party-manager";
 type Editor = {
   title: string;
   path: string;
@@ -56,40 +57,8 @@ export function Administration({ mode }: { mode: "parties" | "settings" }) {
       )}
       {mode === "parties" && (
         <section className="panel">
-          <div className="panel-heading">
-            <h2>{tr("createParty")}</h2>
-            <button
-              className="button"
-              onClick={() =>
-                open({
-                  title: "createParty",
-                  path: "/parties",
-                  method: "POST",
-                  fields: [
-                    { key: "name", required: true },
-                    {
-                      key: "kind",
-                      options: ["customer", "supplier", "person"],
-                      required: true,
-                    },
-                    { key: "phone" },
-                    { key: "address", label: "partyAddress" },
-                  ],
-                })
-              }
-            >
-              {tr("createParty")}
-            </button>
-          </div>
-          {state.parties.map((p) => (
-            <div className="list-row" key={p.id}>
-              <b>{p.name}</b>
-              <span className="badge">{tr(p.kind)}</span>
-              <span>{p.phone}</span>
-              {p.address && <span>{p.address}</span>}
-              <small className="muted">{p.id.slice(0, 8)}</small>
-            </div>
-          ))}
+          <h2>{tr("parties")}</h2>
+          <PartyManager />
         </section>
       )}
       {mode === "settings" && (

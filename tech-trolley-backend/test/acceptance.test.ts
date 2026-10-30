@@ -1270,6 +1270,168 @@ test("isolated PostgreSQL acceptance, authorization, accounting and retry safety
       },
     );
     await t.test(
+      "custom party selections support Staff CRUD without changing posted history or dues",
+      async () => {
+        const staff = await login("staff@example.test", "reset-staff-password");
+        assert.equal(
+          (
+            await request(http)
+              .post("/parties")
+              .send({ name: "Public", kind: "supplier" })
+          ).status,
+          401,
+        );
+        const made = await api(
+          "post",
+          "/parties",
+          {
+            name: "Custom supplier",
+            kind: "supplier",
+            phone: "01234567890",
+            address: "Original address",
+          },
+          staff.token,
+        );
+        assert.equal(made.status, 201);
+        const p = made.body;
+        assert.equal(p.active, true);
+        const duplicate = await api("post", "/parties", {
+          name: " custom SUPPLIER ",
+          kind: "supplier",
+          phone: p.phone,
+        });
+        assert.equal(duplicate.status, 409);
+        const bought = await cmd("purchase", {
+          ...buy("999999999999991", "1", "0", "0"),
+          supplierId: p.id,
+        });
+        const before = (
+          await db.query("SELECT snapshot FROM document WHERE id=$1", [
+            bought.id,
+          ])
+        )[0].snapshot;
+        assert.equal(before.partyName, "Custom supplier");
+        const details = {
+          name: "Changed supplier",
+          phone: "01999999999",
+          address: "New address",
+        };
+        assert.equal(
+          (
+            await api("patch", "/parties/" + p.id, {
+              ...details,
+              kind: "customer",
+            })
+          ).status,
+          400,
+        );
+        assert.equal(
+          (await api("patch", "/parties/" + p.id, { ...details, name: " " }))
+            .status,
+          400,
+        );
+        assert.equal(
+          (await api("patch", "/parties/" + p.id, details, staff.token)).status,
+          200,
+        );
+        assert.equal(
+          (await api("delete", "/parties/" + p.id, undefined, staff.token))
+            .status,
+          200,
+        );
+        let state = (await api("get", "/shop/state")).body;
+        assert.equal(
+          state.parties.find((x: any) => x.id === p.id).active,
+          false,
+        );
+        const { choices, forms } = require("@tech-trolley/contracts");
+        assert.ok(
+          !choices(
+            forms.purchase.find((f: any) => f.key === "supplierId"),
+            state,
+            "bn",
+          ).some((x: any) => x.value === p.id),
+        );
+        const journalCount = (
+          await db.query("SELECT count(*) FROM journal_line")
+        )[0].count;
+        assert.equal(
+          (
+            await api("post", "/commands/purchase", {
+              ...buy("999999999999992", "1", "0", "0"),
+              supplierId: p.id,
+            }).set("Idempotency-Key", randomUUID())
+          ).status,
+          404,
+        );
+        assert.equal(
+          (await db.query("SELECT count(*) FROM journal_line"))[0].count,
+          journalCount,
+        );
+        // Historical payable settlement uses the original document, even when its supplier is hidden.
+        await cmd("supplierPayment", {
+          documentId: bought.id,
+          amount: "1",
+          account: "cash",
+          note: "Settle archived supplier",
+        });
+        state = (await api("get", "/shop/state")).body;
+        assert.equal(
+          state.documents.find((x: any) => x.id === bought.id).due,
+          "0.00",
+        );
+        assert.deepEqual(
+          (
+            await db.query("SELECT snapshot FROM document WHERE id=$1", [
+              bought.id,
+            ])
+          )[0].snapshot,
+          before,
+        );
+        assert.equal(
+          (await api("patch", "/parties/" + p.id + "/active", { active: true }))
+            .status,
+          200,
+        );
+        state = (await api("get", "/shop/state")).body;
+        assert.ok(
+          choices(
+            forms.purchase.find((f: any) => f.key === "supplierId"),
+            state,
+            "en",
+          ).some(
+            (x: any) => x.value === p.id && x.label.includes(details.name),
+          ),
+        );
+        const walkIn = (
+          await db.query("SELECT id FROM party WHERE is_walk_in")
+        )[0];
+        assert.equal(
+          (await api("delete", "/parties/" + walkIn.id)).status,
+          404,
+        );
+        assert.equal(
+          (await api("patch", "/parties/not-an-id", details)).status,
+          400,
+        );
+        const events = await db.query(
+          "SELECT action,details FROM audit_event WHERE subject_id=$1 ORDER BY id",
+          [p.id],
+        );
+        assert.deepEqual(
+          events.map((e: any) => e.action),
+          [
+            "party_created",
+            "party_updated",
+            "party_archived",
+            "party_restored",
+          ],
+        );
+        assert.equal(events[1].details.before.name, "Custom supplier");
+        assert.equal(events[1].details.after.name, details.name);
+      },
+    );
+    await t.test(
       "release startup is idempotent and Supabase-style RLS blocks direct reads",
       async () => {
         const [{ count: before }] = await db.query(

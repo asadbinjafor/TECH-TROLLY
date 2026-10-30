@@ -1,5 +1,11 @@
 # Progress and release handover
 
+## Custom contact selections — 2026-10-30
+
+Fixed the empty required Supplier selection reported in the mobile screenshots/voice note. Purchase/customer/person fields now open an inline contact manager: add/edit and automatic selection preserve the financial draft; Customer also fills invoice contact fields. Shared web/native Parties screens add search, edit, remove-from-list and restore. Migration 007 adds `party.active`; historical snapshots and settlement of existing dues remain intact. Both business roles retain operational contact management, with serialized duplicate checks and append-only audit events. See [audit](selection-management-audit.md).
+
+Local verification: web/API builds, all workspace typechecks, 17 isolated PostgreSQL checks and 13 hosting checks pass. A new disposable 390px browser fixture verified empty-list recovery, preserved model/IMEI/price, successful purchase, Bengali edit/archive/restore and no horizontal overflow. Caught and fixed the missing web DELETE route export and PostgreSQL update response shape before release. Native physical device QA remains pending. Cloud release verification follows.
+
 ## Two-sided A4 memo replacement — 2026-10-30
 
 The Owner supplied new front/back photographs and a separate QR, and confirmed A4. Replaced the earlier one-page memo with a fixed two-page A4 shared web/native print form, vector-traced white-background branding, four item rows, boxed IMEI/internal ID, original totals/warranty/footer and all 12 Bengali reverse-side clauses. The new QR differs from the earlier image; preserve the exact supplied 37×37 module grid for new invoices. Customer/product/Owner or Staff names/roles continue to come from immutable sale snapshots. Both clients use the same renderer; print controls explain two-sided long-edge A4 printing. See [mapping and fidelity audit](invoice-memo-audit.md).

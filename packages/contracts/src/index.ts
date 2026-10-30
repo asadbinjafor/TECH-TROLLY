@@ -84,6 +84,8 @@ export const partySchema = z
 export const categorySchema = z
   .object({ bn: text, en: text, active: z.boolean().default(true) })
   .strict();
+export const partyUpdateSchema = partySchema.omit({ kind: true });
+export const partyActiveSchema = z.strictObject({ active: z.boolean() });
 export const shopSchema = z
   .object({
     name: text,
@@ -236,6 +238,7 @@ export interface Party {
   phone: string;
   address: string;
   kind: string;
+  active?: boolean;
 }
 export interface Category {
   id: string;
@@ -539,7 +542,7 @@ export function choices(
   )[field.source || ""];
   if (pk)
     return state.parties
-      .filter((p) => p.kind === pk)
+      .filter((p) => p.kind === pk && p.active !== false)
       .map((p) => ({
         value: p.id,
         label: `${p.name} · ${p.phone || p.id.slice(0, 8)}`,
@@ -560,6 +563,17 @@ export function choices(
       value: d.id,
       label: `${d.number} · ${String(d.snapshot.model || d.snapshot.partyName || d.kind)} · ${d.due}`,
     }));
+}
+export function partyKindForSource(
+  source?: string,
+): "supplier" | "customer" | "person" | undefined {
+  return source === "suppliers"
+    ? "supplier"
+    : source === "customers"
+      ? "customer"
+      : source === "persons"
+        ? "person"
+        : undefined;
 }
 export const pages = [
   "overview",
