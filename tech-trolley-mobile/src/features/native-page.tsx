@@ -9,6 +9,7 @@ import * as SecureStore from "expo-secure-store";
 import { t, currency, dateLabel } from "@tech-trolley/i18n";
 import {
   productDetails,
+  canChangeStock,
   type CommandKind,
   type Report,
   type Document,
@@ -24,6 +25,7 @@ export function NativePage({ navigation, route, section: initial }: any) {
     c = useColors(),
     [search, setSearch] = useState(""),
     [tab, setTab] = useState("inStock"),
+    [historyUnit, setHistoryUnit] = useState<string | null>(null),
     [date, setDate] = useState(""),
     [showDate, setShowDate] = useState(false),
     [period, setPeriod] = useState(section === "profit" ? "month" : "today"),
@@ -136,15 +138,44 @@ export function NativePage({ navigation, route, section: initial }: any) {
             <Txt style={{ fontSize: 11, color: c.muted }}>
               {d.business_date} · {d.actor_name}
             </Txt>
-            <Txt style={{ fontSize: 20, marginTop: 12, lineHeight: 30 }}>
-              {money(d.total)}
-            </Txt>
+            {d.kind !== "stockEdit" && (
+              <Txt style={{ fontSize: 20, marginTop: 12, lineHeight: 30 }}>
+                {money(d.total)}
+              </Txt>
+            )}
             {Number(d.due) > 0 && (
               <Txt style={{ fontSize: 12, color: "#b95050" }}>
                 {tr("due")}: {money(d.due)}
               </Txt>
             )}
             {d.reversed_by && <Txt>{tr("reversed")}</Txt>}
+            {d.kind === "stockEdit" &&
+              Object.entries(d.snapshot.after as Record<string, unknown>).map(
+                ([k, v]) => (
+                  <Txt key={k}>
+                    {tr(k)}:{" "}
+                    {String(
+                      (d.snapshot.before as Record<string, unknown>)[k] ?? "—",
+                    )}{" "}
+                    → {String(v ?? "—")}
+                  </Txt>
+                ),
+              )}
+            {d.kind === "purchaseReturn" &&
+              Number(
+                state.documents.find((current) => current.id === d.id)?.due ||
+                  "0",
+              ) > 0 && (
+                <Button
+                  label={tr("supplierRefund")}
+                  onPress={() =>
+                    navigation.navigate("Command", {
+                      kind: "supplierRefund",
+                      documentId: d.id,
+                    })
+                  }
+                />
+              )}
             {d.kind === "sale" && (
               <Button
                 label={tr("receipt")}
@@ -274,6 +305,12 @@ export function NativePage({ navigation, route, section: initial }: any) {
         )}
         {section === "inventory" && (
           <>
+            {tab === "inStock" &&
+              !state.units.some((u) => u.status === "IN_STOCK") && (
+                <Panel>
+                  <Txt>{tr("emptyStockSelection")}</Txt>
+                </Panel>
+              )}
             {state.units.some((u) => u.variant && !u.storage && !u.color) && (
               <Panel>
                 <Txt>{tr("legacyVariant")}</Txt>
@@ -353,6 +390,32 @@ export function NativePage({ navigation, route, section: initial }: any) {
                           />
                         </>
                       )}
+                      {canChangeStock(u, state) && (
+                        <>
+                          <Button
+                            label={tr("stockEdit")}
+                            onPress={() =>
+                              navigation.navigate("Command", {
+                                kind: "stockEdit",
+                                unitId: u.id,
+                              })
+                            }
+                          />
+                          <Button
+                            label={tr("purchaseReturn")}
+                            onPress={() =>
+                              navigation.navigate("Command", {
+                                kind: "purchaseReturn",
+                                unitId: u.id,
+                              })
+                            }
+                          />
+                        </>
+                      )}
+                      <Button
+                        label={tr("stockHistory")}
+                        onPress={() => setHistoryUnit(u.id)}
+                      />
                       {u.status === "IN_STOCK" && (
                         <Button
                           label={tr("sale")}
@@ -371,6 +434,12 @@ export function NativePage({ navigation, route, section: initial }: any) {
             ) : (
               <Empty />
             )}
+          </>
+        )}
+        {section === "inventory" && historyUnit && (
+          <>
+            <Button label={tr("close")} onPress={() => setHistoryUnit(null)} />
+            {docList(state.documents.filter((d) => d.unit_id === historyUnit))}
           </>
         )}
         {section === "purchases" && (
@@ -395,13 +464,18 @@ export function NativePage({ navigation, route, section: initial }: any) {
                 justifyContent: "space-between",
               }}
             >
-              {["cash", "bank", "receivable", "payable"].map((k) =>
-                metric(k, state.balances[k]),
-              )}
+              {[
+                "cash",
+                "bank",
+                "receivable",
+                "payable",
+                "supplierReceivable",
+              ].map((k) => metric(k, state.balances[k] || "0.00"))}
             </View>
             {actions([
               "collection",
               "supplierPayment",
+              "supplierRefund",
               "transfer",
               "contribution",
               "withdrawal",
@@ -531,6 +605,11 @@ export function NativePage({ navigation, route, section: initial }: any) {
                   {metric("expenses", r.expense)}
                   {metric("netProfit", r.netProfit)}
                   {metric("purchasesTotal", r.purchases || "0.00")}
+                  {metric("purchaseReturns", r.purchaseReturns || "0.00")}
+                  {metric(
+                    "closingSupplierRefund",
+                    r.closingSupplierRefund || "0.00",
+                  )}
                 </View>
                 {section !== "profit" && (
                   <Panel>

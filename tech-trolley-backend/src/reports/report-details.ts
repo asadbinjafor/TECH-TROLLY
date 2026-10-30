@@ -32,7 +32,8 @@ export function reportDetails(
     moneyStatement: MoneyEntry[] = [];
   let cashBalance = openingCash,
     bankBalance = openingBank,
-    purchases = 0n;
+    purchases = 0n,
+    purchaseReturns = 0n;
   for (const row of rows) {
     const s = row.source_snapshot,
       kind = row.source_kind;
@@ -50,6 +51,7 @@ export function reportDetails(
     const quantity = row.kind === "reversal" ? -1 : 1;
     if (kind === "purchase")
       purchases += BigInt(row.source_total) * BigInt(quantity);
+    if (kind === "purchaseReturn") purchaseReturns += BigInt(row.source_total);
     if (kind === "sale") {
       const brand = s.brand || "",
         model = s.model || "";
@@ -83,9 +85,14 @@ export function reportDetails(
       const labels =
         kind === "expense"
           ? s.categoryLabels || { bn: "অন্যান্য", en: "Other" }
-          : kind === "salary"
-            ? { bn: "বেতন", en: "Salary" }
-            : { bn: "পরিবহন / কুরিয়ার", en: "Procurement / courier" };
+          : kind === "purchaseReturn"
+            ? {
+                bn: "পণ্য ফেরতের কাটতি / অনাদায়ী ক্রয় খরচ",
+                en: "Purchase return loss / unrecovered acquisition cost",
+              }
+            : kind === "salary"
+              ? { bn: "বেতন", en: "Salary" }
+              : { bn: "পরিবহন / কুরিয়ার", en: "Procurement / courier" };
       const key =
         kind === "expense"
           ? s.categoryId === "custom"
@@ -152,5 +159,6 @@ export function reportDetails(
     expenseStatement,
     moneyStatement,
     purchases: decimal(purchases),
+    purchaseReturns: decimal(purchaseReturns),
   };
 }

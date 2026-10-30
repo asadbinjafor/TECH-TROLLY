@@ -1,5 +1,9 @@
 # নিজে deployment করার নির্দেশনা
 
+বর্তমান Stock Edit / Supplier Return update শুধু লোকাল review-এর জন্য অনুমোদিত। এটি `codex/stock-returns-review` branch-এ থাকবে; আপনার deployment নির্দেশের আগে production branch-এ merge/push করবেন না। পরে অনুমোদিত release-এর সময় স্বাভাবিক Render startup runner migration `008_stock_edits_and_supplier_returns.sql` apply করবে; Supabase reset বা পুরোনো SQL edit করবেন না।
+
+এই update-এ Stock → স্টকের তথ্য সম্পাদনা দিয়ে অবিক্রীত পণ্যের তথ্য ও কারণ দিন। বাস্তবে supplier-কে ফেরত দিলে “Supplier-কে পণ্য ফেরত” থেকে supplier-এর অনুমোদিত ফেরতমূল্য দিন। Review-তে বাকি সমন্বয়, ফেরত পাওনা ও কাটতি দেখুন। টাকা হাতে এলে টাকা ও বাকি → “Supplier-এর ফেরত টাকা আদায়” থেকে প্রকৃত পরিমাণ এবং Cash/Bank দিন। আংশিক আদায় করা যাবে; মূল history মুছবে না।
+
 আপনি বন্ধ করতে না বলা পর্যন্ত Codex app update-এর পরে প্রয়োজনীয় deployment ও live verification করে দেবে। এই নির্দেশনাটি নিজে শেখা ও প্রয়োজনে কাজ করার জন্য।
 
 ## আপনার তিনটি service

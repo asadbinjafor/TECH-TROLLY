@@ -54,6 +54,8 @@ export class ReportsController {
         "expense",
         "netProfit",
         "purchases",
+        "purchaseReturns",
+        "closingSupplierRefund",
         "openingCash",
         "closingCash",
         "openingBank",

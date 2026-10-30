@@ -119,6 +119,81 @@ export class PostingService {
               "UPDATE shop SET opened_at=$1,opening_date=$2 WHERE id=1",
               [instant, date],
             );
+          } else if (kind === "stockEdit" || kind === "purchaseReturn") {
+            const [unit] = await tx.query(
+              "SELECT * FROM inventory_unit WHERE id=$1 FOR UPDATE",
+              [data.unitId],
+            );
+            if (!unit) fail("NOT_FOUND", 404);
+            const [purchase] = await tx.query(`${documentsSql} WHERE d.id=$1`, [
+              unit.purchase_id,
+            ]);
+            if (
+              actor.role === "STAFF" &&
+              documentView(purchase).business_date !== date
+            )
+              fail("STAFF_TODAY_ONLY", 403);
+            if (unit.status !== "IN_STOCK") fail("STOCK_CONFLICT", 409);
+            if (unit.revision !== data.revision) fail("STOCK_CHANGED", 409);
+            unitId = unit.id;
+            partyId = purchase.party_id;
+            const metadataKeys = [
+              "model",
+              "brand",
+              "storage",
+              "color",
+              "variant",
+              "category",
+              "condition",
+              "imei",
+              "battery",
+              "box",
+            ];
+            const before = Object.fromEntries(
+              metadataKeys.map((k) => [k, unit[k]]),
+            );
+            snapshot.purchaseId = purchase.id;
+            snapshot.originalNumber = purchase.number;
+            snapshot.partyName = purchase.snapshot.partyName;
+            if (kind === "stockEdit") {
+              snapshot.before = before;
+              snapshot.after = Object.fromEntries(
+                metadataKeys.map((k) => [k, data[k]]),
+              );
+              await tx.query(
+                `UPDATE inventory_unit SET model=$2,brand=$3,storage=$4,color=$5,variant=$6,category=$7,condition=$8,imei=$9,battery=$10,box=$11,revision=revision+1 WHERE id=$1`,
+                [unit.id, ...metadataKeys.map((k) => data[k])],
+              );
+            } else {
+              const credit = minor(data.returnValue);
+              if (credit > BigInt(purchase.total)) fail("RETURN_VALUE_INVALID");
+              const payable = BigInt(purchase.due);
+              const offset = credit < payable ? credit : payable;
+              total = credit;
+              due = credit - offset;
+              snapshot = {
+                ...snapshot,
+                ...before,
+                internalId: unit.internal_id,
+                purchaseAmount: decimal(purchase.total),
+                acquisitionCost: decimal(unit.cost),
+                returnOffset: decimal(offset),
+                refundDue: decimal(due),
+                returnLoss: decimal(BigInt(unit.cost) - credit),
+              };
+              snapshot.paymentIds = (
+                await tx.query(
+                  "SELECT a.document_id FROM allocation a JOIN document d ON d.id=a.document_id WHERE a.target_id=$1 AND a.amount>0 AND d.kind='supplierPayment'",
+                  [purchase.id],
+                )
+              ).map((r: any) => r.document_id);
+              line("inventory", -BigInt(unit.cost));
+              line("payable", offset);
+              line("supplierReceivable", due);
+              line("expense", BigInt(unit.cost) - credit);
+              if (offset > 0n)
+                allocations.push({ target: purchase.id, amount: offset });
+            }
           } else if (kind === "purchase") {
             await party(data.supplierId, "supplier");
             partyId = data.supplierId;
@@ -198,6 +273,7 @@ export class PostingService {
             [
               "collection",
               "supplierPayment",
+              "supplierRefund",
               "loanRepayment",
               "advanceRepayment",
             ].includes(kind)
@@ -206,6 +282,7 @@ export class PostingService {
               {
                 collection: "sale",
                 supplierPayment: "purchase",
+                supplierRefund: "purchaseReturn",
                 loanRepayment: "loan",
                 advanceRepayment: "advance",
               } as Record<string, string>
@@ -233,6 +310,7 @@ export class PostingService {
                 {
                   collection: "receivable",
                   supplierPayment: "payable",
+                  supplierRefund: "supplierReceivable",
                   loanRepayment: "loan",
                   advanceRepayment: "advance",
                 } as any
@@ -320,7 +398,13 @@ export class PostingService {
               fail("STAFF_TODAY_ONLY", 403);
             if (
               target.reversed_by ||
-              ["opening", "reversal", "cashCount"].includes(target.kind)
+              [
+                "opening",
+                "reversal",
+                "cashCount",
+                "stockEdit",
+                "purchaseReturn",
+              ].includes(target.kind)
             )
               fail("DEPENDENCY_CONFLICT", 409);
             const [{ used }] = await tx.query(
@@ -328,6 +412,16 @@ export class PostingService {
               [target.id],
             );
             if (BigInt(used) !== 0n) fail("DEPENDENCY_CONFLICT", 409);
+            if (
+              target.kind === "supplierPayment" &&
+              (
+                await tx.query(
+                  `SELECT 1 FROM document r WHERE r.kind='purchaseReturn' AND r.snapshot->'paymentIds' ? $1::text LIMIT 1`,
+                  [target.id],
+                )
+              ).length
+            )
+              fail("DEPENDENCY_CONFLICT", 409);
             if (target.unit_id) {
               const [unit] = await tx.query(
                 "SELECT * FROM inventory_unit WHERE id=$1 FOR UPDATE",
@@ -375,6 +469,7 @@ export class PostingService {
             "bank",
             "inventory",
             "receivable",
+            "supplierReceivable",
             "loan",
             "advance",
           ]) {
@@ -442,6 +537,15 @@ export class PostingService {
             );
             await tx.query(
               "INSERT INTO inventory_movement(unit_id,document_id,delta) VALUES($1,$2,1)",
+              [unitId, id],
+            );
+          } else if (kind === "purchaseReturn") {
+            await tx.query(
+              "UPDATE inventory_unit SET status='RETURNED',revision=revision+1 WHERE id=$1",
+              [unitId],
+            );
+            await tx.query(
+              "INSERT INTO inventory_movement(unit_id,document_id,delta) VALUES($1,$2,-1)",
               [unitId, id],
             );
           } else if (kind === "sale") {

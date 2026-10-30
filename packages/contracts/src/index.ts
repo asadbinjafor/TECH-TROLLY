@@ -123,6 +123,51 @@ export const shopSchema = z
   .strict();
 export const commands = {
   opening: z.strictObject({ cash: money, bank: money }),
+  stockEdit: z
+    .strictObject({
+      unitId: id,
+      revision: z.number().int().min(0),
+      model: text,
+      brand: text,
+      storage: z.string().trim().max(60),
+      color: z.string().trim().max(60),
+      variant: z.string().trim().max(120),
+      category: z.enum(["phone", "accessory"]),
+      condition: z.enum(["new", "used", "refurbished"]),
+      imei: z
+        .string()
+        .regex(/^\d{15}$/)
+        .nullable(),
+      battery: z.number().int().min(0).max(100).nullable(),
+      box: z.enum(["with", "without", "unspecified"]),
+      note: text,
+    })
+    .superRefine((v, c) => {
+      if (v.category === "phone" && !v.imei)
+        c.addIssue({
+          code: "custom",
+          path: ["imei"],
+          message: "IMEI_REQUIRED",
+        });
+      if (v.category === "accessory" && v.imei)
+        c.addIssue({
+          code: "custom",
+          path: ["imei"],
+          message: "ACCESSORY_IMEI",
+        });
+    }),
+  purchaseReturn: z.strictObject({
+    unitId: id,
+    revision: z.number().int().min(0),
+    returnValue: money,
+    note: text,
+  }),
+  supplierRefund: z.strictObject({
+    documentId: id,
+    amount: money,
+    account,
+    note,
+  }),
   purchase: z
     .strictObject({
       model: text,
@@ -250,7 +295,8 @@ export interface Unit {
   battery: number | null;
   box: string;
   cost: string;
-  status: "IN_STOCK" | "SOLD" | "REVERSED";
+  status: "IN_STOCK" | "SOLD" | "REVERSED" | "RETURNED";
+  revision: number;
   sale_id: string | null;
 }
 export interface Document {
@@ -309,6 +355,8 @@ export interface Report {
   expenseStatement: ExpenseEntry[];
   moneyStatement: MoneyEntry[];
   purchases: string;
+  purchaseReturns?: string;
+  closingSupplierRefund?: string;
 }
 export interface ProductProfit {
   brand: string;
@@ -392,6 +440,7 @@ export interface Field {
   type?: "money" | "text" | "select" | "password" | "number" | "month";
   source?:
     | "units"
+    | "editableUnits"
     | "customers"
     | "suppliers"
     | "persons"
@@ -399,6 +448,7 @@ export interface Field {
     | "staff"
     | "salesDue"
     | "purchasesDue"
+    | "supplierRefundsDue"
     | "loansDue"
     | "advancesDue"
     | "documents";
@@ -422,6 +472,42 @@ const a = f("account", "select", {
 const optionalMoney = (key: string, extra: Partial<Field> = {}) =>
   f(key, "money", { optional: true, emptyValue: "0", ...extra });
 export const forms: Record<CommandKind, Field[]> = {
+  stockEdit: [
+    f("unitId", "select", { source: "editableUnits" }),
+    f("revision", "number"),
+    f("model"),
+    f("brand"),
+    f("storage", "text", { optional: true }),
+    f("color", "text", { optional: true }),
+    f("variant", "text", { optional: true }),
+    f("category", "select", {
+      options: ["phone", "accessory"],
+      default: "phone",
+    }),
+    f("condition", "select", {
+      options: ["new", "used", "refurbished"],
+      default: "used",
+    }),
+    f("imei", "text", { optional: true }),
+    f("battery", "number", { optional: true }),
+    f("box", "select", {
+      options: ["unspecified", "with", "without"],
+      default: "unspecified",
+    }),
+    f("note"),
+  ],
+  purchaseReturn: [
+    f("unitId", "select", { source: "editableUnits" }),
+    f("revision", "number"),
+    f("returnValue", "money"),
+    f("note"),
+  ],
+  supplierRefund: [
+    f("documentId", "select", { source: "supplierRefundsDue" }),
+    amount,
+    a,
+    n,
+  ],
   opening: [
     optionalMoney("cash", { label: "openingCash" }),
     optionalMoney("bank", { label: "openingBank" }),
@@ -541,9 +627,10 @@ export function saleNeedsCustomer(values: {
 export function formFields(kind: CommandKind, values: Record<string, string>) {
   return forms[kind].filter(
     (f) =>
+      f.key !== "revision" &&
       (f.key !== "expenseName" || values.categoryId === "custom") &&
       !(
-        kind === "purchase" &&
+        ["purchase", "stockEdit"].includes(kind) &&
         f.key === "imei" &&
         values.category === "accessory"
       ),
@@ -581,7 +668,7 @@ export function fieldRequired(
 ) {
   if (kind === "sale" && field.key === "customerId")
     return saleNeedsCustomer(values);
-  if (kind === "purchase" && field.key === "imei")
+  if (["purchase", "stockEdit"].includes(kind) && field.key === "imei")
     return values.category === "phone";
   if (kind === "purchase" && ["account", "treatment"].includes(field.key)) {
     try {
@@ -649,6 +736,8 @@ export function emptySelectionMessage(field: Field) {
     (
       {
         units: "emptyStockSelection",
+        editableUnits: "emptyStockSelection",
+        supplierRefundsDue: "emptySupplierRefundSelection",
         staff: "emptyStaffSelection",
         salesDue: "emptySalesDueSelection",
         purchasesDue: "emptyPurchasesDueSelection",
@@ -685,6 +774,26 @@ export function prepareForm(
   state: State,
 ) {
   const blocked = selectionBlockers(kind, values, state);
+  if (kind === "supplierRefund" && money.safeParse(values.amount).success) {
+    const target = state.documents.find((d) => d.id === values.documentId);
+    if (target && minor(values.amount) > minor(target.due))
+      blocked.amount = "DUE_EXCEEDED";
+  }
+  if (["stockEdit", "purchaseReturn"].includes(kind)) {
+    const unit = state.units.find((u) => u.id === values.unitId);
+    if (!unit || Number(values.revision) !== (unit.revision ?? 0))
+      blocked.unitId = "STOCK_CHANGED";
+    if (
+      kind === "purchaseReturn" &&
+      money.safeParse(values.returnValue).success
+    ) {
+      const purchase = state.documents.find(
+        (d) => d.kind === "purchase" && d.unit_id === unit?.id,
+      );
+      if (purchase && minor(values.returnValue) > minor(purchase.total))
+        blocked.returnValue = "RETURN_VALUE_INVALID";
+    }
+  }
   if (
     kind === "cashCount" &&
     fieldRequired(kind, forms.cashCount[1], values, state) &&
@@ -703,7 +812,8 @@ export function prepareForm(
 }
 export function prepare(kind: CommandKind, raw: Record<string, string>) {
   const data: Record<string, unknown> = { ...raw };
-  if (kind === "purchase" && raw.category === "accessory") data.imei = null;
+  if (["purchase", "stockEdit"].includes(kind) && raw.category === "accessory")
+    data.imei = null;
   for (const field of forms[kind]) {
     if (field.emptyValue !== undefined && !data[field.key])
       data[field.key] = field.emptyValue;
@@ -780,9 +890,13 @@ export function choices(
               ? "bankAccount"
               : value,
     }));
-  if (field.source === "units")
+  if (field.source === "units" || field.source === "editableUnits")
     return state.units
-      .filter((u) => u.status === "IN_STOCK")
+      .filter(
+        (u) =>
+          u.status === "IN_STOCK" &&
+          (field.source !== "editableUnits" || canChangeStock(u, state)),
+      )
       .map((u) => ({
         value: u.id,
         label: `${u.model} · ${u.imei || u.internal_id}`,
@@ -818,6 +932,7 @@ export function choices(
     {
       salesDue: "sale",
       purchasesDue: "purchase",
+      supplierRefundsDue: "purchaseReturn",
       loansDue: "loan",
       advancesDue: "advance",
     } as Record<string, string>
@@ -836,7 +951,26 @@ export function choices(
     }));
 }
 export function correctableDocument(d: Document, state: State) {
-  if (d.reversed_by || ["opening", "cashCount", "reversal"].includes(d.kind))
+  if (
+    d.reversed_by ||
+    [
+      "opening",
+      "cashCount",
+      "reversal",
+      "stockEdit",
+      "purchaseReturn",
+    ].includes(d.kind)
+  )
+    return false;
+  if (
+    d.kind === "supplierPayment" &&
+    state.documents.some(
+      (r) =>
+        r.kind === "purchaseReturn" &&
+        Array.isArray(r.snapshot.paymentIds) &&
+        r.snapshot.paymentIds.includes(d.id),
+    )
+  )
     return false;
   const unit = state.units.find((u) => u.id === d.unit_id);
   if (d.kind === "purchase" && unit && unit.status !== "IN_STOCK") return false;
@@ -859,6 +993,68 @@ export function correctableDocument(d: Document, state: State) {
     /* Older incomplete snapshots still defer to the authoritative API. */
   }
   return true;
+}
+
+export function canChangeStock(unit: Unit, state: State) {
+  return (
+    unit.status === "IN_STOCK" &&
+    (state.user.role === "OWNER" ||
+      state.documents.some(
+        (d) =>
+          d.kind === "purchase" &&
+          d.unit_id === unit.id &&
+          d.business_date === state.today,
+      ))
+  );
+}
+export function unitFormValues(
+  kind: CommandKind,
+  unit?: Unit,
+): Record<string, string> {
+  if (kind === "sale") return { price: "", discount: "", cash: "", bank: "" };
+  if (!["stockEdit", "purchaseReturn"].includes(kind)) return {};
+  const values: Record<string, string> = {
+    revision: String(unit?.revision ?? 0),
+  };
+  if (kind === "stockEdit")
+    for (const key of [
+      "model",
+      "brand",
+      "storage",
+      "color",
+      "variant",
+      "category",
+      "condition",
+      "imei",
+      "battery",
+      "box",
+    ] as const)
+      values[key] = unit?.[key] == null ? "" : String(unit[key]);
+  return values;
+}
+
+export function returnPreview(state: State, values: Record<string, string>) {
+  const unit = state.units.find((u) => u.id === values.unitId);
+  const purchase = state.documents.find(
+    (d) => d.kind === "purchase" && d.unit_id === unit?.id,
+  );
+  if (!unit || !purchase) return null;
+  if (!values.returnValue)
+    return {
+      purchaseAmount: purchase.total,
+      returnOffset: "",
+      refundDue: "",
+      returnLoss: "",
+    };
+  const credit = minor(values.returnValue || "0");
+  const payable = minor(purchase.due);
+  const offset = credit < payable ? credit : payable;
+  return {
+    purchaseAmount: purchase.total,
+    returnOffset: decimal(offset),
+    refundDue: decimal(credit - offset),
+    returnLoss: decimal(minor(unit.cost) - credit),
+  };
 }
 export function partyKindForSource(
   source?: string,

@@ -25,6 +25,7 @@ export class ShopController {
         bank: "0.00",
         inventory: "0.00",
         receivable: "0.00",
+        supplierReceivable: "0.00",
         payable: "0.00",
         loan: "0.00",
         advance: "0.00",

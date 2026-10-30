@@ -15,6 +15,8 @@ import {
   profileSchema,
   profileIdentityChanged,
   correctableDocument,
+  unitFormValues,
+  returnPreview,
   type State,
   type CommandKind,
 } from "@tech-trolley/contracts";
@@ -57,6 +59,7 @@ test("profile forms distinguish a display-name edit from a normalized login iden
     );
 });
 const empty = {
+  user: { role: "OWNER" },
   today: "2026-10-30",
   balances: { cash: "0.00" },
   units: [],
@@ -87,11 +90,14 @@ const populated = {
     "opening",
     "cashCount",
     "reversal",
+    "purchaseReturn",
   ].map((kind, i) => ({
     id: id(i + 6),
     kind,
     number: `TT-${i}`,
     due: "1.00",
+    total: "1.00",
+    unit_id: kind === "purchase" ? id(1) : null,
     snapshot: {},
   })),
 } as unknown as State;
@@ -100,6 +106,21 @@ const fields = (kind: CommandKind, overrides: Record<string, string> = {}) => ({
   ...overrides,
 });
 const scenarios: Record<CommandKind, Record<string, string>> = {
+  stockEdit: {
+    unitId: id(1),
+    revision: "0",
+    model: "Phone",
+    brand: "Brand",
+    imei: "123456789012345",
+    note: "Correct label",
+  },
+  purchaseReturn: {
+    unitId: id(1),
+    revision: "0",
+    returnValue: "1",
+    note: "Faulty item accepted by supplier",
+  },
+  supplierRefund: { documentId: id(13), amount: "1" },
   opening: { cash: "0", bank: "0" },
   purchase: {
     model: "Phone",
@@ -129,6 +150,72 @@ const scenarios: Record<CommandKind, Record<string, string>> = {
   cashCount: { counted: "0" },
   reversal: { documentId: id(6), note: "Correction reason" },
 };
+test("stock review uses current details, rejects stale revisions and keeps refunds within their actual due", () => {
+  const stock = {
+    ...populated.units[0],
+    cost: "105.00",
+    revision: 7,
+    brand: "QA",
+    variant: "Japan",
+    storage: "128",
+    color: "Blue",
+    category: "phone",
+    condition: "used",
+    battery: 80,
+    box: "with",
+  };
+  const state = {
+    ...populated,
+    units: [stock],
+    documents: populated.documents.map((d) =>
+      d.kind === "purchase" ? { ...d, total: "100.00", due: "30.00" } : d,
+    ),
+  } as State;
+  const draft = {
+    ...unitFormValues("stockEdit", stock),
+    unitId: stock.id,
+    note: "Correct physical label",
+  };
+  const changed = prepareForm(
+    "stockEdit",
+    { ...draft, variant: "USA" },
+    state,
+  ) as any;
+  assert.equal(changed.revision, 7);
+  assert.equal(changed.variant, "USA");
+  assert.ok(!("cost" in changed));
+  assert.throws(() =>
+    prepareForm("stockEdit", { ...draft, revision: "6" }, state),
+  );
+  const raw = {
+    unitId: stock.id,
+    revision: "7",
+    returnValue: "80",
+    note: "Supplier accepted return with deduction",
+  };
+  assert.deepEqual(returnPreview(state, raw), {
+    purchaseAmount: "100.00",
+    returnOffset: "30.00",
+    refundDue: "50.00",
+    returnLoss: "25.00",
+  });
+  assert.ok(prepareForm("purchaseReturn", raw, state));
+  assert.throws(() =>
+    prepareForm("purchaseReturn", { ...raw, returnValue: "100.01" }, state),
+  );
+  assert.ok(prepareForm("purchaseReturn", { ...raw, returnValue: "0" }, state));
+  assert.throws(() =>
+    prepareForm("purchaseReturn", { ...raw, returnValue: "" }, state),
+  );
+  assert.throws(() =>
+    prepareForm(
+      "supplierRefund",
+      fields("supplierRefund", { documentId: id(13), amount: "1.01" }),
+      state,
+    ),
+  );
+  assert.equal(choices(forms.supplierRefund[0], state, "en")[0].value, id(13));
+});
 test("every transaction form supplies a valid payload with consistent English/Bengali fields", () => {
   assert.deepEqual(Object.keys(scenarios).sort(), Object.keys(commands).sort());
   for (const kind of Object.keys(scenarios) as CommandKind[]) {

@@ -29,6 +29,7 @@ import {
   minor,
   decimal,
   productDetails,
+  canChangeStock,
   type CommandKind,
   type Document,
   type Report,
@@ -70,6 +71,8 @@ export function Workspace({ section }: { section: string }) {
     } = useShop(),
     [command, setCommand] = useState<CommandKind | null>(null),
     [selectedUnit, setSelectedUnit] = useState<string | undefined>(),
+    [selectedDocument, setSelectedDocument] = useState<string | undefined>(),
+    [historyUnit, setHistoryUnit] = useState<string | null>(null),
     [search, setSearch] = useState(""),
     [stockTab, setStockTab] = useState("inStock"),
     [menu, setMenu] = useState(false),
@@ -142,6 +145,7 @@ export function Workspace({ section }: { section: string }) {
     tr = (k: string) => t(k, lang);
   const action = (kind: CommandKind) => {
     setSelectedUnit(undefined);
+    setSelectedDocument(undefined);
     setCommand(kind);
   };
   const fetchReceipt = async (id: string) => {
@@ -233,7 +237,7 @@ export function Workspace({ section }: { section: string }) {
                   </td>
                   <td data-label={tr("actor")}>{d.actor_name}</td>
                   <td data-label={tr("total")} className="num">
-                    {money(d.total)}
+                    {d.kind === "stockEdit" ? "—" : money(d.total)}
                   </td>
                   <td data-label={tr("due")} className="num">
                     {money(d.due)}
@@ -563,6 +567,10 @@ export function Workspace({ section }: { section: string }) {
           )}
           {section === "inventory" && (
             <>
+              {stockTab === "inStock" &&
+                !state.units.some((u) => u.status === "IN_STOCK") && (
+                  <p className="notice">{tr("emptyStockSelection")}</p>
+                )}
               {state.units.some((u) => u.variant && !u.storage && !u.color) && (
                 <p className="notice">{tr("legacyVariant")}</p>
               )}
@@ -672,6 +680,34 @@ export function Workspace({ section }: { section: string }) {
                                       {tr("sale")}
                                     </button>
                                   ) : null}
+                                  {canChangeStock(u, state) && (
+                                    <>
+                                      <button
+                                        className="text-button"
+                                        onClick={() => {
+                                          setSelectedUnit(u.id);
+                                          setCommand("stockEdit");
+                                        }}
+                                      >
+                                        {tr("stockEdit")}
+                                      </button>
+                                      <button
+                                        className="text-button"
+                                        onClick={() => {
+                                          setSelectedUnit(u.id);
+                                          setCommand("purchaseReturn");
+                                        }}
+                                      >
+                                        {tr("purchaseReturn")}
+                                      </button>
+                                    </>
+                                  )}
+                                  <button
+                                    className="text-button"
+                                    onClick={() => setHistoryUnit(u.id)}
+                                  >
+                                    {tr("stockHistory")}
+                                  </button>
                                 </td>
                               </tr>
                             );
@@ -685,11 +721,26 @@ export function Workspace({ section }: { section: string }) {
               </section>
             </>
           )}
+          {section === "inventory" && historyUnit && (
+            <>
+              <button className="button" onClick={() => setHistoryUnit(null)}>
+                {tr("close")}
+              </button>
+              {table(
+                docs.filter((d) => d.unit_id === historyUnit),
+                "stockHistory",
+              )}
+            </>
+          )}
           {section === "purchases" && (
             <>
               <div className="metrics-grid three">
                 {card("stockCost", state.balances.inventory)}
                 {card("payable", state.balances.payable)}
+                {card(
+                  "supplierReceivable",
+                  state.balances.supplierReceivable || "0.00",
+                )}
                 {card("cash", state.balances.cash)}
               </div>
               {table(
@@ -713,12 +764,17 @@ export function Workspace({ section }: { section: string }) {
                 {card("bank", state.balances.bank)}
                 {card("receivable", state.balances.receivable)}
                 {card("payable", state.balances.payable)}
+                {card(
+                  "supplierReceivable",
+                  state.balances.supplierReceivable || "0.00",
+                )}
               </div>
               <section className="quick-actions">
                 <div>
                   {actions([
                     "collection",
                     "supplierPayment",
+                    "supplierRefund",
                     "transfer",
                     "contribution",
                     "withdrawal",
@@ -873,6 +929,11 @@ export function Workspace({ section }: { section: string }) {
                     {card("expenses", r.expense)}
                     {card("netProfit", r.netProfit, "profit")}
                     {card("purchasesTotal", r.purchases || "0.00")}
+                    {card("purchaseReturns", r.purchaseReturns || "0.00")}
+                    {card(
+                      "closingSupplierRefund",
+                      r.closingSupplierRefund || "0.00",
+                    )}
                   </div>
                   {section !== "profit" && (
                     <section className="panel ledger-panels">
@@ -975,6 +1036,7 @@ export function Workspace({ section }: { section: string }) {
           key={command}
           kind={command}
           initialUnit={selectedUnit}
+          initialDocument={selectedDocument}
           onClose={() => setCommand(null)}
           onSaved={(id, kind) => {
             setCommand(null);
@@ -1034,23 +1096,82 @@ export function Workspace({ section }: { section: string }) {
             <p>
               {tr(detail.kind)} · {detail.business_date} · {detail.actor_name}
             </p>
+            {detail.kind === "stockEdit" && (
+              <table>
+                <thead>
+                  <tr>
+                    <th>{tr("details")}</th>
+                    <th>{tr("beforeEdit")}</th>
+                    <th>{tr("afterEdit")}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {Object.entries(
+                    detail.snapshot.after as Record<string, unknown>,
+                  ).map(([k, v]) => (
+                    <tr key={k}>
+                      <td>{tr(k)}</td>
+                      <td>
+                        {String(
+                          (detail.snapshot.before as Record<string, unknown>)[
+                            k
+                          ] ?? "—",
+                        )}
+                      </td>
+                      <td>{String(v ?? "—")}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+            {detail.kind === "purchaseReturn" &&
+              minor(
+                state.documents.find((d) => d.id === detail.id)?.due || "0",
+              ) > 0n && (
+                <button
+                  className="button primary"
+                  onClick={() => {
+                    setSelectedDocument(detail.id);
+                    setSelectedUnit(undefined);
+                    setDetail(null);
+                    setCommand("supplierRefund");
+                  }}
+                >
+                  {tr("supplierRefund")}
+                </button>
+              )}
             {Object.entries(detail.snapshot)
               .filter(
                 ([k, v]) =>
-                  v !== null && typeof v !== "object" && !k.endsWith("Id"),
+                  v !== null &&
+                  typeof v !== "object" &&
+                  !k.endsWith("Id") &&
+                  k !== "revision" &&
+                  (detail.kind !== "stockEdit" ||
+                    ["note", "partyName", "originalNumber"].includes(k)),
               )
               .map(([k, v]) => (
                 <div className="pnl-row" key={k}>
-                  <span>{tr(k)}</span>
+                  <span>
+                    {tr(
+                      detail.kind === "purchaseReturn" && k === "refundDue"
+                        ? "originalRefundDue"
+                        : k,
+                    )}
+                  </span>
                   <b>{String(v)}</b>
                 </div>
               ))}
-            <p>
-              {tr("total")}: {money(detail.total)}
-            </p>
-            <p>
-              {tr("due")}: {money(detail.due)}
-            </p>
+            {detail.kind !== "stockEdit" && (
+              <>
+                <p>
+                  {tr("total")}: {money(detail.total)}
+                </p>
+                <p>
+                  {tr("due")}: {money(detail.due)}
+                </p>
+              </>
+            )}
           </section>
         </div>
       )}

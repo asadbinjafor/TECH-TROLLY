@@ -24,6 +24,8 @@ import {
   decimal,
   customerInvoiceFields,
   partyKindForSource,
+  unitFormValues,
+  returnPreview,
   type Field,
   type CommandKind,
 } from "@tech-trolley/contracts";
@@ -68,11 +70,24 @@ export function NativeCommand({ navigation, route }: any) {
           );
       if (!p && route.params.unitId && initial.unitId !== route.params.unitId) {
         initial.unitId = route.params.unitId;
-        initial.price = "";
-        initial.discount = "";
-        initial.cash = "";
-        initial.bank = "";
+        Object.assign(
+          initial,
+          unitFormValues(
+            kind,
+            state?.units.find((u) => u.id === route.params.unitId),
+          ),
+        );
       }
+      if (
+        !p &&
+        route.params.documentId &&
+        kind === "supplierRefund" &&
+        initial.documentId !== route.params.documentId
+      )
+        Object.assign(initial, {
+          documentId: route.params.documentId,
+          amount: "",
+        });
       setValues(initial);
       setPending(p ? JSON.parse(p) : null);
       setReady(true);
@@ -118,6 +133,8 @@ export function NativeCommand({ navigation, route }: any) {
         );
       } else {
         setError(e.code || "SERVER_ERROR");
+        if (["STOCK_CHANGED", "STOCK_CONFLICT"].includes(e.code))
+          await refresh();
         if (e.status >= 400 && e.status < 500) await persist(null);
         if (e.details)
           setIssues(
@@ -141,6 +158,10 @@ export function NativeCommand({ navigation, route }: any) {
       };
     }
   } catch {}
+  let returnSummary: Record<string, string> | null = null;
+  try {
+    if (kind === "purchaseReturn") returnSummary = returnPreview(state, values);
+  } catch {}
   return (
     <SafeAreaView
       style={{ flex: 1, backgroundColor: c.bg }}
@@ -160,6 +181,28 @@ export function NativeCommand({ navigation, route }: any) {
           {paymentHint && (
             <Txt style={{ marginBottom: 14 }}>{tr(paymentHint)}</Txt>
           )}
+          {["stockEdit", "purchaseReturn", "supplierRefund"].includes(kind) && (
+            <Panel>
+              <Txt>{tr(kind + "Help")}</Txt>
+            </Panel>
+          )}
+          {["stockEdit", "purchaseReturn"].includes(kind) &&
+            values.unitId &&
+            !review &&
+            !pending && (
+              <Button
+                label={tr("reloadStock")}
+                onPress={() =>
+                  setValues((v) => ({
+                    ...v,
+                    ...unitFormValues(
+                      kind,
+                      state.units.find((u) => u.id === v.unitId),
+                    ),
+                  }))
+                }
+              />
+            )}
           {formFields(kind, values).map((f) => (
             <View key={f.key}>
               {f.type === "select" ? (
@@ -188,7 +231,10 @@ export function NativeCommand({ navigation, route }: any) {
                           ...prev,
                           [f.key]: String(v),
                           ...(f.key === "unitId"
-                            ? { price: "", discount: "", cash: "", bank: "" }
+                            ? unitFormValues(
+                                kind,
+                                state.units.find((u) => u.id === String(v)),
+                              )
                             : {}),
                           ...(f.key === "customerId"
                             ? customerInvoiceFields(
@@ -278,6 +324,17 @@ export function NativeCommand({ navigation, route }: any) {
               )}
             </View>
           ))}
+          {returnSummary && (
+            <Panel>
+              {Object.entries(returnSummary)
+                .filter(([, v]) => v !== "")
+                .map(([k, v]) => (
+                  <Txt key={k}>
+                    {tr(k)}: {currency(v, lang)}
+                  </Txt>
+                ))}
+            </Panel>
+          )}
           {preview && (
             <Panel>
               {Object.entries(preview).map(

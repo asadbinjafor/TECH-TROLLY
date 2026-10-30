@@ -1,5 +1,64 @@
 export type Language = "bn" | "en";
 const words: Record<string, [string, string]> = {
+  originalRefundDue: ["Original refund receivable", "ফেরতের সময় মূল পাওনা"],
+  acquisitionCost: ["Stock acquisition cost", "মজুদের মোট ক্রয় খরচ"],
+  partyName: ["Supplier / contact", "Supplier / যোগাযোগের নাম"],
+  originalNumber: ["Original document", "মূল ডকুমেন্ট"],
+  stockEdit: ["Edit stock details", "স্টকের তথ্য সম্পাদনা"],
+  purchaseReturn: ["Return to supplier", "Supplier-কে পণ্য ফেরত"],
+  supplierRefund: ["Collect supplier refund", "Supplier-এর ফেরত টাকা আদায়"],
+  stockHistory: ["Stock history", "স্টকের ইতিহাস"],
+  beforeEdit: ["Before edit", "আগের তথ্য"],
+  afterEdit: ["After edit", "সংশোধিত তথ্য"],
+  reloadStock: ["Load current stock details", "বর্তমান স্টকের তথ্য আনুন"],
+  stockEditHelp: [
+    "Edit unsold stock details with a reason. Purchase cost, supplier, payments and original documents stay in history. Future sales use the corrected details.",
+    "অবিক্রীত পণ্যের তথ্য ও সংশোধনের কারণ দিন। ক্রয়মূল্য, supplier, টাকা ও মূল রেকর্ড অপরিবর্তিত থাকবে। পরবর্তী বিক্রিতে সংশোধিত তথ্য যাবে।",
+  ],
+  purchaseReturnHelp: [
+    "Enter the merchandise value accepted by the supplier (zero is allowed). Unpaid purchase dues are offset first; the remaining refund stays receivable. Cash/Bank changes only when you collect the refund. Deductions and unrecovered capitalized courier cost are recorded as a loss.",
+    "Supplier যে ফেরতমূল্য মেনে নিয়েছেন সেটি দিন (শূন্যও দেওয়া যায়)। আগে এই ক্রয়ের বাকি সমন্বয় হবে; অবশিষ্ট টাকা supplier-এর কাছে পাওনা থাকবে। টাকা আদায় করলে Cash/Bank বাড়বে। কাটতি ও ফেরত না পাওয়া মূলধনী কুরিয়ার খরচ লোকসানে যাবে।",
+  ],
+  supplierRefundHelp: [
+    "Record only money actually received from the supplier. Partial collections are allowed. This reduces the refund due; it is not new sales profit.",
+    "Supplier-এর কাছ থেকে বাস্তবে পাওয়া টাকা লিখুন। আংশিক আদায় করা যায়। এতে ফেরত পাওনা কমবে; নতুন বিক্রির লাভ হবে না।",
+  ],
+  returnValue: [
+    "Supplier-approved return value",
+    "Supplier-এর অনুমোদিত ফেরতমূল্য",
+  ],
+  purchaseAmount: ["Original merchandise price", "মূল পণ্যের ক্রয়মূল্য"],
+  returnOffset: ["Purchase due adjusted", "ক্রয়ের বাকি সমন্বয়"],
+  refundDue: ["Refund to collect", "ফেরত বাবদ পাওনা"],
+  returnLoss: [
+    "Return deduction / unrecovered cost",
+    "ফেরতের কাটতি / অনাদায়ী ক্রয় খরচ",
+  ],
+  supplierReceivable: [
+    "Supplier refund receivable",
+    "Supplier-এর কাছে ফেরত পাওনা",
+  ],
+  closingSupplierRefund: [
+    "Supplier refund due at end date",
+    "শেষ তারিখে Supplier-এর কাছে ফেরত পাওনা",
+  ],
+  purchaseReturns: [
+    "Supplier-approved purchase returns",
+    "Supplier-এর অনুমোদিত ক্রয় ফেরত",
+  ],
+  RETURNED: ["Returned to supplier", "Supplier-কে ফেরত দেওয়া"],
+  STOCK_CHANGED: [
+    "Stock changed since you opened this form. Refresh and load its current details before reviewing again.",
+    "ফর্ম খোলার পর স্টকের তথ্য বদলেছে। Refresh করে বর্তমান তথ্য এনে আবার যাচাই করুন।",
+  ],
+  RETURN_VALUE_INVALID: [
+    "Return value cannot exceed the original merchandise price.",
+    "ফেরতমূল্য মূল পণ্যের ক্রয়মূল্যের বেশি হতে পারবে না।",
+  ],
+  emptySupplierRefundSelection: [
+    "No supplier refunds are due in your accessible records.",
+    "আপনার দেখা যায় এমন রেকর্ডে Supplier-এর ফেরত পাওনা নেই।",
+  ],
   invoiceSellerNameMissing: [
     "The original seller's actual name is missing. The invoice name area is blank. Update that seller's profile name in Settings.",
     "এই বিক্রেতার প্রকৃত নাম সংরক্ষিত নেই, তাই ইনভয়েসে নামের জায়গা খালি রাখা হয়েছে। Settings থেকে সংশ্লিষ্ট বিক্রেতার profile-এ প্রকৃত নাম দিন।",

@@ -76,12 +76,26 @@ export class ReportsService {
       revenue = -get("revenue", "activity"),
       cogs = get("cogs", "activity"),
       expense = get("expense", "activity");
-    const documents = (
-      await em.query(
-        `${documentsSql} WHERE d.business_date BETWEEN $1 AND $2 ORDER BY d.created_at DESC,d.id`,
-        [from, to],
-      )
-    ).map(documentView);
+    const documentRows = await em.query(
+      `${documentsSql} WHERE d.business_date BETWEEN $1 AND $2 ORDER BY d.created_at DESC,d.id`,
+      [from, to],
+    );
+    // Historical return statements must not consume receipts after their end date.
+    const refundDues = new Map(
+      (
+        await em.query(
+          `SELECT d.id,d.original_due-COALESCE(sum(a.amount) FILTER(WHERE receipt.business_date<=$2::date),0) AS due
+       FROM document d LEFT JOIN allocation a ON a.target_id=d.id LEFT JOIN document receipt ON receipt.id=a.document_id
+       WHERE d.kind='purchaseReturn' AND d.business_date BETWEEN $1::date AND $2::date GROUP BY d.id`,
+          [from, to],
+        )
+      ).map((r: any) => [r.id, r.due]),
+    );
+    const documents = documentRows.map((d: any) =>
+      documentView(
+        refundDues.has(d.id) ? { ...d, due: refundDues.get(d.id) } : d,
+      ),
+    );
     // Net cash+bank per document removes transfers. Grouping also handles linked reversals.
     const [external] = await em.query(
       `SELECT COALESCE(sum(n) FILTER(WHERE n>0),0) AS inflow,COALESCE(-sum(n) FILTER(WHERE n<0),0) AS outflow FROM (SELECT sum(l.amount) AS n FROM journal_line l JOIN document d ON d.id=l.document_id WHERE l.account IN ('cash','bank') AND d.business_date BETWEEN $1 AND $2 AND d.kind<>'opening' GROUP BY d.id) x`,
@@ -125,6 +139,7 @@ export class ReportsService {
       openingBank: decimal(get("bank", "opening")),
       closingCash: decimal(get("cash", "closing")),
       closingBank: decimal(get("bank", "closing")),
+      closingSupplierRefund: decimal(get("supplierReceivable", "closing")),
       cashIn: decimal(get("cash", "inflow")),
       cashOut: decimal(get("cash", "outflow")),
       bankIn: decimal(get("bank", "inflow")),

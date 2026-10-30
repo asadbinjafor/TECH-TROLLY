@@ -14,6 +14,8 @@ import {
   decimal,
   customerInvoiceFields,
   partyKindForSource,
+  unitFormValues,
+  returnPreview,
   type Field,
   type CommandKind,
 } from "@tech-trolley/contracts";
@@ -26,9 +28,11 @@ export function CommandForm({
   onClose,
   onSaved,
   initialUnit,
+  initialDocument,
 }: {
   kind: CommandKind;
   initialUnit?: string;
+  initialDocument?: string;
   onClose: () => void;
   onSaved: (id: string, kind: CommandKind) => void;
 }) {
@@ -53,11 +57,17 @@ export function CommandForm({
         if (initialUnit && v.unitId !== initialUnit)
           Object.assign(v, {
             unitId: initialUnit,
-            price: "",
-            discount: "",
-            cash: "",
-            bank: "",
+            ...unitFormValues(
+              kind,
+              state?.units.find((u) => u.id === initialUnit),
+            ),
           });
+        if (
+          initialDocument &&
+          kind === "supplierRefund" &&
+          v.documentId !== initialDocument
+        )
+          Object.assign(v, { documentId: initialDocument, amount: "" });
         return v;
       } catch {
         return {};
@@ -120,6 +130,8 @@ export function CommandForm({
         setError("VALIDATION_ERROR");
       } else {
         setError(e.code || "SERVER_ERROR");
+        if (["STOCK_CHANGED", "STOCK_CONFLICT"].includes(e.code))
+          await refresh();
         if (e.status >= 400 && e.status < 500) persist(null);
         if (e.details)
           setIssues(
@@ -142,6 +154,10 @@ export function CommandForm({
         profit: unit ? decimal(total - minor(unit.cost)) : undefined,
       };
     }
+  } catch {}
+  let returnSummary: Record<string, string> | null = null;
+  try {
+    if (kind === "purchaseReturn") returnSummary = returnPreview(state, values);
   } catch {}
   return (
     <div className="modal-backdrop">
@@ -166,6 +182,29 @@ export function CommandForm({
           </button>
         </header>
         <p className="date-stamp">{state.today} · Asia/Dhaka</p>
+        {["stockEdit", "purchaseReturn", "supplierRefund"].includes(kind) && (
+          <p className="notice">{t(kind + "Help", lang)}</p>
+        )}
+        {["stockEdit", "purchaseReturn"].includes(kind) &&
+          values.unitId &&
+          !review &&
+          !pending && (
+            <button
+              type="button"
+              className="button"
+              onClick={() =>
+                setValues((v) => ({
+                  ...v,
+                  ...unitFormValues(
+                    kind,
+                    state.units.find((u) => u.id === v.unitId),
+                  ),
+                }))
+              }
+            >
+              {t("reloadStock", lang)}
+            </button>
+          )}
         {paymentHint && (
           <p className="notice" role="status">
             {t(paymentHint, lang)}
@@ -221,7 +260,10 @@ export function CommandForm({
                         ...v,
                         [field.key]: e.target.value,
                         ...(field.key === "unitId"
-                          ? { price: "", discount: "", cash: "", bank: "" }
+                          ? unitFormValues(
+                              kind,
+                              state.units.find((u) => u.id === e.target.value),
+                            )
                           : {}),
                         ...(field.key === "customerId"
                           ? customerInvoiceFields(
@@ -371,6 +413,18 @@ export function CommandForm({
                 {t("checkStatus", lang)}
               </button>
             </div>
+          )}
+          {returnSummary && (
+            <section className="notice" aria-label={t("purchaseReturn", lang)}>
+              {Object.entries(returnSummary)
+                .filter(([, v]) => v !== "")
+                .map(([k, v]) => (
+                  <div className="pnl-row" key={k}>
+                    <span>{t(k, lang)}</span>
+                    <b>{currency(v, lang)}</b>
+                  </div>
+                ))}
+            </section>
           )}
           {error && (
             <p role="alert" className="error">
