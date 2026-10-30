@@ -107,7 +107,7 @@ export function renderInvoiceBody(
   const row = (label: string, value: string, gold = false) =>
     `<div class="tt-memo__total-row${gold ? " tt-memo__total-row--gold" : ""}"><span>${label}</span><strong class="${money(value).length > 13 ? "tt-memo__money--long" : ""}">${esc(money(value))}</strong></div>`;
   const address = esc(r.shop.address).replace(
-    /,?\s*(Bashundhara City)/i,
+    /\s+(Bashundhara City)/i,
     "<br>$1",
   );
   const policy = r.shop.warrantyPolicy
