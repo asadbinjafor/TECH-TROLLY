@@ -66,7 +66,7 @@ export async function createApp() {
     app,
     new DocumentBuilder()
       .setTitle("Tech Trolley internal API")
-      .setVersion("1.0")
+      .setVersion("1.1")
       .addCookieAuth("tt_session")
       .addBearerAuth()
       .build(),
