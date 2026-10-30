@@ -4,7 +4,8 @@ import {
   choices,
   prepareForm,
   formFields,
-  formDefaults,
+  restoreFormDraft,
+  paymentHelp,
   fieldRequired,
   fieldMaxLength,
   selectionBlockers,
@@ -44,16 +45,18 @@ export function CommandForm({
               v === null ? "" : String(v),
             ]),
           );
-        const v =
-          JSON.parse(sessionStorage.getItem(storage) || "null") ||
-          formDefaults(kind, state?.today || "");
+        const v = restoreFormDraft(
+          kind,
+          JSON.parse(sessionStorage.getItem(storage) || "null"),
+          state?.today || "",
+        );
         if (initialUnit && v.unitId !== initialUnit)
           Object.assign(v, {
             unitId: initialUnit,
             price: "",
-            discount: "0",
-            cash: "0",
-            bank: "0",
+            discount: "",
+            cash: "",
+            bank: "",
           });
         return v;
       } catch {
@@ -78,6 +81,7 @@ export function CommandForm({
   if (!state) return null;
   const blockers = selectionBlockers(kind, values, state);
   const blocked = !pending && Object.keys(blockers).length > 0;
+  const paymentHint = paymentHelp(kind, values);
   const persist = (p: typeof pending) => {
     setPending(p);
     if (p) sessionStorage.setItem(pendingKey, JSON.stringify(p));
@@ -162,6 +166,11 @@ export function CommandForm({
           </button>
         </header>
         <p className="date-stamp">{state.today} · Asia/Dhaka</p>
+        {paymentHint && (
+          <p className="notice" role="status">
+            {t(paymentHint, lang)}
+          </p>
+        )}
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -198,10 +207,9 @@ export function CommandForm({
                     : field.label,
                   lang,
                 )}
-                {field.optional &&
-                  !fieldRequired(kind, field, values, state) && (
-                    <small className="muted"> · {t("optional", lang)}</small>
-                  )}
+                {!fieldRequired(kind, field, values, state) && (
+                  <small className="muted"> · {t("optional", lang)}</small>
+                )}
                 {field.type === "select" ? (
                   <select
                     aria-label={t(field.label, lang)}
@@ -213,7 +221,7 @@ export function CommandForm({
                         ...v,
                         [field.key]: e.target.value,
                         ...(field.key === "unitId"
-                          ? { price: "", discount: "0", cash: "0", bank: "0" }
+                          ? { price: "", discount: "", cash: "", bank: "" }
                           : {}),
                         ...(field.key === "customerId"
                           ? customerInvoiceFields(

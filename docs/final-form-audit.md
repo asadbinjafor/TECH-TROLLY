@@ -10,7 +10,7 @@ Scope: all 16 transaction commands, fixed and data-backed dropdowns, required/op
 | Fully paid walk-in sale showed a customer hint that sounded mandatory | Explicitly explain that saved Customer is optional for full payment |
 | Customer for a credit sale was checked only at financial posting | Shared validation and required marker now request Customer before confirmation |
 | Phone IMEI remained attached to a draft after changing to Accessory | Hide that field for Accessory and send null IMEI; retain its draft value if the user changes back to Phone; direct API schema remains strict |
-| Cash/Bank and salary month unnecessarily began blank | New-sale payment sides start at zero; salary month uses server-supplied Bangladesh business date |
+| Cash/Bank and salary month unnecessarily began blank | Superseded by the Owner's later blank-input request: payment/discount inputs start empty; salary month still uses the server-supplied Bangladesh business date |
 | Reversal options included opening, cash counts, reversal records and known dependent transactions | Exclude unsupported kinds, sold purchases, superseded sales and documents with allocated dues; authoritative API checks remain final, especially for incomplete old snapshots |
 | A previously selected option could be removed/sold/settled by another action | Show unavailable-selection guidance and block a new submission while keeping the other input values |
 | Input lengths differed from server constraints | Align product/contact/money/month limits, including native inputs and admin editors |
@@ -23,9 +23,9 @@ Scope: all 16 transaction commands, fixed and data-backed dropdowns, required/op
 | --- | --- |
 | Opening, contribution, withdrawal, transfer, cash count | Required blanks, amount/account choices, reason fields; mismatch reason required in UI; isolated accounting checks |
 | Purchase | Required fields, three independent stock details, phone IMEI/battery validation, accessory null IMEI, supplier creation and selected draft preservation |
-| Sale | Available stock, optional walk-in customer/contact fields, zero defaults, credit Customer requirement, selected unit resets, invoice output |
+| Sale | Available stock, optional walk-in customer/contact fields, blank payment/discount defaults (later follow-up), credit Customer requirement, selected unit resets, invoice output |
 | Collection / supplier payment / loan repayment / advance repayment | Correct outstanding source type, empty guidance, fixed accounts, stale selections; isolated settlement/overcollection checks |
-| Loan / Staff advance / salary | Person/Staff sources, required reasons, current salary month, advance default zero; existing salary uniqueness and permission checks |
+| Loan / Staff advance / salary | Person/Staff sources, required reasons, current salary month, blank optional advance adjustment (later follow-up); existing salary uniqueness and permission checks |
 | Correction | Allowed types, stock/dependency exclusions, required reason, immutable linked journal correction tests |
 | Contacts / categories / users / shop / login | Optional contact values, length limits, create/update/archive/restore and duplicate handling; account response/audit values; existing authentication, last-Owner, revocation and same-origin checks |
 | Reports / date filters | Existing inclusive range, invalid/future date, CSV/profit and Staff today-only tests retained |

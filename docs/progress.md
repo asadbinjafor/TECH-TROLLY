@@ -1,5 +1,11 @@
 # Progress and release handover
 
+## Blank money inputs and payment dependencies — 2026-10-30
+
+The Owner supersedes the earlier sale zero-default choice. Audited all 16 shared transaction forms plus web/native editors. Every numeric input now begins empty, including sale-unit resets and restored ordinary optional-zero drafts. Discount, sale Cash/Bank, courier, purchase payment, opening balances and salary advance adjustment accept blank values and normalize to decimal zero only at new-command preparation. Dynamic Customer/account/courier-treatment requirements preserve dues and actual account movements; bilingual payment guidance explains full Cash, full Bank and credit. Existing positive-amount, overpayment and discount constraints now also reject before confirmation. Saved pending commands retain their exact payload/key. No migration or accounting/data rewrite. See [field mapping and evidence](money-input-audit.md).
+
+API/web builds and all workspace typechecks pass. All 22 hosting/form checks and 22 isolated PostgreSQL checks pass. A separate synthetic shop verified 390px Cash-only/Bank-only Review with blank discount/unused side and excess-payment rejection, with no captured browser errors. Prepared blank-input payloads also posted full Cash, full Bank and partial credit through the real API; exact balances, customer due, balanced journal and idempotent retries passed. No production business test writes. The persistent localhost app remains independent; native physical-device verification is not claimed.
+
 ## Contact dropdown ID display — 2026-10-30
 
 Removed the UUID-prefix fallback shown beside a Supplier name when its phone is empty. The shared Supplier/Customer/Person choices now show only the name and, when provided, phone. Stable internal IDs remain selection values and preserve existing transaction links. No generation/storage/authentication/accounting/schema change. Shared/web builds and 19 existing hosting/form checks pass. A direct selector check confirms `Smart Switch` without phone, the supplied-phone label when present, and an unchanged internal selection value.

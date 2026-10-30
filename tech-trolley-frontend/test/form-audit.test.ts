@@ -5,6 +5,8 @@ import {
   forms,
   choices,
   formDefaults,
+  restoreFormDraft,
+  paymentHelp,
   formFields,
   fieldRequired,
   fieldMaxLength,
@@ -186,6 +188,202 @@ test("every required input rejects a blank and every fixed dropdown option remai
       }
     }
   }
+});
+test("all numeric inputs start empty; old optional-zero drafts reopen empty without losing real input", () => {
+  for (const kind of Object.keys(forms) as CommandKind[])
+    for (const field of forms[kind].filter(
+      (f) => f.type === "money" || f.type === "number",
+    ))
+      assert.equal(fields(kind)[field.key], "", `${kind}.${field.key}`);
+  const draft = restoreFormDraft(
+    "sale",
+    {
+      unitId: id(1),
+      price: "25.00",
+      discount: "0",
+      cash: "25.00",
+      bank: "0.00",
+    },
+    empty.today,
+  );
+  assert.deepEqual(
+    [draft.price, draft.discount, draft.cash, draft.bank],
+    ["25.00", "", "25.00", ""],
+  );
+  assert.equal(
+    restoreFormDraft("cashCount", { counted: "0" }, empty.today).counted,
+    "0",
+  );
+  assert.equal(
+    restoreFormDraft("sale", { discount: "invalid" }, empty.today).discount,
+    "invalid",
+  );
+});
+test("sale accepts blank discount and either unused payment side, mixed payments and tracked credit", () => {
+  for (const [cash, bank, discount] of [
+    ["100", "", ""],
+    ["", "100", ""],
+    ["60.25", "39.75", ""],
+    ["90", "", "10"],
+    ["", "90", "10"],
+    ["60", "30", "10"],
+    ["999999999999.99", "", ""],
+  ] as const) {
+    const price = cash === "999999999999.99" ? cash : "100";
+    const raw = fields("sale", { unitId: id(1), price, cash, bank, discount });
+    const parsed = prepareForm("sale", raw, populated) as any;
+    assert.equal(parsed.discount, discount || "0");
+    assert.equal(parsed.cash, cash || "0");
+    assert.equal(parsed.bank, bank || "0");
+    assert.equal(parsed.customerId, null);
+    for (const key of ["cash", "bank", "discount", "customerId"])
+      assert.equal(
+        fieldRequired(
+          "sale",
+          forms.sale.find((f) => f.key === key)!,
+          raw,
+          populated,
+        ),
+        false,
+      );
+  }
+  assert.equal(
+    paymentHelp("sale", fields("sale", { price: "100", cash: "100" })),
+    "fullCashPaymentHelp",
+  );
+  assert.equal(
+    paymentHelp("sale", fields("sale", { price: "100", bank: "100" })),
+    "fullBankPaymentHelp",
+  );
+  const partials: Record<string, string>[] = [
+    {},
+    { cash: "40" },
+    { bank: "40" },
+  ];
+  for (const payments of partials) {
+    const raw = fields("sale", { unitId: id(1), price: "100", ...payments });
+    assert.equal(paymentHelp("sale", raw), "creditPaymentHelp");
+    assert.throws(
+      () => prepareForm("sale", raw, populated),
+      /CUSTOMER_REQUIRED/,
+    );
+    assert.ok(prepareForm("sale", { ...raw, customerId: id(3) }, populated));
+  }
+  const invalidPayments: Record<string, string>[] = [
+    { cash: "101" },
+    { cash: "60", bank: "41" },
+    { discount: "100" },
+    { discount: "101" },
+    { cash: "-1" },
+    { cash: "1.001" },
+    { discount: "oops" },
+    { price: "" },
+    { price: "0" },
+  ];
+  for (const invalid of invalidPayments)
+    assert.throws(() =>
+      prepareForm(
+        "sale",
+        fields("sale", {
+          unitId: id(1),
+          price: "100",
+          customerId: id(3),
+          ...invalid,
+        }),
+        populated,
+      ),
+    );
+});
+test("zero-allowed dependencies stay optional while actual payments require their account", () => {
+  const purchase = fields("purchase", {
+    ...scenarios.purchase,
+    paid: "",
+    procurement: "",
+    account: "",
+    treatment: "",
+  });
+  const parsed = prepareForm("purchase", purchase, populated) as any;
+  assert.deepEqual(
+    [parsed.paid, parsed.procurement, parsed.account, parsed.treatment],
+    ["0", "0", "cash", "capitalize"],
+  );
+  for (const key of ["paid", "procurement", "account", "treatment"])
+    assert.equal(
+      fieldRequired(
+        "purchase",
+        forms.purchase.find((f) => f.key === key)!,
+        purchase,
+        populated,
+      ),
+      false,
+    );
+  assert.ok(
+    prepareForm(
+      "purchase",
+      { ...purchase, paid: "0.00", procurement: "0.00" },
+      populated,
+    ),
+  );
+  assert.throws(() =>
+    prepareForm("purchase", { ...purchase, paid: "1" }, populated),
+  );
+  assert.throws(() =>
+    prepareForm("purchase", { ...purchase, procurement: "1" }, populated),
+  );
+  assert.ok(
+    prepareForm(
+      "purchase",
+      { ...purchase, paid: "1", account: "bank" },
+      populated,
+    ),
+  );
+  assert.ok(
+    prepareForm(
+      "purchase",
+      { ...purchase, procurement: "1", treatment: "expense", account: "cash" },
+      populated,
+    ),
+  );
+  assert.throws(
+    () =>
+      prepareForm(
+        "purchase",
+        { ...purchase, paid: "2", account: "cash" },
+        populated,
+      ),
+    /PAYMENT_INVALID/,
+  );
+  const opening = prepareForm(
+    "opening",
+    fields("opening", { bank: "100" }),
+    populated,
+  ) as any;
+  assert.deepEqual(opening, { cash: "0", bank: "100" });
+  assert.deepEqual(prepareForm("opening", fields("opening"), populated), {
+    cash: "0",
+    bank: "0",
+  });
+  const salary = fields("salary", { ...scenarios.salary, account: "" });
+  assert.throws(() => prepareForm("salary", salary, populated));
+  assert.equal(
+    (prepareForm("salary", { ...salary, account: "cash" }, populated) as any)
+      .applyAdvance,
+    "0",
+  );
+  assert.ok(prepareForm("salary", { ...salary, applyAdvance: "1" }, populated));
+  assert.throws(
+    () =>
+      prepareForm(
+        "salary",
+        { ...salary, applyAdvance: "2", account: "cash" },
+        populated,
+      ),
+    /PAYMENT_INVALID/,
+  );
+  assert.throws(() => prepareForm("cashCount", fields("cashCount"), populated));
+  assert.ok(
+    prepareForm("cashCount", fields("cashCount", { counted: "0" }), populated),
+  );
 });
 test("conditional contact, IMEI, reason and stale selection validation preserves optional blanks", () => {
   const sale = fields("sale", { ...scenarios.sale, cash: "0" });

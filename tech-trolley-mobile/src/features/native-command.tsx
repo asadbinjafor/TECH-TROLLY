@@ -14,7 +14,8 @@ import {
   choices,
   prepareForm,
   formFields,
-  formDefaults,
+  restoreFormDraft,
+  paymentHelp,
   fieldRequired,
   fieldMaxLength,
   selectionBlockers,
@@ -60,15 +61,17 @@ export function NativeCommand({ navigation, route }: any) {
               v === null ? "" : String(v),
             ]),
           )
-        : draft
-          ? JSON.parse(draft)
-          : formDefaults(kind, state?.today || "");
+        : restoreFormDraft(
+            kind,
+            draft ? JSON.parse(draft) : null,
+            state?.today || "",
+          );
       if (!p && route.params.unitId && initial.unitId !== route.params.unitId) {
         initial.unitId = route.params.unitId;
         initial.price = "";
-        initial.discount = "0";
-        initial.cash = "0";
-        initial.bank = "0";
+        initial.discount = "";
+        initial.cash = "";
+        initial.bank = "";
       }
       setValues(initial);
       setPending(p ? JSON.parse(p) : null);
@@ -81,6 +84,7 @@ export function NativeCommand({ navigation, route }: any) {
   if (!state || !ready) return <Txt>{tr("loading")}</Txt>;
   const blockers = selectionBlockers(kind, values, state);
   const blocked = !pending && Object.keys(blockers).length > 0;
+  const paymentHint = paymentHelp(kind, values);
   const persist = async (p: typeof pending) => {
     setPending(p);
     if (p) await AsyncStorage.setItem(pendingKey, JSON.stringify(p));
@@ -153,11 +157,19 @@ export function NativeCommand({ navigation, route }: any) {
           <Txt style={{ fontSize: 11, color: c.muted, marginBottom: 20 }}>
             {state.today} · Asia/Dhaka
           </Txt>
+          {paymentHint && (
+            <Txt style={{ marginBottom: 14 }}>{tr(paymentHint)}</Txt>
+          )}
           {formFields(kind, values).map((f) => (
             <View key={f.key}>
               {f.type === "select" ? (
                 <View style={{ marginBottom: 14 }}>
-                  <Txt style={{ fontSize: 12 }}>{tr(f.label)}</Txt>
+                  <Txt style={{ fontSize: 12 }}>
+                    {tr(f.label) +
+                      (!fieldRequired(kind, f, values, state)
+                        ? " · " + tr("optional")
+                        : "")}
+                  </Txt>
                   <View
                     style={{
                       borderWidth: 1,
@@ -176,7 +188,7 @@ export function NativeCommand({ navigation, route }: any) {
                           ...prev,
                           [f.key]: String(v),
                           ...(f.key === "unitId"
-                            ? { price: "", discount: "0", cash: "0", bank: "0" }
+                            ? { price: "", discount: "", cash: "", bank: "" }
                             : {}),
                           ...(f.key === "customerId"
                             ? customerInvoiceFields(
@@ -212,7 +224,10 @@ export function NativeCommand({ navigation, route }: any) {
               ) : (
                 <Input
                   label={
-                    tr(f.label) + (f.optional ? " · " + tr("optional") : "")
+                    tr(f.label) +
+                    (!fieldRequired(kind, f, values, state)
+                      ? " · " + tr("optional")
+                      : "")
                   }
                   value={values[f.key] || ""}
                   onChange={(v) =>

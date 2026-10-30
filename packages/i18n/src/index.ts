@@ -36,6 +36,22 @@ const words: Record<string, [string, string]> = {
   ],
   cashReceived: ["Cash received", "ক্যাশে পেয়েছেন"],
   bankReceived: ["Bank received", "ব্যাংকে পেয়েছেন"],
+  salePaymentHelp: [
+    "Enter only the amounts received. Discount and unused payment fields may stay blank. You can split payment between Cash and Bank.",
+    "যত টাকা পেয়েছেন শুধু সেটুকু লিখুন। Discount ও ব্যবহার না করা payment-এর ঘর খালি রাখা যাবে। Cash ও Bank মিলিয়েও টাকা নেওয়া যাবে।",
+  ],
+  fullCashPaymentHelp: [
+    "Fully paid in Cash. Bank and Discount may stay blank.",
+    "পুরো টাকা Cash-এ পেয়েছেন। Bank ও Discount-এর ঘর খালি রাখা যাবে।",
+  ],
+  fullBankPaymentHelp: [
+    "Fully paid in Bank. Cash and Discount may stay blank.",
+    "পুরো টাকা Bank-এ পেয়েছেন। Cash ও Discount-এর ঘর খালি রাখা যাবে।",
+  ],
+  creditPaymentHelp: [
+    "The unpaid amount will be saved as customer due. Select a Customer, or enter the remaining payment. Discount may stay blank.",
+    "না পাওয়া টাকা গ্রাহকের বাকি হবে। Customer নির্বাচন করুন অথবা বাকি payment লিখুন। Discount খালি রাখা যাবে।",
+  ],
   cashAccount: ["Cash", "ক্যাশ"],
   bankAccount: ["Bank", "ব্যাংক"],
   REVERSED: ["Reversed purchase", "সংশোধিত ক্রয়"],

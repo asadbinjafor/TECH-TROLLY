@@ -127,3 +127,8 @@ Render service-এর paid compute plan-এ এই idle spin-down থাকে �
 ## ভুল deployment হলে
 
 নতুন deployment-এর logs ও commit আগে মিলিয়ে দেখুন। Vercel-এর working deployment-এ rollback এবং Render-এর working commit-এ redeploy/rollback করা যায়। Code rollback database migration undo করে না—database table মুছবেন না। Schema বদল থাকলে কোন API/web version একসঙ্গে compatible তা দেখে fix/release করুন। পূর্ণ hosting setup ও backup-এর জন্য [deployment guide](deploy-vercel-render-supabase-bn.md) দেখুন।
+
+
+### খালি টাকা ও optional payment field-এর আপডেট
+
+এই পরিবর্তন shared contracts/i18n এবং web/native form-এ। Production branch-এ push করলে আগের নিয়মেই Vercel deploy এবং CI পাসের পরে Render deploy হবে; নতুন Supabase migration নেই। Deploy শেষে নতুন বিক্রির form খুলে Discount/Cash/Bank খালি আছে কি না দেখুন। একটিতে পুরো টাকা লিখে Review করুন—অন্য ঘরে ০ দিতে হবে না। পরীক্ষার জন্য আসল বিক্রি Confirm করবেন না। কম টাকা পেলে Customer নির্বাচন করতে হবে; বাকি আলাদা হিসাব হবে।

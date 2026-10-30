@@ -400,6 +400,7 @@ export interface Field {
   options?: string[];
   optional?: boolean;
   default?: string;
+  emptyValue?: string;
 }
 const f = (
   key: string,
@@ -412,10 +413,13 @@ const a = f("account", "select", {
   }),
   n = f("note", "text", { optional: true }),
   amount = f("amount", "money");
+// Blank input is a UI choice. Financial payloads still carry decimal strings.
+const optionalMoney = (key: string, extra: Partial<Field> = {}) =>
+  f(key, "money", { optional: true, emptyValue: "0", ...extra });
 export const forms: Record<CommandKind, Field[]> = {
   opening: [
-    f("cash", "money", { label: "openingCash" }),
-    f("bank", "money", { label: "openingBank" }),
+    optionalMoney("cash", { label: "openingCash" }),
+    optionalMoney("bank", { label: "openingBank" }),
   ],
   purchase: [
     f("model"),
@@ -439,13 +443,14 @@ export const forms: Record<CommandKind, Field[]> = {
     }),
     f("supplierId", "select", { source: "suppliers" }),
     f("cost", "money"),
-    f("procurement", "money", { default: "0" }),
+    optionalMoney("procurement"),
     f("treatment", "select", {
       options: ["capitalize", "expense"],
       default: "capitalize",
+      optional: true,
     }),
-    f("paid", "money"),
-    a,
+    optionalMoney("paid"),
+    { ...a, optional: true },
     n,
   ],
   sale: [
@@ -455,9 +460,9 @@ export const forms: Record<CommandKind, Field[]> = {
     f("customerPhone", "text", { optional: true }),
     f("customerAddress", "text", { optional: true }),
     f("price", "money"),
-    f("discount", "money", { default: "0" }),
-    f("cash", "money", { label: "cashReceived", default: "0" }),
-    f("bank", "money", { label: "bankReceived", default: "0" }),
+    optionalMoney("discount"),
+    optionalMoney("cash", { label: "cashReceived" }),
+    optionalMoney("bank", { label: "bankReceived" }),
     n,
   ],
   collection: [f("documentId", "select", { source: "salesDue" }), amount, a, n],
@@ -499,8 +504,8 @@ export const forms: Record<CommandKind, Field[]> = {
     f("staffId", "select", { source: "staff" }),
     f("month", "month"),
     amount,
-    f("applyAdvance", "money", { default: "0" }),
-    a,
+    optionalMoney("applyAdvance"),
+    { ...a, optional: true },
     n,
   ],
   cashCount: [f("counted", "money"), n],
@@ -547,6 +552,22 @@ export function formDefaults(kind: CommandKind, today: string) {
     ]),
   );
 }
+export function restoreFormDraft(
+  kind: CommandKind,
+  draft: Record<string, string> | null,
+  today: string,
+) {
+  const values = { ...formDefaults(kind, today), ...draft };
+  // Replace old seeded zeros only in ordinary drafts, never pending commands.
+  for (const field of forms[kind])
+    if (
+      field.emptyValue === "0" &&
+      money.safeParse(values[field.key]).success &&
+      minor(values[field.key]) === 0n
+    )
+      values[field.key] = "";
+  return values;
+}
 export function fieldRequired(
   kind: CommandKind,
   field: Field,
@@ -557,6 +578,23 @@ export function fieldRequired(
     return saleNeedsCustomer(values);
   if (kind === "purchase" && field.key === "imei")
     return values.category === "phone";
+  if (kind === "purchase" && ["account", "treatment"].includes(field.key)) {
+    try {
+      return (
+        minor(values.procurement || "0") > 0n ||
+        (field.key === "account" && minor(values.paid || "0") > 0n)
+      );
+    } catch {
+      return true;
+    }
+  }
+  if (kind === "salary" && field.key === "account") {
+    try {
+      return minor(values.amount || "0") !== minor(values.applyAdvance || "0");
+    } catch {
+      return true;
+    }
+  }
   if (kind === "cashCount" && field.key === "note") {
     try {
       return minor(values.counted || "0") !== minor(state.balances.cash);
@@ -565,6 +603,20 @@ export function fieldRequired(
     }
   }
   return !field.optional;
+}
+export function paymentHelp(kind: CommandKind, values: Record<string, string>) {
+  if (kind !== "sale") return null;
+  try {
+    const total = minor(values.price || "0") - minor(values.discount || "0"),
+      cash = minor(values.cash || "0"),
+      bank = minor(values.bank || "0");
+    if (total > 0n && cash === total && bank === 0n)
+      return "fullCashPaymentHelp";
+    if (total > 0n && bank === total && cash === 0n)
+      return "fullBankPaymentHelp";
+    if (total > cash + bank) return "creditPaymentHelp";
+  } catch {}
+  return "salePaymentHelp";
 }
 export function fieldMaxLength(kind: CommandKind, field: Field) {
   if (field.type === "money") return 15;
@@ -648,6 +700,8 @@ export function prepare(kind: CommandKind, raw: Record<string, string>) {
   const data: Record<string, unknown> = { ...raw };
   if (kind === "purchase" && raw.category === "accessory") data.imei = null;
   for (const field of forms[kind]) {
+    if (field.emptyValue !== undefined && !data[field.key])
+      data[field.key] = field.emptyValue;
     if (field.optional && !data[field.key])
       data[field.key] =
         field.key === "imei" ||
@@ -658,7 +712,51 @@ export function prepare(kind: CommandKind, raw: Record<string, string>) {
     if (field.type === "number" && data[field.key] !== null)
       data[field.key] = Number(data[field.key]);
   }
-  return commands[kind].parse(data);
+  const zero = (value: unknown) =>
+    money.safeParse(value).success && minor(String(value)) === 0n;
+  if (kind === "purchase") {
+    if (!data.treatment && zero(data.procurement))
+      data.treatment = "capitalize";
+    if (!data.account && zero(data.paid) && zero(data.procurement))
+      data.account = "cash";
+  }
+  if (
+    kind === "salary" &&
+    !data.account &&
+    money.safeParse(data.amount).success &&
+    money.safeParse(data.applyAdvance).success &&
+    minor(String(data.amount)) === minor(String(data.applyAdvance))
+  )
+    data.account = "cash";
+  const parsed = commands[kind].parse(data);
+  const values = parsed as Record<string, unknown>;
+  const issues: z.core.$ZodIssue[] = [];
+  const issue = (key: string, message: string) =>
+    issues.push({ code: "custom", path: [key], message });
+  // Match existing PostingService constraints before asking for confirmation.
+  for (const key of ["price", "cost", "amount"])
+    if (key in values && minor(String(values[key])) === 0n)
+      issue(key, "POSITIVE_REQUIRED");
+  if (kind === "sale") {
+    const total = minor(String(values.price)) - minor(String(values.discount));
+    if (total <= 0n) issue("discount", "PAYMENT_INVALID");
+    else if (minor(String(values.cash)) + minor(String(values.bank)) > total) {
+      issue("cash", "PAYMENT_INVALID");
+      issue("bank", "PAYMENT_INVALID");
+    }
+  }
+  if (
+    kind === "purchase" &&
+    minor(String(values.paid)) > minor(String(values.cost))
+  )
+    issue("paid", "PAYMENT_INVALID");
+  if (
+    kind === "salary" &&
+    minor(String(values.applyAdvance)) > minor(String(values.amount))
+  )
+    issue("applyAdvance", "PAYMENT_INVALID");
+  if (issues.length) throw new z.ZodError(issues);
+  return parsed;
 }
 export function choices(
   field: Field,
