@@ -1,5 +1,9 @@
 # Progress and release handover
 
+## Stock-return production release authorized — 2026-10-30
+
+The Owner explicitly requested deployment of the reviewed stock-edit / supplier-return / refund-collection update (95cb295). This supersedes the earlier local-review deployment hold for that scope. The subsequently discussed individual-seller identity/declaration form remains analysis-only and is not included. Release uses the existing production branch, Vercel Git integration, Render After CI Checks Pass and normal migration 008 startup runner. Production backup and read-only before/after checks precede live verification; release results follow below when complete.
+
 ## Stock edits and supplier refunds — local review, 2026-10-30
 
 The Owner approved implementation/testing, holding deployment for a later instruction. Added reasoned stock metadata edits with before/after history; accepted supplier return with purchase-payable offset, separate refund receivable and deduction/courier losses; partial Cash/Bank refund collection; shared web/native forms and range exports. Original purchases, journals and invoices remain intact. Migration 008 is additive and retains RLS. Work is on `codex/stock-returns-review`; no production push/deploy/migration. See [accounting, access and limits](stock-returns-audit.md).

@@ -1,6 +1,6 @@
 # নিজে deployment করার নির্দেশনা
 
-বর্তমান Stock Edit / Supplier Return update শুধু লোকাল review-এর জন্য অনুমোদিত। এটি `codex/stock-returns-review` branch-এ থাকবে; আপনার deployment নির্দেশের আগে production branch-এ merge/push করবেন না। পরে অনুমোদিত release-এর সময় স্বাভাবিক Render startup runner migration `008_stock_edits_and_supplier_returns.sql` apply করবে; Supabase reset বা পুরোনো SQL edit করবেন না।
+Stock Edit / Supplier Return update-এর deployment আপনি এখন অনুমোদন করেছেন। পরীক্ষিত `codex/stock-returns-review` পরিবর্তন production branch-এ merge/push করলে নিচের স্বাভাবিক automatic deployment চলবে। Render startup runner migration `008_stock_edits_and_supplier_returns.sql` apply করবে; Supabase reset বা পুরোনো SQL edit করবেন না। ব্যক্তির কাছ থেকে ফোন কেনার পূর্ণ পরিচয়/ঘোষণাপত্রের আলোচনা এই release-এর অংশ নয়।
 
 এই update-এ Stock → স্টকের তথ্য সম্পাদনা দিয়ে অবিক্রীত পণ্যের তথ্য ও কারণ দিন। বাস্তবে supplier-কে ফেরত দিলে “Supplier-কে পণ্য ফেরত” থেকে supplier-এর অনুমোদিত ফেরতমূল্য দিন। Review-তে বাকি সমন্বয়, ফেরত পাওনা ও কাটতি দেখুন। টাকা হাতে এলে টাকা ও বাকি → “Supplier-এর ফেরত টাকা আদায়” থেকে প্রকৃত পরিমাণ এবং Cash/Bank দিন। আংশিক আদায় করা যাবে; মূল history মুছবে না।
 

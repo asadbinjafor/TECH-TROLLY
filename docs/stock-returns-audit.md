@@ -1,6 +1,6 @@
 # Stock edits and supplier returns — 2026-10-30
 
-The Owner approved implementation/local checks, holding deployment for a later instruction. Keep `codex/stock-returns-review` out of the automatic production branch until then.
+The Owner initially approved implementation/local checks with a deployment hold, then explicitly requested deployment of the reviewed update. The normal production-branch/CI/hosting pipeline is now authorized. See progress.md for release verification. The individual-seller declaration discussion is excluded.
 
 ## Posting and history
 
