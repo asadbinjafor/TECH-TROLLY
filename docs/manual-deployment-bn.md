@@ -1,5 +1,7 @@
 # নিজে deployment করার নির্দেশনা
 
+**Password-এর number keyboard:** Login, Dashboard-এর অঙ্ক দেখানো, profile যাচাই, password change, account তৈরি ও reset—সব password ঘরে মোবাইলের number keyboard চাওয়া হবে। Password আগের মতো ঢাকা থাকবে; 0 দিয়ে শুরু হলেও থাকবে। এই client update-এ Vercel deploy এবং native Android/iOS export যাচাই করবেন; API/Render বা Supabase migration লাগবে না। পুরোনো tab refresh করে দেখবেন।
+
 **৪ সংখ্যার password (১ নভেম্বর):** Settings → My profile → Change password থেকে বর্তমান password দিয়ে নতুন password-এ ঠিক ৪টি ইংরেজি সংখ্যা (0–9) দিন। শুরুতে 0 থাকলেও সংরক্ষিত থাকবে। Save হলে আবার login করতে হবে। নতুন Owner/Staff তৈরি বা password reset-এও একই নিয়ম। Update নিজে থেকে আপনার পুরোনো password বদলাবে না; পুরোনোটি দিয়ে login করে পরিবর্তন করবেন। ভুল password পাঁচবার দিলে ওই account-এর password যাচাই ১৫ মিনিটের window শেষ হওয়া পর্যন্ত বন্ধ থাকবে; User ID/email, tab বা login/unlock পাল্টালে সীমা মুছবে না। এই update-এ database migration বা Supabase-এ SQL প্রয়োজন নেই। স্বাভাবিক production branch-এ commit/push → GitHub Verify পাস → Vercel ও Render auto-deploy → web এবং `/api/health`-এ release যাচাই করবেন; নিয়মিত manual deploy দরকার নেই।
 
 এই update live: `ddb8191`; [পূর্ণ CI সফল](https://github.com/asadbinjafor/TECH-TROLLY/actions/runs/41234372324)। Vercel ও Render স্বয়ংক্রিয়ভাবে update হয়েছে। পুরোনো Owner password দিয়ে login এবং ভুল দৈর্ঘ্যের নতুন password প্রত্যাখ্যান live-এ যাচাই হয়েছে; আপনার password বা হিসাবের data বদলানো হয়নি। পুরোনো tab refresh করে Settings খুলুন।

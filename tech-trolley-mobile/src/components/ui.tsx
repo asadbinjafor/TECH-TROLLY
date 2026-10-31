@@ -112,8 +112,15 @@ export function Input({
         maxLength={maxLength}
         onChangeText={onChange}
         secureTextEntry={secure}
+        inputMode={secure ? "numeric" : undefined}
         keyboardType={
-          money ? "decimal-pad" : numeric ? "number-pad" : "default"
+          secure
+            ? "number-pad"
+            : money
+              ? "decimal-pad"
+              : numeric
+                ? "number-pad"
+                : "default"
         }
         autoCapitalize="none"
         autoCorrect={false}

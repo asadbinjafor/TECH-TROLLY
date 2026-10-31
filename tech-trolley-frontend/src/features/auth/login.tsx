@@ -73,6 +73,7 @@ export function Login() {
                 <input
                   name="currentPassword"
                   type="password"
+                  inputMode="numeric"
                   autoComplete="current-password"
                   required
                   maxLength={72}
@@ -100,7 +101,7 @@ export function Login() {
                 }
                 minLength={user?.must_change ? 4 : 1}
                 maxLength={user?.must_change ? 4 : 72}
-                inputMode={user?.must_change ? "numeric" : undefined}
+                inputMode="numeric"
                 pattern={user?.must_change ? "[0-9]{4}" : undefined}
                 required
               />

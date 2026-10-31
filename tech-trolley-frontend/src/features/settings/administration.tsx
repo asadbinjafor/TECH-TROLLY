@@ -467,7 +467,7 @@ export function Administration({ mode }: { mode: "parties" | "settings" }) {
                               : "off"
                           }
                           inputMode={
-                            f.key === "password" ? "numeric" : undefined
+                            f.type === "password" ? "numeric" : undefined
                           }
                           pattern={
                             f.key === "password" ? "[0-9]{4}" : undefined

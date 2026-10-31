@@ -416,7 +416,9 @@ export function CommandForm({
                           ? "decimal"
                           : field.key === "customerPhone"
                             ? "tel"
-                            : field.type === "number" || field.key === "imei"
+                            : field.type === "password" ||
+                                field.type === "number" ||
+                                field.key === "imei"
                               ? "numeric"
                               : undefined
                       }

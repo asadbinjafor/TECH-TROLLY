@@ -130,6 +130,7 @@ export function RevealBalances({
           >
             <input
               type="password"
+              inputMode="numeric"
               name="password"
               autoComplete="current-password"
               required
