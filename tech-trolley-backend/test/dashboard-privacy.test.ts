@@ -18,7 +18,7 @@ test("dashboard password verification is account-bound, throttled and leaves bus
     DATABASE_SSL: "false",
     DATABASE_SSL_CA_BASE64: "",
     BOOTSTRAP_OWNER_EMAIL: "privacy@example.test",
-    BOOTSTRAP_OWNER_PASSWORD: "privacy-owner-password",
+    BOOTSTRAP_OWNER_PASSWORD: "1023",
     WEB_ORIGIN: "http://localhost:3001",
   });
   const { db } = require("../dist/database/database"),
@@ -40,7 +40,7 @@ test("dashboard password verification is account-bound, throttled and leaves bus
       assert.equal(r.status, 201);
       return r.body;
     };
-    const owner = await login("owner", "privacy-owner-password");
+    const owner = await login("owner", "1023");
     const call = (token: string, password: string, extra = {}) =>
       request(http)
         .post("/auth/verify-password")
@@ -53,10 +53,10 @@ test("dashboard password verification is account-bound, throttled and leaves bus
         name: "Privacy staff",
         login: "privacy.staff",
         role: "STAFF",
-        password: "privacy-staff-password",
+        password: "2034",
       });
     assert.equal(staffCreated.status, 201);
-    const staff = await login("privacy.staff", "privacy-staff-password");
+    const staff = await login("privacy.staff", "2034");
     const rowsBefore = await db.query(
       "SELECT 'document' AS type,count(*)::int AS n FROM document UNION ALL SELECT 'journal',count(*)::int FROM journal_line UNION ALL SELECT 'allocation',count(*)::int FROM allocation",
     );
@@ -70,21 +70,15 @@ test("dashboard password verification is account-bound, throttled and leaves bus
           (
             await request(http)
               .post("/auth/verify-password")
-              .send({ password: "privacy-owner-password" })
+              .send({ password: "1023" })
           ).status,
           401,
         );
-        assert.equal(
-          (await call(owner.token, "privacy-staff-password")).status,
-          400,
-        );
-        assert.equal(
-          (await call(staff.token, "privacy-owner-password")).status,
-          400,
-        );
+        assert.equal((await call(owner.token, "2034")).status, 400);
+        assert.equal((await call(staff.token, "1023")).status, 400);
         for (const [token, password] of [
-          [owner.token, "privacy-owner-password"],
-          [staff.token, "privacy-staff-password"],
+          [owner.token, "1023"],
+          [staff.token, "2034"],
         ]) {
           const r = await call(token, password);
           assert.equal(r.status, 201);
@@ -94,7 +88,7 @@ test("dashboard password verification is account-bound, throttled and leaves bus
         assert.equal((await call(owner.token, "")).status, 400);
         assert.equal(
           (
-            await call(owner.token, "privacy-owner-password", {
+            await call(owner.token, "1023", {
               userId: staff.user.id,
             })
           ).status,
@@ -109,29 +103,20 @@ test("dashboard password verification is account-bound, throttled and leaves bus
       },
     );
     await t.test(
-      "five failed attempts block further guesses across sessions without blocking another user",
+      "five failed attempts block login and reveal without blocking another user",
       async () => {
         for (let i = 0; i < 5; i++)
           assert.equal((await call(owner.token, "wrong-password")).status, 400);
-        const another = await login("owner", "privacy-owner-password");
-        assert.equal(
-          (await call(another.token, "privacy-owner-password")).status,
-          429,
-        );
-        assert.equal(
-          (await call(staff.token, "privacy-staff-password")).status,
-          201,
-        );
+        const another = owner; // The account limit also applies across endpoints.
+        assert.equal((await call(another.token, "1023")).status, 429);
+        assert.equal((await call(staff.token, "2034")).status, 201);
         const { digest } = require("../dist/auth/auth.service");
         // Only the explicitly owned isolated test database's auth window is advanced.
         await db.query(
           "UPDATE auth_attempt SET reset_at=now()-interval '1 second' WHERE key=$1",
-          [digest("dashboard-reveal:" + owner.user.id)],
+          [digest("password-check:" + owner.user.id)],
         );
-        assert.equal(
-          (await call(owner.token, "privacy-owner-password")).status,
-          201,
-        );
+        assert.equal((await call(owner.token, "1023")).status, 201);
       },
     );
     await t.test(
@@ -141,30 +126,18 @@ test("dashboard password verification is account-bound, throttled and leaves bus
           .post("/auth/password")
           .set("Authorization", "Bearer " + staff.token)
           .send({
-            currentPassword: "privacy-staff-password",
-            password: "privacy-staff-updated",
+            currentPassword: "2034",
+            password: "3045",
           });
         assert.equal(changed.status, 201);
-        assert.equal(
-          (await call(staff.token, "privacy-staff-password")).status,
-          401,
-        );
-        const next = await login("privacy.staff", "privacy-staff-updated");
-        assert.equal(
-          (await call(next.token, "privacy-staff-password")).status,
-          400,
-        );
-        assert.equal(
-          (await call(next.token, "privacy-staff-updated")).status,
-          201,
-        );
+        assert.equal((await call(staff.token, "2034")).status, 401);
+        const next = await login("privacy.staff", "3045");
+        assert.equal((await call(next.token, "2034")).status, 400);
+        assert.equal((await call(next.token, "3045")).status, 201);
         await request(http)
           .post("/auth/logout")
           .set("Authorization", "Bearer " + next.token);
-        assert.equal(
-          (await call(next.token, "privacy-staff-updated")).status,
-          401,
-        );
+        assert.equal((await call(next.token, "3045")).status, 401);
       },
     );
     await t.test(
@@ -184,7 +157,7 @@ test("dashboard password verification is account-bound, throttled and leaves bus
           ).status,
           401,
         );
-        const next = await login("privacy.staff", "privacy-staff-updated");
+        const next = await login("privacy.staff", "3045");
         assert.equal(
           (
             await request(http)

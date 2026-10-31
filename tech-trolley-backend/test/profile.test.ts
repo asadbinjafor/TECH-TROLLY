@@ -21,7 +21,7 @@ test("profile editing keeps identities, sessions, permissions and invoice histor
   process.env.DATABASE_SSL_CA_BASE64 = "";
   process.env.WEB_ORIGIN = "http://localhost:3001";
   process.env.BOOTSTRAP_OWNER_EMAIL = "profile.owner@example.test";
-  process.env.BOOTSTRAP_OWNER_PASSWORD = "profile-owner-password";
+  process.env.BOOTSTRAP_OWNER_PASSWORD = "1023";
   const { db } = require("../dist/database/database"),
     { migrate } = require("../dist/database/migrate"),
     { bootstrap } = require("../dist/auth/bootstrap"),
@@ -43,8 +43,8 @@ test("profile editing keeps identities, sessions, permissions and invoice histor
       assert.equal(r.status, 201, JSON.stringify(r.body));
       return r.body;
     };
-    let ownerPassword = "profile-owner-password",
-      staffPassword = "profile-staff-password";
+    let ownerPassword = "1023",
+      staffPassword = "2034";
     let owner = await login("owner", ownerPassword),
       ownerToken = owner.token;
     const api = (
@@ -393,7 +393,7 @@ test("profile editing keeps identities, sessions, permissions and invoice histor
           name: "Second Staff",
           login: "second.staff",
           role: "STAFF",
-          password: "second-staff-password",
+          password: "3045",
         });
         const races = await Promise.all(
           [staffId, second.body.id].map((id) =>
@@ -418,7 +418,7 @@ test("profile editing keeps identities, sessions, permissions and invoice histor
         for (const secret of [
           ownerPassword,
           staffPassword,
-          "second-staff-password",
+          "3045",
           "password_hash",
           "currentPassword",
         ])
@@ -447,7 +447,7 @@ test("profile editing keeps identities, sessions, permissions and invoice histor
         for (const account of ["owner", "staff"]) {
           const token = account === "owner" ? ownerToken : staffToken;
           const previous = account === "owner" ? ownerPassword : staffPassword,
-            password = "new-" + previous;
+            password = account === "owner" ? "0145" : "0256";
           const r = await api(
             "post",
             "/auth/password",

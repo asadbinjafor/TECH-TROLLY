@@ -1,4 +1,3 @@
-import bcrypt from "bcrypt";
 import type { EntityManager } from "typeorm";
 import { fail } from "../common/errors";
 
@@ -20,6 +19,7 @@ export async function updateProfile(
   previous: any,
   values: Details,
   actor: any,
+  verifiedPasswordHash?: string,
 ) {
   const next = {
     name: values.name ?? previous.name,
@@ -31,10 +31,7 @@ export async function updateProfile(
   const changed = identityChanged || next.name !== previous.name;
   if (identityChanged && !values.currentPassword)
     fail("CURRENT_PASSWORD_REQUIRED");
-  if (
-    values.currentPassword &&
-    !(await bcrypt.compare(values.currentPassword, actor.password_hash))
-  )
+  if (values.currentPassword && actor.password_hash !== verifiedPasswordHash)
     fail("CURRENT_PASSWORD_INVALID");
   if (!changed) return { user: previous, identityChanged, changed };
   const [user] = await tx.query(

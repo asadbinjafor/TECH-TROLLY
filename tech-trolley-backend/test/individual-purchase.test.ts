@@ -23,7 +23,7 @@ test(
     process.env.DATABASE_URL = url.toString();
     process.env.DATABASE_SSL = "false";
     process.env.BOOTSTRAP_OWNER_EMAIL = "individual.owner@example.test";
-    process.env.BOOTSTRAP_OWNER_PASSWORD = "individual-test-password";
+    process.env.BOOTSTRAP_OWNER_PASSWORD = "1023";
     const { db } = require("../dist/database/database"),
       { migrate } = require("../dist/database/migrate"),
       { bootstrap } = require("../dist/auth/bootstrap"),
@@ -590,7 +590,7 @@ test(
               login: "individual.staff",
               email: "",
               role: "STAFF",
-              password: "staff-qa-password",
+              password: "2034",
             })
           ).body;
           assert.ok(staff.id);
@@ -599,7 +599,7 @@ test(
             .set("X-Native-Client", "1")
             .send({
               identity: "individual.staff",
-              password: "staff-qa-password",
+              password: "2034",
             });
           assert.equal(login.status, 201);
           assert.equal(

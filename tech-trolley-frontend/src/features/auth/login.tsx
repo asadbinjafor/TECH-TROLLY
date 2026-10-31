@@ -75,7 +75,7 @@ export function Login() {
                   type="password"
                   autoComplete="current-password"
                   required
-                  maxLength={128}
+                  maxLength={72}
                 />
               </FormField>
             ) : (
@@ -90,6 +90,7 @@ export function Login() {
             )}
             <FormField
               label={t(user?.must_change ? "newPassword" : "password", lang)}
+              hint={user?.must_change ? t("PASSWORD_FORMAT", lang) : undefined}
             >
               <input
                 name="password"
@@ -97,8 +98,10 @@ export function Login() {
                 autoComplete={
                   user?.must_change ? "new-password" : "current-password"
                 }
-                minLength={user?.must_change ? 8 : 1}
-                maxLength={128}
+                minLength={user?.must_change ? 4 : 1}
+                maxLength={user?.must_change ? 4 : 72}
+                inputMode={user?.must_change ? "numeric" : undefined}
+                pattern={user?.must_change ? "[0-9]{4}" : undefined}
                 required
               />
             </FormField>

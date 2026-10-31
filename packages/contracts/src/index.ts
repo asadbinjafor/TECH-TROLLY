@@ -55,11 +55,12 @@ const currentPassword = z
   .min(1)
   .max(72)
   .refine(withinBcryptLimit, "PASSWORD_LENGTH");
+// Keep passwords as strings: leading zeroes are significant. Current-password
+// checks still accept legacy credentials so a policy update cannot lock users out.
 export const newPassword = z
   .string()
-  .min(8)
-  .max(72)
-  .refine(withinBcryptLimit, "PASSWORD_LENGTH");
+  .length(4, "PASSWORD_FORMAT")
+  .regex(/^[0-9]{4}$/, "PASSWORD_FORMAT");
 export const loginSchema = z
   .object({ identity: text, password: currentPassword })
   .strict();

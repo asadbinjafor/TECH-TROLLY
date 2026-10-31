@@ -17,6 +17,7 @@ import { NativePartyManager } from "./native-party-manager";
 import {
   profileSchema,
   profileIdentityChanged,
+  newPassword,
   type User,
 } from "@tech-trolley/contracts";
 type Editor = {
@@ -338,15 +339,23 @@ export function NativeAdministration({ route, navigation }: any) {
                     ) : (
                       <Input
                         key={f.key}
-                        label={tr(f.label || f.key)}
+                        label={
+                          tr(f.label || f.key) +
+                          (f.key === "password"
+                            ? " · " + tr("PASSWORD_FORMAT")
+                            : "")
+                        }
                         value={values[f.key] || ""}
                         onChange={(value) =>
                           setValues((v) => ({ ...v, [f.key]: value }))
                         }
                         secure={f.secure}
+                        numeric={f.key === "password"}
                         maxLength={
                           f.secure
-                            ? 72
+                            ? f.key === "password"
+                              ? 4
+                              : 72
                             : f.key === "address"
                               ? 300
                               : f.key === "phone"
@@ -383,6 +392,13 @@ export function NativeAdministration({ route, navigation }: any) {
                             ),
                             ...editor.fixed,
                           };
+                          if (
+                            editor.fields.some((f) => f.key === "password") &&
+                            !newPassword.safeParse(values.password).success
+                          ) {
+                            setError("PASSWORD_FORMAT");
+                            return;
+                          }
                           if (editor.profile) {
                             profileSchema.parse(data);
                             if (

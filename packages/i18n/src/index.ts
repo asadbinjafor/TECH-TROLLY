@@ -572,8 +572,12 @@ const words: Record<string, [string, string]> = {
   reversed: ["Reversed", "সংশোধিত"],
   pending: ["Submission pending", "অনুরোধের ফল অনিশ্চিত"],
   PASSWORD_LENGTH: [
-    "Password must have at least 8 characters and no more than 72 UTF-8 bytes.",
-    "পাসওয়ার্ড অন্তত ৮ অক্ষর এবং সর্বোচ্চ ৭২ UTF-8 বাইট হতে হবে।",
+    "Current password must not exceed 72 UTF-8 bytes.",
+    "বর্তমান পাসওয়ার্ড সর্বোচ্চ ৭২ UTF-8 বাইট হতে পারে।",
+  ],
+  PASSWORD_FORMAT: [
+    "Use exactly 4 digits (0–9).",
+    "ঠিক ৪টি ইংরেজি সংখ্যা (0–9) দিন।",
   ],
   SESSION_EXPIRED: [
     "Your session expired. Sign in again.",

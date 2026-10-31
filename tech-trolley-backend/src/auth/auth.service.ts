@@ -6,6 +6,7 @@ import { db } from "../database/database";
 import { fail } from "../common/errors";
 import type { User } from "@tech-trolley/contracts";
 import { updateProfile, profileDetails } from "../users/profile";
+import { verifyAccountPassword, verifyCurrentPassword } from "./password-check";
 export const digest = (s: string) =>
   createHash("sha256").update(s).digest("hex");
 export const safeUser = (u: any): User => ({
@@ -20,18 +21,11 @@ export const safeUser = (u: any): User => ({
 @Injectable()
 export class AuthService {
   async verifyPassword(user: User & { sessionHash: string }, password: string) {
-    // Account-wide persistent limit: opening another tab/session cannot reset it.
-    const key = digest("dashboard-reveal:" + user.id);
-    const [attempt] = await db.query(
-      `INSERT INTO auth_attempt(key,count,reset_at) VALUES($1,1,now()+interval '15 minutes') ON CONFLICT(key) DO UPDATE SET count=CASE WHEN auth_attempt.reset_at<now() THEN 1 ELSE auth_attempt.count+1 END,reset_at=CASE WHEN auth_attempt.reset_at<now() THEN now()+interval '15 minutes' ELSE auth_attempt.reset_at END RETURNING count`,
-      [key],
-    );
-    if (attempt.count > 5) fail("RATE_LIMIT", 429);
     const [u] = await db.query(
-      "SELECT password_hash FROM app_user WHERE id=$1",
+      "SELECT id,password_hash FROM app_user WHERE id=$1",
       [user.id],
     );
-    if (!u || !(await bcrypt.compare(password, u.password_hash)))
+    if (!u || !(await verifyAccountPassword(u, password)))
       fail("CURRENT_PASSWORD_INVALID", 400);
     return db.transaction(async (em) => {
       const [fresh] = await em.query(
@@ -40,7 +34,6 @@ export class AuthService {
       );
       if (!fresh || fresh.password_hash !== u.password_hash)
         fail("SESSION_EXPIRED", 401);
-      await em.query("DELETE FROM auth_attempt WHERE key=$1", [key]);
       return { ok: true, revealForSeconds: 60 };
     });
   }
@@ -56,11 +49,12 @@ export class AuthService {
       "SELECT u.* FROM app_user u JOIN identity i ON i.user_id=u.id WHERE i.value=$1",
       [normalized],
     );
-    const valid = await bcrypt.compare(
-      password,
-      u?.password_hash ||
-        "$2b$12$Zuc0ypmVn4HXFg1H8.VLF.26KLlrQHTeE9FSEVpmJlgyKlw8.0Hny",
-    );
+    const valid = u
+      ? await verifyAccountPassword(u, password)
+      : await bcrypt.compare(
+          password,
+          "$2b$12$Zuc0ypmVn4HXFg1H8.VLF.26KLlrQHTeE9FSEVpmJlgyKlw8.0Hny",
+        );
     if (!u || !valid || !u.active) fail("INVALID_CREDENTIALS", 401);
     return db.transaction(async (em) => {
       await em.query("SELECT id FROM app_user WHERE id=$1 FOR UPDATE", [u.id]);
@@ -99,14 +93,20 @@ export class AuthService {
     current: string,
     password: string,
   ) {
+    const verifiedHash = await verifyCurrentPassword(
+      user.id,
+      current,
+      "INVALID_CREDENTIALS",
+      401,
+    );
     const hash = await bcrypt.hash(password, 12);
     await db.transaction(async (em) => {
       const [u] = await em.query(
         "SELECT * FROM app_user WHERE id=$1 FOR UPDATE",
         [user.id],
       );
-      if (!(await bcrypt.compare(current, u.password_hash)))
-        fail("INVALID_CREDENTIALS", 401);
+      if (!u?.active || u.password_hash !== verifiedHash)
+        fail("SESSION_EXPIRED", 401);
       await em.query(
         "UPDATE app_user SET password_hash=$2,must_change=false WHERE id=$1",
         [user.id, hash],
@@ -120,6 +120,10 @@ export class AuthService {
     return { ok: true };
   }
   async profile(user: User, values: Parameters<typeof updateProfile>[2]) {
+    const verifiedHash = await verifyCurrentPassword(
+      user.id,
+      values.currentPassword,
+    );
     return db.transaction(async (tx) => {
       await tx.query("SELECT pg_advisory_xact_lock(74819322)");
       const [actor] = await tx.query(
@@ -127,7 +131,13 @@ export class AuthService {
         [user.id],
       );
       if (!actor?.active) fail("SESSION_EXPIRED", 401);
-      const result = await updateProfile(tx, actor, values, actor);
+      const result = await updateProfile(
+        tx,
+        actor,
+        values,
+        actor,
+        verifiedHash,
+      );
       if (result.identityChanged)
         await tx.query("DELETE FROM session WHERE user_id=$1", [user.id]);
       if (result.changed)

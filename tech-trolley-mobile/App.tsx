@@ -27,6 +27,7 @@ import { NativeCommand } from "./src/features/native-command";
 import { NativeAdministration } from "./src/features/native-administration";
 import { NativeReceipt } from "./src/features/native-receipt";
 import { NativePurchaseDeclaration } from "./src/features/native-purchase-declaration";
+import { passwordSchema } from "@tech-trolley/contracts";
 const Tabs = createBottomTabNavigator(),
   Stack = createNativeStackNavigator();
 function Login() {
@@ -93,14 +94,20 @@ function Login() {
             value={password}
             onChange={setPassword}
             secure
+            maxLength={72}
           />
           {user?.must_change && (
-            <Input
-              label={t("newPassword", lang)}
-              value={newPassword}
-              onChange={setNewPassword}
-              secure
-            />
+            <>
+              <Input
+                label={t("newPassword", lang)}
+                value={newPassword}
+                onChange={setNewPassword}
+                secure
+                numeric
+                maxLength={4}
+              />
+              <Txt>{t("PASSWORD_FORMAT", lang)}</Txt>
+            </>
           )}
           {(error || networkError) && (
             <Txt accessibilityRole="alert" style={{ color: "#b95050" }}>
@@ -120,10 +127,11 @@ function Login() {
               void (async () => {
                 try {
                   if (user?.must_change) {
-                    await api.request("/auth/password", "POST", {
+                    const body = passwordSchema.parse({
                       currentPassword: password,
                       password: newPassword,
                     });
+                    await api.request("/auth/password", "POST", body);
                     await SecureStore.deleteItemAsync(tokenKey);
                     setPassword("");
                     setNewPassword("");
@@ -133,7 +141,9 @@ function Login() {
                     setPassword("");
                   }
                 } catch (e: any) {
-                  setError(e.code || "NETWORK_ERROR");
+                  setError(
+                    e.code || (e.issues ? "PASSWORD_FORMAT" : "NETWORK_ERROR"),
+                  );
                 } finally {
                   setBusy(false);
                 }

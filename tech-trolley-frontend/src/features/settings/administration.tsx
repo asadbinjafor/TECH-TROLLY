@@ -408,6 +408,9 @@ export function Administration({ mode }: { mode: "parties" | "settings" }) {
                       optional={!required}
                       optionalText={tr("optional")}
                       wide={f.key === "address"}
+                      hint={
+                        f.key === "password" ? tr("PASSWORD_FORMAT") : undefined
+                      }
                     >
                       {f.options ? (
                         <select
@@ -438,12 +441,14 @@ export function Administration({ mode }: { mode: "parties" | "settings" }) {
                             f.type === "password"
                               ? f.key === "currentPassword"
                                 ? 1
-                                : 8
+                                : 4
                               : undefined
                           }
                           maxLength={
                             f.type === "password"
-                              ? 72
+                              ? f.key === "currentPassword"
+                                ? 72
+                                : 4
                               : f.key === "address"
                                 ? 300
                                 : f.key === "phone"
@@ -460,6 +465,12 @@ export function Administration({ mode }: { mode: "parties" | "settings" }) {
                                 ? "current-password"
                                 : "new-password"
                               : "off"
+                          }
+                          inputMode={
+                            f.key === "password" ? "numeric" : undefined
+                          }
+                          pattern={
+                            f.key === "password" ? "[0-9]{4}" : undefined
                           }
                           onChange={(e) =>
                             setValues((v) => ({

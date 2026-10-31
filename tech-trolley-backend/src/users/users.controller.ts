@@ -19,6 +19,7 @@ import { safeUser } from "../auth/auth.service";
 import type { Response } from "express";
 import { updateProfile, profileDetails } from "./profile";
 import { sessionCookieOptions } from "../auth/cookies";
+import { verifyCurrentPassword } from "../auth/password-check";
 @Controller("users")
 @UseGuards(AuthGuard)
 export class UsersController {
@@ -75,6 +76,10 @@ export class UsersController {
     z.uuid().parse(id);
     const v = userUpdateSchema.parse(body),
       hash = v.password ? await bcrypt.hash(v.password, 12) : null;
+    const verifiedHash = await verifyCurrentPassword(
+      req.user.id,
+      v.currentPassword,
+    );
     return db.transaction(async (em) => {
       await em.query("SELECT pg_advisory_xact_lock(74819322)");
       const [actor] = await em.query(
@@ -87,7 +92,7 @@ export class UsersController {
         [id],
       );
       if (!u) fail("NOT_FOUND", 404);
-      const profile = await updateProfile(em, u, v, actor);
+      const profile = await updateProfile(em, u, v, actor, verifiedHash);
       const [{ count }] = await em.query(
         "SELECT count(*) FROM app_user WHERE role='OWNER' AND active",
       );

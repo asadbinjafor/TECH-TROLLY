@@ -1,6 +1,7 @@
 import { connect, db } from "../database/database";
 import { randomUUID } from "node:crypto";
 import bcrypt from "bcrypt";
+import { newPassword } from "@tech-trolley/contracts";
 export async function bootstrap() {
   await connect();
   await db.transaction(async (em) => {
@@ -10,12 +11,7 @@ export async function bootstrap() {
     if (Number(count) > 0) throw new Error("EXISTING_ACCOUNTS_REQUIRE_REVIEW");
     const email = process.env.BOOTSTRAP_OWNER_EMAIL?.trim().toLowerCase(),
       password = process.env.BOOTSTRAP_OWNER_PASSWORD;
-    if (
-      !email ||
-      !password ||
-      password.length < 8 ||
-      Buffer.byteLength(password, "utf8") > 72
-    )
+    if (!email || !password || !newPassword.safeParse(password).success)
       throw new Error("BOOTSTRAP_CONFIGURATION_REQUIRED");
     const id = randomUUID();
     await em.query(

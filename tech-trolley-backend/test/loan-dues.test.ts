@@ -28,7 +28,7 @@ test("person loan dues reconcile with real postings, reversals and date authoriz
     DATABASE_SSL: "false",
     DATABASE_SSL_CA_BASE64: "",
     BOOTSTRAP_OWNER_EMAIL: "loans@example.test",
-    BOOTSTRAP_OWNER_PASSWORD: "loan-test-password",
+    BOOTSTRAP_OWNER_PASSWORD: "1023",
     WEB_ORIGIN: "http://localhost:3001",
   });
   const { db } = require("../dist/database/database");
@@ -45,7 +45,7 @@ test("person loan dues reconcile with real postings, reversals and date authoriz
     const login = await request(http)
       .post("/auth/login")
       .set("X-Native-Client", "1")
-      .send({ identity: "owner", password: "loan-test-password" });
+      .send({ identity: "owner", password: "1023" });
     assert.equal(login.status, 201);
     const token = login.body.token;
     const api = (method: string, path: string, body?: any, auth = token) => {
@@ -257,7 +257,7 @@ test("person loan dues reconcile with real postings, reversals and date authoriz
           name: "Rony staff",
           login: "rony",
           role: "STAFF",
-          password: "rony-test-password",
+          password: "2034",
         });
         assert.equal(created.status, 201);
         await cmd("advance", {
@@ -292,7 +292,7 @@ test("person loan dues reconcile with real postings, reversals and date authoriz
         const staff = await request(http)
           .post("/auth/login")
           .set("X-Native-Client", "1")
-          .send({ identity: "rony", password: "rony-test-password" });
+          .send({ identity: "rony", password: "2034" });
         assert.equal(staff.status, 201);
         assert.ok(
           !(await state(staff.body.token)).documents.some(

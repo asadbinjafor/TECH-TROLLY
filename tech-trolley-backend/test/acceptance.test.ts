@@ -23,7 +23,7 @@ test("isolated PostgreSQL acceptance, authorization, accounting and retry safety
   url.pathname = "/" + name;
   process.env.DATABASE_URL = url.toString();
   process.env.BOOTSTRAP_OWNER_EMAIL = "owner@example.test";
-  process.env.BOOTSTRAP_OWNER_PASSWORD = "initial-test-password";
+  process.env.BOOTSTRAP_OWNER_PASSWORD = "1023";
   const { db } = require("../dist/database/database");
   const { migrate } = require("../dist/database/migrate");
   const { bootstrap } = require("../dist/auth/bootstrap");
@@ -45,7 +45,7 @@ test("isolated PostgreSQL acceptance, authorization, accounting and retry safety
       assert.equal(r.status, 201, JSON.stringify(r.body));
       return r.body;
     };
-    let owner = await login("owner@example.test", "initial-test-password"),
+    let owner = await login("owner@example.test", "1023"),
       token = owner.token;
     const api = (method: string, path: string, body?: any, tok = token) => {
       let r = (request(http) as any)
@@ -110,15 +110,15 @@ test("isolated PostgreSQL acceptance, authorization, accounting and retry safety
         assert.equal(
           (
             await api("post", "/auth/password", {
-              currentPassword: "initial-test-password",
-              password: "changed-test-password",
+              currentPassword: "1023",
+              password: "2034",
             })
           ).status,
           201,
         );
         assert.equal((await api("get", "/auth/me")).status, 401);
         await bootstrap();
-        owner = await login("OWNER@example.test", "changed-test-password");
+        owner = await login("OWNER@example.test", "2034");
         token = owner.token;
         assert.equal(owner.user.must_change, false);
         const state = (await api("get", "/shop/state")).body;
@@ -331,21 +331,21 @@ test("isolated PostgreSQL acceptance, authorization, accounting and retry safety
           login: "test.staff",
           email: "staff@example.test",
           role: "STAFF",
-          password: "initial-staff-password",
+          password: "3045",
         });
         assert.equal(created.status, 201);
         staffId = created.body.id;
-        let staff = await login("TEST.STAFF", "initial-staff-password");
+        let staff = await login("TEST.STAFF", "3045");
         await api(
           "post",
           "/auth/password",
           {
-            currentPassword: "initial-staff-password",
-            password: "changed-staff-password",
+            currentPassword: "3045",
+            password: "4056",
           },
           staff.token,
         );
-        staff = await login("staff@example.test", "changed-staff-password");
+        staff = await login("staff@example.test", "4056");
         staffToken = staff.token;
         assert.equal(
           (await api("get", "/reports?period=month", undefined, staffToken))
@@ -400,13 +400,13 @@ test("isolated PostgreSQL acceptance, authorization, accounting and retry safety
               login: "second.owner",
               email: "",
               role: "OWNER",
-              password: "second-owner-password",
+              password: "5067",
             })
           ).status,
           201,
         );
         const reset = await api("patch", "/users/" + staffId, {
-          password: "reset-staff-password",
+          password: "6078",
         });
         assert.equal(reset.status, 200);
         assert.equal(reset.body.id, staffId);
@@ -430,7 +430,7 @@ test("isolated PostgreSQL acceptance, authorization, accounting and retry safety
         );
         const cookieLogin = await request(http)
           .post("/auth/login")
-          .send({ identity: "owner", password: "changed-test-password" });
+          .send({ identity: "owner", password: "2034" });
         assert.ok(cookieLogin.headers["set-cookie"][0].includes("HttpOnly"));
         assert.equal(cookieLogin.body.token, undefined);
         assert.equal(
@@ -716,10 +716,7 @@ test("isolated PostgreSQL acceptance, authorization, accounting and retry safety
           ].schema.properties.sellingPrice,
           undefined,
         );
-        const changed = await login(
-          "staff@example.test",
-          "reset-staff-password",
-        );
+        const changed = await login("staff@example.test", "6078");
         assert.equal(changed.user.must_change, false);
         assert.equal(
           (await api("get", "/shop/state", undefined, changed.token)).status,
@@ -765,7 +762,9 @@ test("isolated PostgreSQL acceptance, authorization, accounting and retry safety
         );
         const today = (await api("get", "/shop/state")).body.today;
         const { shift } = require("../dist/reports/reports.service");
-        const first = today.slice(0, 8) + "01",
+        // Use a completed month so the first day of a real month cannot mix
+        // this boundary fixture with the transactions posted earlier today.
+        const first = shift(today.slice(0, 8) + "01", -1).slice(0, 8) + "01",
           previous = shift(first, -1);
         await db.query("UPDATE shop SET opening_date=$1 WHERE id=1", [
           previous,
@@ -897,7 +896,7 @@ test("isolated PostgreSQL acceptance, authorization, accounting and retry safety
           active: true,
           role: "STAFF",
         });
-        const staff = await login("staff@example.test", "reset-staff-password");
+        const staff = await login("staff@example.test", "6078");
         const second = await cmd("purchase", {
           ...buy("000000000000168", "100", "0", "0"),
         });
@@ -942,7 +941,7 @@ test("isolated PostgreSQL acceptance, authorization, accounting and retry safety
     await t.test(
       "model profit, separate product details, custom expenses and statement balances reconcile",
       async () => {
-        const staff = await login("staff@example.test", "reset-staff-password");
+        const staff = await login("staff@example.test", "6078");
         const postUnit = async (
           imei: string,
           cost: string,
@@ -1184,7 +1183,7 @@ test("isolated PostgreSQL acceptance, authorization, accounting and retry safety
             [oldId],
           );
         });
-        const staff = await login("staff@example.test", "reset-staff-password");
+        const staff = await login("staff@example.test", "6078");
         const state = (await api("get", "/shop/state", undefined, staff.token))
           .body;
         assert.ok(state.documents.every((d: any) => d.business_date === today));
@@ -1315,7 +1314,7 @@ test("isolated PostgreSQL acceptance, authorization, accounting and retry safety
     await t.test(
       "custom party selections support Staff CRUD without changing posted history or dues",
       async () => {
-        const staff = await login("staff@example.test", "reset-staff-password");
+        const staff = await login("staff@example.test", "6078");
         assert.equal(
           (
             await request(http)
@@ -1541,7 +1540,7 @@ test("isolated PostgreSQL acceptance, authorization, accounting and retry safety
             headers: { Origin: origin, "Content-Type": "application/json" },
             body: JSON.stringify({
               identity: "owner@example.test",
-              password: "changed-test-password",
+              password: "2034",
             }),
           }),
           ["auth", "login"],

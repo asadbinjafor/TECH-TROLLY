@@ -31,7 +31,7 @@ test("stock edits and supplier returns preserve immutable accounting and actual 
     DATABASE_SSL: "false",
     DATABASE_SSL_CA_BASE64: "",
     BOOTSTRAP_OWNER_EMAIL: "stock.owner@example.test",
-    BOOTSTRAP_OWNER_PASSWORD: "stock-owner-password",
+    BOOTSTRAP_OWNER_PASSWORD: "1023",
     WEB_ORIGIN: "http://localhost:3001",
   });
   const { db, connect } = require("../dist/database/database");
@@ -79,7 +79,7 @@ test("stock edits and supplier returns preserve immutable accounting and actual 
       assert.equal(r.status, 201);
       return r.body;
     };
-    const owner = await signIn("owner", "stock-owner-password");
+    const owner = await signIn("owner", "1023");
     const api = (
       method: string,
       path: string,
@@ -189,10 +189,10 @@ test("stock edits and supplier returns preserve immutable accounting and actual 
       name: "Stock Staff",
       login: "stock.staff",
       role: "STAFF",
-      password: "stock-staff-password",
+      password: "2034",
     });
     assert.equal(staffCreated.status, 201);
-    const staff = await signIn("stock.staff", "stock-staff-password");
+    const staff = await signIn("stock.staff", "2034");
     const editData = (u: any, extra = {}) => ({
       unitId: u.id,
       ...unitFormValues("stockEdit", u),
