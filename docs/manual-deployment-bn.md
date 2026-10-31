@@ -1,5 +1,7 @@
 # নিজে deployment করার নির্দেশনা
 
+**প্রিন্ট ছাড়া বিক্রি:** New sale পূরণ করে Review চাপুন। এরপর **প্রিন্ট ছাড়া বিক্রি সেভ করুন** বেছে নিলে বিক্রি, স্টক, Cash/Bank, বাকি ও লাভ স্বাভাবিকভাবে জমা হবে; invoice screen খুলবে না। **বিক্রি সেভ করে ইনভয়েস দেখুন** বেছে নিলে আগের মতো invoice খুলবে। পরে Daybook/লেনদেন থেকে একই বিক্রির Receipt খুলে PDF/Print করা যাবে। বাকি রাখলে Customer বাছতে হবে। Network সমস্যা হলে দেখানো status/retry ব্যবহার করবেন; একই বিক্রি নতুন করে লিখবেন না। এই update-এ migration/হাতে SQL লাগে না; shared ভাষার label বদলানোয় বর্তমান build filters অনুযায়ী Vercel এবং Render স্বাভাবিক Git/CI পথে deploy হবে।
+
 **Password-এর number keyboard:** Login, Dashboard-এর অঙ্ক দেখানো, profile যাচাই, password change, account তৈরি ও reset—সব password ঘরে মোবাইলের number keyboard চাওয়া হবে। Password আগের মতো ঢাকা থাকবে; 0 দিয়ে শুরু হলেও থাকবে। এই client update-এ Vercel deploy এবং native Android/iOS export যাচাই করবেন; API/Render বা Supabase migration লাগবে না। পুরোনো tab refresh করে দেখবেন।
 
 এই update live: `c80e779`; [পূর্ণ CI সফল](https://github.com/asadbinjafor/TECH-TROLLY/actions/runs/41235952665)। Live login-এর numeric setting ও অন্য password controls-এর প্রকাশিত code যাচাই হয়েছে। আসল ফোনে password ঘরে tap করে keyboard দেখা আলাদা device check।

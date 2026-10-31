@@ -287,6 +287,15 @@ const words: Record<string, [string, string]> = {
   saving: ["Saving…", "সংরক্ষণ হচ্ছে…"],
   saved: ["Saved successfully", "সফলভাবে সংরক্ষিত"],
   confirm: ["Confirm and post", "নিশ্চিত করে সংরক্ষণ"],
+  saleWithInvoice: ["Save sale & open invoice", "বিক্রি সেভ করে ইনভয়েস দেখুন"],
+  saleWithoutPrint: [
+    "Save sale without printing",
+    "প্রিন্ট ছাড়া বিক্রি সেভ করুন",
+  ],
+  salePrintChoiceHelp: [
+    "Both options save the same sale, stock, payments, dues and profit. Without printing skips the invoice screen; you can open the invoice later from transaction history.",
+    "দুইভাবেই একই বিক্রি, স্টক, টাকা, বাকি ও লাভ সংরক্ষিত হবে। প্রিন্ট ছাড়া সেভ করলে ইনভয়েস খুলবে না; পরে লেনদেনের ইতিহাস থেকে খুলতে পারবেন।",
+  ],
   review: ["Review before posting", "সংরক্ষণের আগে যাচাই করুন"],
   today: ["Today", "আজ"],
   week: ["Trailing 7 days", "গত ৭ দিন"],

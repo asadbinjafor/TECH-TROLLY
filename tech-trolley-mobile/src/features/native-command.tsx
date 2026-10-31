@@ -42,6 +42,7 @@ import { api } from "../services/api";
 import { NativePartyManager } from "./native-party-manager";
 import { readPrivateDraft, writePrivateDraft } from "../services/private-draft";
 export function NativeCommand({ navigation, route }: any) {
+  const submitting = useRef(false);
   const sellerSelection = useRef(0);
   useEffect(
     () => () => {
@@ -53,7 +54,11 @@ export function NativeCommand({ navigation, route }: any) {
     { state, user, lang, refresh } = useShop(),
     c = useColors(),
     [values, setValues] = useState<Record<string, string>>({}),
-    [pending, setPending] = useState<{ key: string; data: any } | null>(null),
+    [pending, setPending] = useState<{
+      key: string;
+      data: any;
+      showInvoice?: boolean;
+    } | null>(null),
     [ready, setReady] = useState(false),
     [loadAttempt, setLoadAttempt] = useState(0),
     [review, setReview] = useState(false),
@@ -190,17 +195,19 @@ export function NativeCommand({ navigation, route }: any) {
     else if (p) await AsyncStorage.setItem(pendingKey, JSON.stringify(p));
     else await AsyncStorage.removeItem(pendingKey);
   };
-  const finish = async (id: string) => {
+  const finish = async (id: string, showInvoice = true) => {
     await AsyncStorage.multiRemove([storage, pendingKey]);
     if (kind === "individualPurchase")
       await writePrivateDraft(pendingKey, null);
     await refresh();
-    if (kind === "sale") navigation.replace("Receipt", { id });
+    if (kind === "sale" && showInvoice) navigation.replace("Receipt", { id });
     else if (kind === "individualPurchase")
       navigation.replace("PurchaseDeclaration", { id });
     else navigation.goBack();
   };
-  const submit = async () => {
+  const submit = async (showInvoice = true) => {
+    if (submitting.current) return;
+    submitting.current = true;
     setBusy(true);
     setError("");
     try {
@@ -209,11 +216,12 @@ export function NativeCommand({ navigation, route }: any) {
         p = {
           key: Crypto.randomUUID(),
           data: prepareForm(kind, values, state),
+          ...(kind === "sale" ? { showInvoice } : {}),
         };
         await persist(p);
       }
       const result = await api.command(kind, p.data, p.key);
-      await finish(result.id);
+      await finish(result.id, p.showInvoice !== false);
     } catch (e: any) {
       if (e.issues) {
         setError("VALIDATION_ERROR");
@@ -231,6 +239,7 @@ export function NativeCommand({ navigation, route }: any) {
           );
       }
     } finally {
+      submitting.current = false;
       setBusy(false);
     }
   };
@@ -500,14 +509,21 @@ export function NativeCommand({ navigation, route }: any) {
                 label={tr("checkStatus")}
                 disabled={busy}
                 onPress={() => {
+                  if (submitting.current) return;
+                  submitting.current = true;
                   setBusy(true);
                   void api
                     .status(pending.key)
                     .then((r) =>
-                      r.found ? finish(r.result!.id) : setError("notFound"),
+                      r.found
+                        ? finish(r.result!.id, pending.showInvoice !== false)
+                        : setError("notFound"),
                     )
                     .catch((e) => setError(e.code))
-                    .finally(() => setBusy(false));
+                    .finally(() => {
+                      submitting.current = false;
+                      setBusy(false);
+                    });
                 }}
               />
             </Panel>
@@ -520,9 +536,29 @@ export function NativeCommand({ navigation, route }: any) {
               {tr(error)}
             </Txt>
           )}
+          {kind === "sale" && (review || pending) && (
+            <Panel>
+              <Txt>{tr("salePrintChoiceHelp")}</Txt>
+            </Panel>
+          )}
+          {kind === "sale" && review && !pending && (
+            <Button
+              label={tr(busy ? "saving" : "saleWithoutPrint")}
+              disabled={busy || blocked}
+              onPress={() => void submit(false)}
+            />
+          )}
           <Button
             label={tr(
-              busy ? "saving" : review || pending ? "confirm" : "review",
+              busy
+                ? "saving"
+                : review || pending
+                  ? kind === "sale"
+                    ? pending?.showInvoice === false
+                      ? "saleWithoutPrint"
+                      : "saleWithInvoice"
+                    : "confirm"
+                  : "review",
             )}
             primary
             disabled={busy || blocked}

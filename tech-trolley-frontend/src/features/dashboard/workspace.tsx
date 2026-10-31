@@ -770,10 +770,10 @@ export function Workspace({ section }: { section: string }) {
               kind="sale"
               embedded
               onClose={() => navigation.back()}
-              onSaved={(id) => {
+              onSaved={(id, _kind, showInvoice = true) => {
                 setSaleVersion((value) => value + 1);
                 setToast(tr("saved"));
-                void fetchReceipt(id, false);
+                if (showInvoice) void fetchReceipt(id, false);
               }}
             />
           )}
@@ -1312,10 +1312,10 @@ export function Workspace({ section }: { section: string }) {
           initialDocument={selectedDocument}
           initialParty={selectedParty}
           onClose={() => setCommand(null)}
-          onSaved={(id, kind) => {
+          onSaved={(id, kind, showInvoice = true) => {
             setCommand(null);
             setToast(tr("saved"));
-            if (kind === "sale") void fetchReceipt(id, false);
+            if (kind === "sale" && showInvoice) void fetchReceipt(id, false);
             if (kind === "individualPurchase") setDeclarationId(id);
           }}
         />

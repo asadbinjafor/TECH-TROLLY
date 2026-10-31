@@ -45,10 +45,11 @@ export function CommandForm({
   initialParty?: string;
   embedded?: boolean;
   onClose: () => void;
-  onSaved: (id: string, kind: CommandKind) => void;
+  onSaved: (id: string, kind: CommandKind, showInvoice?: boolean) => void;
 }) {
   const { state, lang, user, refresh, connection } = useShop();
   const formTitleId = useId();
+  const submitting = useRef(false);
   const sellerSelection = useRef(0);
   useEffect(
     () => () => {
@@ -95,7 +96,11 @@ export function CommandForm({
         return {};
       }
     }),
-    [pending, setPending] = useState<{ key: string; data: any } | null>(() => {
+    [pending, setPending] = useState<{
+      key: string;
+      data: any;
+      showInvoice?: boolean;
+    } | null>(() => {
       try {
         return JSON.parse(sessionStorage.getItem(pendingKey) || "null");
       } catch {
@@ -153,17 +158,19 @@ export function CommandForm({
     if (p) sessionStorage.setItem(pendingKey, JSON.stringify(p));
     else sessionStorage.removeItem(pendingKey);
   };
-  const finish = async (id: string) => {
+  const finish = async (id: string, showInvoice = true) => {
     sessionStorage.removeItem(storage);
     persist(null);
     await refresh();
-    onSaved(id, kind);
+    onSaved(id, kind, showInvoice);
   };
-  const submit = async () => {
+  const submit = async (showInvoice = true) => {
+    if (submitting.current) return;
     if (connection !== "ready") {
       setError("UPSTREAM_UNAVAILABLE");
       return;
     }
+    submitting.current = true;
     setBusy(true);
     setError("");
     setIssues({});
@@ -173,11 +180,12 @@ export function CommandForm({
         p = {
           key: crypto.randomUUID(),
           data: prepareForm(kind, values, state),
+          ...(kind === "sale" ? { showInvoice } : {}),
         };
         persist(p);
       }
       const result = await api.command(kind, p.data, p.key);
-      await finish(result.id);
+      await finish(result.id, p.showInvoice !== false);
     } catch (e: any) {
       if (e.issues) {
         setIssues(
@@ -195,6 +203,7 @@ export function CommandForm({
           );
       }
     } finally {
+      submitting.current = false;
       setBusy(false);
     }
   };
@@ -472,14 +481,18 @@ export function CommandForm({
                 className="button"
                 disabled={busy}
                 onClick={async () => {
+                  if (submitting.current) return;
+                  submitting.current = true;
                   setBusy(true);
                   try {
                     const r = await api.status(pending.key);
-                    if (r.found) await finish(r.result!.id);
+                    if (r.found)
+                      await finish(r.result!.id, pending.showInvoice !== false);
                     else setError("notFound");
                   } catch (e: any) {
                     setError(e.code);
                   } finally {
+                    submitting.current = false;
                     setBusy(false);
                   }
                 }}
@@ -505,6 +518,9 @@ export function CommandForm({
               {t(error, lang)}
             </p>
           )}
+          {kind === "sale" && (review || pending) && (
+            <p className="notice">{t("salePrintChoiceHelp", lang)}</p>
+          )}
           <footer>
             <button
               type="button"
@@ -515,12 +531,30 @@ export function CommandForm({
             >
               {t("cancel", lang)}
             </button>
+            {kind === "sale" && review && !pending && (
+              <button
+                type="button"
+                className="button"
+                disabled={busy || connection !== "ready" || blocked}
+                onClick={() => void submit(false)}
+              >
+                {t(busy ? "saving" : "saleWithoutPrint", lang)}
+              </button>
+            )}
             <button
               className="button primary"
               disabled={busy || connection !== "ready" || blocked}
             >
               {t(
-                busy ? "saving" : review || pending ? "confirm" : "review",
+                busy
+                  ? "saving"
+                  : review || pending
+                    ? kind === "sale"
+                      ? pending?.showInvoice === false
+                        ? "saleWithoutPrint"
+                        : "saleWithInvoice"
+                      : "confirm"
+                    : "review",
                 lang,
               )}
             </button>
