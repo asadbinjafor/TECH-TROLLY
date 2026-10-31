@@ -1,5 +1,134 @@
 export type Language = "bn" | "en";
 const words: Record<string, [string, string]> = {
+  historyStartHint: [
+    "Need to enter previous days? Choose Start from previous accounts in Settings before saving ordinary opening balances.",
+    "আগের দিনের হিসাব তুলতে চান? সাধারণ opening সংরক্ষণের আগে Settings-এ ‘আগের হিসাব থেকে শুরু’ বাছুন।",
+  ],
+  historySetup: ["Start from previous accounts", "আগের হিসাব থেকে শুরু"],
+  historyStart: [
+    "Set the starting date and money",
+    "শুরুর তারিখ ও টাকা নির্ধারণ",
+  ],
+  historyLock: ["Confirm opening balances", "শুরুর হিসাব নিশ্চিত করুন"],
+  historyFinish: [
+    "Check balances and finish setup",
+    "টাকা মিলিয়ে setup শেষ করুন",
+  ],
+  openingStockPayable: [
+    "Still owed for this starting stock unit",
+    "শুরুর এই পণ্যটির জন্য সরবরাহকারীকে দেওয়ার বাকি",
+  ],
+  openingStockHelp: [
+    "Enter the original acquisition cost of a unit you already held. If its supplier is still owed money, put that amount here and select the supplier. Do not enter that same debt again under old dues. No Cash / Bank moves now.",
+    "আগে থেকে থাকা পণ্যটির আসল ক্রয় খরচ দিন। এই পণ্যের জন্য টাকা দেওয়া বাকি থাকলে এখানেই সেই বাকি ও সরবরাহকারী দিন। একই বাকি আবার আলাদা পুরোনো বাকি হিসেবে তুলবেন না। এখন Cash / Bank কমবে না।",
+  ],
+  SUPPLIER_REQUIRED: [
+    "Select the supplier for this stock's unpaid amount.",
+    "এই পণ্যের বাকি টাকার জন্য সরবরাহকারী বাছুন।",
+  ],
+  openingStock: [
+    "Add stock held before the starting date",
+    "শুরুর তারিখের আগের stock যোগ করুন",
+  ],
+  openingDue: [
+    "Add a due from before the starting date",
+    "শুরুর তারিখের আগের বাকি যোগ করুন",
+  ],
+  openingAdjustment: [
+    "Correct opening Cash / Bank",
+    "শুরুর Cash / Bank সংশোধন",
+  ],
+  historyStartDate: [
+    "First business date to enter",
+    "যে তারিখ থেকে লেনদেন তুলবেন",
+  ],
+  historyEndDate: ["Last date of previous accounts", "আগের হিসাবের শেষ তারিখ"],
+  businessDate: ["Actual business date", "লেনদেনের আসল তারিখ"],
+  dueParty: ["Name", "নাম"],
+  openingDue_customer: ["Customer owes the shop", "গ্রাহকের কাছে পাওনা"],
+  openingDue_supplier: ["Shop owes supplier", "সরবরাহকারীকে দেওয়ার বাকি"],
+  openingDue_person: ["Personal loan receivable", "ব্যক্তিকে দেওয়া ধার"],
+  openingDue_advance: [
+    "Staff salary advance still outstanding",
+    "কর্মীর কাছে থাকা বেতন অগ্রিম",
+  ],
+  openingDue_refund: ["Supplier owes a refund", "সরবরাহকারীর ফেরত পাওনা"],
+  dueType: ["Type of old due", "আগের বাকির ধরন"],
+  verifiedCash: [
+    "Actual Cash after previous accounts",
+    "আগের হিসাব শেষে বাস্তবে থাকা Cash",
+  ],
+  verifiedBank: [
+    "Actual Bank after previous accounts",
+    "আগের হিসাব শেষে বাস্তবে থাকা Bank",
+  ],
+  historyIntro: [
+    "Choose the first date of the previous week (or another period). Enter Cash, Bank, unsold stock at acquisition cost and outstanding dues as they stood BEFORE that day's first transaction. Do not enter today's balances or count these again as purchases/sales.",
+    "আগের সপ্তাহ বা প্রয়োজনীয় সময়ের প্রথম তারিখ বাছুন। সেই দিনের প্রথম লেনদেনের আগে থাকা Cash, Bank, অবিক্রীত stock-এর ক্রয়মূল্য ও বাকি তুলুন। আজকের balance বসাবেন না; এগুলো আবার ক্রয়-বিক্রি হিসেবে তুলবেন না।",
+  ],
+  historyBaselineHelp: [
+    "1. Add every starting stock unit and old due. No money moves for these entries; add only unrelated dues separately. Check the list below. Correct stock details or reverse a mistaken opening stock/due before confirming. Opening balances cannot be changed after confirmation.",
+    "১. শুরুর সব stock ও পুরোনো বাকি যোগ করুন। এতে Cash/Bank কমবে না; পণ্যের সঙ্গে দেওয়া বাকি আলাদা করে আবার তুলবেন না। নিচের তালিকা মিলিয়ে নিন। নিশ্চিত করার আগে ভুল stock-এর তথ্য সংশোধন বা ভুল opening stock/বাকি বাতিল করা যাবে। নিশ্চিত করার পরে শুরুর হিসাব বদলানো যাবে না।",
+  ],
+  historyEntryHelp: [
+    "2. Enter real purchases, sales, expenses and due payments on their usual pages, using the actual business date. Complete one day before moving to the next; an earlier day cannot be inserted later. Days without transactions need no entry. Reports remain provisional until setup finishes.",
+    "২. পরিচিত ক্রয়, বিক্রি, খরচ ও টাকা/বাকি পাতায় আসল তারিখ দিয়ে লেনদেন তুলুন। এক দিনের সব হিসাব শেষ করে পরের দিনে যান; পরে আগের দিনে নতুন এন্ট্রি দেওয়া যাবে না। লেনদেন না থাকা দিনে কিছু তুলতে হবে না। Setup শেষ না হওয়া পর্যন্ত রিপোর্ট অসম্পূর্ণ।",
+  ],
+  historyFinishHelp: [
+    "3. Review the entire selected period in Reports. Match stock and every person's due, then enter the real Cash and Bank balances. Finish only after all previous transactions are entered. Nothing resets: the closing balances carry into today and future days automatically.",
+    "৩. Reports-এ নির্বাচিত পুরো সময়ের হিসাব দেখুন। Stock ও প্রত্যেকের বাকি মিলিয়ে বাস্তবে থাকা Cash ও Bank লিখুন। আগের সব লেনদেন শেষ হলে তবেই setup শেষ করুন। কিছু reset হবে না; শেষ balance থেকেই আজ ও ভবিষ্যতের হিসাব চলবে।",
+  ],
+  historyActive: [
+    "Previous accounts setup is in progress — reports are provisional. Only the Owner may post until it is finished.",
+    "আগের হিসাব তোলা চলছে—রিপোর্ট এখনো অসম্পূর্ণ। শেষ না হওয়া পর্যন্ত শুধু Owner হিসাব তুলতে পারবেন।",
+  ],
+  historyComplete: [
+    "Previous accounts setup is complete. Today's transactions continue from these closing balances. Historical entry is now locked.",
+    "আগের হিসাব তোলা শেষ। সেই শেষ balance থেকেই আজকের লেনদেন চলছে। পুরোনো তারিখে নতুন এন্ট্রি এখন বন্ধ।",
+  ],
+  historyPeriod: ["Setup period", "আগের হিসাবের সময়"],
+  historyLastDate: ["Latest entered business date", "সর্বশেষ এন্ট্রির তারিখ"],
+  historyOpeningList: ["Opening stock and dues", "শুরুর stock ও বাকির তালিকা"],
+  historyOpeningReview: [
+    "Review these starting balances before confirming",
+    "নিশ্চিত করার আগে শুরুর এই হিসাব মিলিয়ে নিন",
+  ],
+  historyNoRestart: [
+    "Opening balances are already saved. A new historical setup cannot replace existing accounts.",
+    "শুরুর হিসাব আগেই সংরক্ষিত। পুরোনো হিসাব মুছে নতুন historical setup বসানো যাবে না।",
+  ],
+  HISTORY_DATE_INVALID: [
+    "Use a real date within the setup period, on or after the latest entered date, and not in the future.",
+    "Setup-এর সময়ের মধ্যে আসল তারিখ দিন; সর্বশেষ এন্ট্রির আগের বা ভবিষ্যতের তারিখ দেওয়া যাবে না।",
+  ],
+  HISTORY_NOT_ACTIVE: [
+    "Historical entry is available only during previous-accounts setup.",
+    "শুধু আগের হিসাবের setup চলার সময় পুরোনো তারিখে এন্ট্রি করা যাবে।",
+  ],
+  HISTORY_OPENING_LOCKED: [
+    "The starting balances have already been confirmed and are locked.",
+    "শুরুর হিসাব ইতিমধ্যে নিশ্চিত করা হয়েছে; এটি এখন বন্ধ।",
+  ],
+  HISTORY_LOCK_REQUIRED: [
+    "Add and confirm the starting balances in Settings before entering dated transactions.",
+    "তারিখ দিয়ে লেনদেন তোলার আগে Settings-এ শুরুর হিসাব যোগ করে নিশ্চিত করুন।",
+  ],
+  HISTORY_OWNER_ONLY: [
+    "Only the Owner can post while previous accounts are being entered.",
+    "আগের হিসাব তোলার সময় শুধু Owner হিসাব তুলতে পারবেন।",
+  ],
+  HISTORY_BALANCE_MISMATCH: [
+    "Actual Cash / Bank does not match the ledger. Check missing or mistaken transactions; no automatic adjustment was made.",
+    "বাস্তবে থাকা Cash / Bank হিসাবের সঙ্গে মেলেনি। বাদ পড়া বা ভুল লেনদেন যাচাই করুন; কোনো স্বয়ংক্রিয় সমন্বয় করা হয়নি।",
+  ],
+  HISTORY_CHANGED: [
+    "The setup changed after you opened this form. Close and reopen it, then review the latest balances before confirming.",
+    "এই form খোলার পরে হিসাব বদলেছে। Form বন্ধ করে আবার খুলুন; সর্বশেষ balance মিলিয়ে নিশ্চিত করুন।",
+  ],
+  OPENING_STOCK_RETURN: [
+    "This opening stock has no linked supplier. It cannot create a supplier refund; contact the Owner to check its source.",
+    "এই শুরুর stock-এর সঙ্গে সরবরাহকারী নেই। সরবরাহকারীর ফেরত পাওনা তৈরি করা যাবে না; উৎসটি Owner-কে যাচাই করতে বলুন।",
+  ],
   individualPurchase: [
     "Buy a phone from a person",
     "ব্যক্তির কাছ থেকে ফোন ক্রয়",

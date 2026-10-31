@@ -14,7 +14,8 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   choices,
   prepareForm,
-  formFields,
+  commandFields,
+  historyCommandError,
   restoreFormDraft,
   paymentHelp,
   fieldRequired,
@@ -105,12 +106,12 @@ export function NativeCommand({ navigation, route }: any) {
       if (
         !p &&
         route.params.documentId &&
-        ["supplierRefund", "loanRepayment"].includes(kind) &&
+        ["supplierRefund", "loanRepayment", "reversal"].includes(kind) &&
         initial.documentId !== route.params.documentId
       )
         Object.assign(initial, {
           documentId: route.params.documentId,
-          amount: "",
+          ...(kind === "reversal" ? {} : { amount: "" }),
         });
       if (
         !p &&
@@ -230,7 +231,11 @@ export function NativeCommand({ navigation, route }: any) {
         );
       } else {
         setError(e.code || "SERVER_ERROR");
-        if (["STOCK_CHANGED", "STOCK_CONFLICT"].includes(e.code))
+        if (
+          ["STOCK_CHANGED", "STOCK_CONFLICT", "HISTORY_CHANGED"].includes(
+            e.code,
+          )
+        )
           await refresh();
         if (e.status >= 400 && e.status < 500) await persist(null);
         if (e.details)
@@ -283,12 +288,22 @@ export function NativeCommand({ navigation, route }: any) {
           keyboardShouldPersistTaps="handled"
         >
           <Txt style={{ fontSize: 11, color: c.muted, marginBottom: 20 }}>
-            {state.today} · Asia/Dhaka
+            {values.businessDate || state.today} · Asia/Dhaka
           </Txt>
+          {historyCommandError(kind, state) && (
+            <Panel>
+              <Txt>{tr(historyCommandError(kind, state))}</Txt>
+            </Panel>
+          )}
           {paymentHint && (
             <Txt style={{ marginBottom: 14 }}>{tr(paymentHint)}</Txt>
           )}
-          {["stockEdit", "purchaseReturn", "supplierRefund"].includes(kind) && (
+          {[
+            "stockEdit",
+            "purchaseReturn",
+            "supplierRefund",
+            "openingStock",
+          ].includes(kind) && (
             <Panel>
               <Txt>{tr(kind + "Help")}</Txt>
             </Panel>
@@ -310,7 +325,7 @@ export function NativeCommand({ navigation, route }: any) {
                 }
               />
             )}
-          {formFields(kind, values).map((f) => (
+          {commandFields(kind, values, state).map((f) => (
             <View key={f.key}>
               {f.type === "select" ? (
                 <View style={{ marginBottom: 14 }}>
@@ -380,9 +395,26 @@ export function NativeCommand({ navigation, route }: any) {
                   {dateField === f.key && (
                     <DateTimePicker
                       value={
-                        new Date((values[f.key] || "2000-01-01") + "T12:00:00")
+                        new Date(
+                          (values[f.key] ||
+                            (f.key === "dateOfBirth"
+                              ? "2000-01-01"
+                              : state.shop.history_last_date || state.today)) +
+                            "T12:00:00",
+                        )
                       }
-                      maximumDate={new Date(state.today + "T23:59:59")}
+                      minimumDate={
+                        f.key === "businessDate" && state.shop.history_last_date
+                          ? new Date(state.shop.history_last_date + "T00:00:00")
+                          : undefined
+                      }
+                      maximumDate={
+                        new Date(
+                          (f.key === "businessDate"
+                            ? state.shop.history_to || state.today
+                            : state.today) + "T23:59:59",
+                        )
+                      }
                       mode="date"
                       display={Platform.OS === "ios" ? "inline" : "default"}
                       onChange={(event, date) => {
@@ -487,6 +519,31 @@ export function NativeCommand({ navigation, route }: any) {
                     </View>
                   ),
               )}
+            </Panel>
+          )}
+          {["historyLock", "historyFinish"].includes(kind) && (
+            <Panel>
+              <Txt>
+                {tr(
+                  kind === "historyLock"
+                    ? "historyOpeningReview"
+                    : "historyFinishHelp",
+                )}
+              </Txt>
+              {[
+                "cash",
+                "bank",
+                "inventory",
+                "receivable",
+                "payable",
+                "loan",
+                "advance",
+                "supplierReceivable",
+              ].map((a) => (
+                <Txt key={a}>
+                  {tr(a)}: {currency(state.balances[a] || "0", lang)}
+                </Txt>
+              ))}
             </Panel>
           )}
           {review && (

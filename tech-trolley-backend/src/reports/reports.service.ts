@@ -4,7 +4,7 @@ import { decimal, z, type User, type Report } from "@tech-trolley/contracts";
 import { reportDetails } from "./report-details";
 import { db } from "../database/database";
 import { fail } from "../common/errors";
-import { documentsSql, documentView } from "../accounts/posting.service";
+import { documentView } from "../accounts/posting.service";
 export function shift(date: string, days: number) {
   const d = new Date(`${date}T00:00:00Z`);
   d.setUTCDate(d.getUTCDate() + days);
@@ -68,7 +68,7 @@ export class ReportsService {
       fail("STAFF_TODAY_ONLY", 403);
     const [shop] = await em.query("SELECT opening_date FROM shop WHERE id=1");
     const sums = await em.query(
-      `SELECT l.account,COALESCE(sum(l.amount) FILTER(WHERE d.business_date<$1::date OR (d.business_date BETWEEN $1::date AND $2::date AND d.kind='opening')),0) AS opening,COALESCE(sum(l.amount) FILTER(WHERE d.business_date BETWEEN $1::date AND $2::date),0) AS activity,COALESCE(sum(l.amount) FILTER(WHERE d.business_date<=$2::date),0) AS closing,COALESCE(sum(l.amount) FILTER(WHERE d.business_date BETWEEN $1::date AND $2::date AND l.amount>0 AND d.kind<>'opening'),0) AS inflow,COALESCE(-sum(l.amount) FILTER(WHERE d.business_date BETWEEN $1::date AND $2::date AND l.amount<0 AND d.kind<>'opening'),0) AS outflow FROM journal_line l JOIN document d ON d.id=l.document_id GROUP BY l.account`,
+      `SELECT l.account,COALESCE(sum(l.amount) FILTER(WHERE d.business_date<$1::date OR (d.business_date BETWEEN $1::date AND $2::date AND (d.kind IN ('opening','openingAdjustment')))),0) AS opening,COALESCE(sum(l.amount) FILTER(WHERE d.business_date BETWEEN $1::date AND $2::date),0) AS activity,COALESCE(sum(l.amount) FILTER(WHERE d.business_date<=$2::date),0) AS closing,COALESCE(sum(l.amount) FILTER(WHERE d.business_date BETWEEN $1::date AND $2::date AND l.amount>0 AND d.kind NOT IN ('opening','openingAdjustment')),0) AS inflow,COALESCE(-sum(l.amount) FILTER(WHERE d.business_date BETWEEN $1::date AND $2::date AND l.amount<0 AND d.kind NOT IN ('opening','openingAdjustment')),0) AS outflow FROM journal_line l JOIN document d ON d.id=l.document_id GROUP BY l.account`,
       [from, to],
     );
     const get = (a: string, k: string) =>
@@ -76,29 +76,20 @@ export class ReportsService {
       revenue = -get("revenue", "activity"),
       cogs = get("cogs", "activity"),
       expense = get("expense", "activity");
+    // Dues and linked corrections are shown as at the report's end date, not
+    // silently cleared by a collection/reversal posted in a later period.
     const documentRows = await em.query(
-      `${documentsSql} WHERE d.business_date BETWEEN $1 AND $2 ORDER BY d.created_at DESC,d.id`,
+      `SELECT d.*,r.id AS reversed_by,CASE WHEN r.id IS NOT NULL THEN 0 ELSE d.original_due-
+       COALESCE((SELECT sum(a.amount) FROM allocation a JOIN document payment ON payment.id=a.document_id
+         WHERE a.target_id=d.id AND payment.business_date<=$2::date),0) END AS due
+       FROM document d LEFT JOIN document r ON r.reversal_of=d.id AND r.business_date<=$2::date
+       WHERE d.business_date BETWEEN $1::date AND $2::date ORDER BY d.business_date DESC,d.created_at DESC,d.id`,
       [from, to],
     );
-    // Historical return statements must not consume receipts after their end date.
-    const refundDues = new Map(
-      (
-        await em.query(
-          `SELECT d.id,d.original_due-COALESCE(sum(a.amount) FILTER(WHERE receipt.business_date<=$2::date),0) AS due
-       FROM document d LEFT JOIN allocation a ON a.target_id=d.id LEFT JOIN document receipt ON receipt.id=a.document_id
-       WHERE d.kind='purchaseReturn' AND d.business_date BETWEEN $1::date AND $2::date GROUP BY d.id`,
-          [from, to],
-        )
-      ).map((r: any) => [r.id, r.due]),
-    );
-    const documents = documentRows.map((d: any) =>
-      documentView(
-        refundDues.has(d.id) ? { ...d, due: refundDues.get(d.id) } : d,
-      ),
-    );
+    const documents = documentRows.map(documentView);
     // Net cash+bank per document removes transfers. Grouping also handles linked reversals.
     const [external] = await em.query(
-      `SELECT COALESCE(sum(n) FILTER(WHERE n>0),0) AS inflow,COALESCE(-sum(n) FILTER(WHERE n<0),0) AS outflow FROM (SELECT sum(l.amount) AS n FROM journal_line l JOIN document d ON d.id=l.document_id WHERE l.account IN ('cash','bank') AND d.business_date BETWEEN $1 AND $2 AND d.kind<>'opening' GROUP BY d.id) x`,
+      `SELECT COALESCE(sum(n) FILTER(WHERE n>0),0) AS inflow,COALESCE(-sum(n) FILTER(WHERE n<0),0) AS outflow FROM (SELECT sum(l.amount) AS n FROM journal_line l JOIN document d ON d.id=l.document_id WHERE l.account IN ('cash','bank') AND d.business_date BETWEEN $1 AND $2 AND d.kind NOT IN ('opening','openingAdjustment') GROUP BY d.id) x`,
       [from, to],
     );
     const openingDate = shop.opening_date
@@ -119,7 +110,7 @@ export class ReportsService {
       COALESCE(sum(l.amount) FILTER(WHERE l.account='bank'),0) AS bank
       FROM document d LEFT JOIN document o ON o.id=d.reversal_of LEFT JOIN journal_line l ON l.document_id=d.id
       WHERE d.business_date BETWEEN $1::date AND $2::date
-      GROUP BY d.id,o.id ORDER BY d.created_at,d.id`,
+      GROUP BY d.id,o.id ORDER BY d.business_date,d.created_at,d.id`,
         [from, to],
       ),
       get("cash", "opening"),

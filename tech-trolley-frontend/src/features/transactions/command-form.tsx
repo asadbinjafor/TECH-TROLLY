@@ -5,7 +5,8 @@ import { useBackLayer } from "@/components/navigation/navigation-provider";
 import {
   choices,
   prepareForm,
-  formFields,
+  commandFields,
+  historyCommandError,
   restoreFormDraft,
   paymentHelp,
   fieldRequired,
@@ -85,10 +86,13 @@ export function CommandForm({
           });
         if (
           initialDocument &&
-          ["supplierRefund", "loanRepayment"].includes(kind) &&
+          ["supplierRefund", "loanRepayment", "reversal"].includes(kind) &&
           v.documentId !== initialDocument
         )
-          Object.assign(v, { documentId: initialDocument, amount: "" });
+          Object.assign(v, {
+            documentId: initialDocument,
+            ...(kind === "reversal" ? {} : { amount: "" }),
+          });
         if (initialParty && kind === "loan" && v.partyId !== initialParty)
           Object.assign(v, { partyId: initialParty, amount: "", note: "" });
         return v;
@@ -194,7 +198,11 @@ export function CommandForm({
         setError("VALIDATION_ERROR");
       } else {
         setError(e.code || "SERVER_ERROR");
-        if (["STOCK_CHANGED", "STOCK_CONFLICT"].includes(e.code))
+        if (
+          ["STOCK_CHANGED", "STOCK_CONFLICT", "HISTORY_CHANGED"].includes(
+            e.code,
+          )
+        )
           await refresh();
         if (e.status >= 400 && e.status < 500) persist(null);
         if (e.details)
@@ -255,10 +263,15 @@ export function CommandForm({
             ×
           </button>
         </header>
-        <p className="date-stamp">{state.today} · Asia/Dhaka</p>
-        {["stockEdit", "purchaseReturn", "supplierRefund"].includes(kind) && (
-          <p className="notice">{t(kind + "Help", lang)}</p>
-        )}
+        <p className="date-stamp">
+          {values.businessDate || state.today} · Asia/Dhaka
+        </p>
+        {[
+          "stockEdit",
+          "purchaseReturn",
+          "supplierRefund",
+          "openingStock",
+        ].includes(kind) && <p className="notice">{t(kind + "Help", lang)}</p>}
         {["stockEdit", "purchaseReturn"].includes(kind) &&
           values.unitId &&
           !review &&
@@ -279,6 +292,11 @@ export function CommandForm({
               {t("reloadStock", lang)}
             </button>
           )}
+        {historyCommandError(kind, state) && (
+          <p className="notice" role="status">
+            {t(historyCommandError(kind, state), lang)}
+          </p>
+        )}
         {paymentHint && (
           <p className="notice" role="status">
             {t(paymentHint, lang)}
@@ -305,7 +323,7 @@ export function CommandForm({
           }}
         >
           <FormGrid>
-            {formFields(kind, values).map((field) => {
+            {commandFields(kind, values, state).map((field) => {
               const required = fieldRequired(kind, field, values, state);
               const partySource = partyKindForSource(field.source);
               const options =
@@ -419,7 +437,18 @@ export function CommandForm({
                               ? "date"
                               : "text"
                       }
-                      max={field.type === "date" ? state.today : undefined}
+                      min={
+                        field.key === "businessDate"
+                          ? state.shop.history_last_date || undefined
+                          : undefined
+                      }
+                      max={
+                        field.key === "businessDate"
+                          ? state.shop.history_to || state.today
+                          : field.type === "date"
+                            ? state.today
+                            : undefined
+                      }
                       inputMode={
                         field.type === "money"
                           ? "decimal"
@@ -463,6 +492,36 @@ export function CommandForm({
                 </span>
               )}
             </div>
+          )}
+          {["historyLock", "historyFinish"].includes(kind) && (
+            <section className="notice">
+              <p>
+                {t(
+                  kind === "historyLock"
+                    ? "historyOpeningReview"
+                    : "historyFinishHelp",
+                  lang,
+                )}
+              </p>
+              {Object.entries(state.balances)
+                .filter(([a]) =>
+                  [
+                    "cash",
+                    "bank",
+                    "inventory",
+                    "receivable",
+                    "payable",
+                    "loan",
+                    "advance",
+                    "supplierReceivable",
+                  ].includes(a),
+                )
+                .map(([a, b]) => (
+                  <p key={a}>
+                    {t(a, lang)}: <b>{currency(b, lang)}</b>
+                  </p>
+                ))}
+            </section>
           )}
           {review && <p className="notice">{t("review", lang)}</p>}
           {kind === "individualPurchase" && review && (

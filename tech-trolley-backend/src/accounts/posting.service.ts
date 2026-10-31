@@ -10,6 +10,9 @@ import {
   individualSellerSchema,
   individualSellerKeys,
   purchaseDeclarationTerms,
+  isHistoryControl,
+  isOpeningKind,
+  dueKind,
   type CommandKind,
   type User,
 } from "@tech-trolley/contracts";
@@ -68,13 +71,62 @@ export class PostingService {
             if (old.request_hash !== hash) fail("IDEMPOTENCY_CONFLICT", 409);
             return old.result;
           }
-          if (kind === "opening") {
+          if (kind === "opening" || kind === "historyStart") {
             if (actor.role !== "OWNER") fail("FORBIDDEN", 403);
             if (shop.opened_at) fail("ALREADY_OPENED", 409);
+            if (
+              kind === "historyStart" &&
+              (await tx.query("SELECT 1 FROM document LIMIT 1")).length
+            )
+              fail("ALREADY_OPENED", 409);
           } else if (!shop.opened_at) fail("OPENING_REQUIRED", 409);
-          const [{ instant, date }] = await tx.query(
+          const [{ instant, date: today }] = await tx.query(
             `WITH stamp AS MATERIALIZED(SELECT clock_timestamp() AS instant) SELECT instant,to_char(instant AT TIME ZONE 'Asia/Dhaka','YYYY-MM-DD') AS date FROM stamp`,
           );
+          const baseline = shop.history_active && !shop.history_locked;
+          const control = isHistoryControl(kind);
+          let date = today;
+          if (kind === "historyStart") {
+            if (data.startDate > data.endDate || data.endDate > today)
+              fail("HISTORY_DATE_INVALID");
+            date = data.startDate;
+          } else if (control) {
+            if (actor.role !== "OWNER") fail("FORBIDDEN", 403);
+            if (!shop.history_active) fail("HISTORY_NOT_ACTIVE", 409);
+            if (
+              [
+                "openingStock",
+                "openingDue",
+                "openingAdjustment",
+                "historyLock",
+              ].includes(kind) &&
+              !baseline
+            )
+              fail("HISTORY_OPENING_LOCKED", 409);
+            if (kind === "historyFinish" && !shop.history_locked)
+              fail("HISTORY_LOCK_REQUIRED", 409);
+            date =
+              kind === "historyFinish" ? shop.history_to : shop.history_from;
+          } else if (shop.history_active) {
+            if (actor.role !== "OWNER") fail("HISTORY_OWNER_ONLY", 403);
+            // Before confirming opening, only audited metadata corrections or
+            // reversal of an opening stock/due entry may be posted.
+            if (baseline) {
+              if (!["stockEdit", "reversal"].includes(kind))
+                fail("HISTORY_LOCK_REQUIRED", 409);
+              date = shop.history_from;
+            } else {
+              if (
+                !data.businessDate ||
+                data.businessDate < shop.history_last_date ||
+                data.businessDate > shop.history_to ||
+                data.businessDate > today
+              )
+                fail("HISTORY_DATE_INVALID");
+              date = data.businessDate;
+            }
+          } else if (data.businessDate !== undefined)
+            fail("HISTORY_NOT_ACTIVE", 409);
           const id = randomUUID(),
             [{ seq }] = await tx.query(
               "SELECT nextval('document_number') AS seq",
@@ -86,8 +138,14 @@ export class PostingService {
             unitId: string | null = null,
             reversalOf: string | null = null;
           const individual = kind === "individualPurchase";
-          const isPurchase = kind === "purchase" || individual;
-          const documentKind = individual ? "purchase" : kind;
+          const openingStock = kind === "openingStock";
+          const isPurchase = kind === "purchase" || individual || openingStock;
+          const documentKind =
+            kind === "historyStart"
+              ? "opening"
+              : individual
+                ? "purchase"
+                : kind;
           // Do not spread NID/nominee/parent/address fields into public state.
           let snapshot: any = Object.fromEntries(
               Object.entries(data).filter(
@@ -121,7 +179,34 @@ export class PostingService {
             snapshot.staffName = s.name;
           };
           const allocations: { target: string; amount: bigint }[] = [];
-          if (kind === "opening") {
+          if (kind === "historyLock" || kind === "historyFinish") {
+            if (data.setupVersion !== shop.history_version)
+              fail("HISTORY_CHANGED", 409);
+            const balances = await tx.query(
+              "SELECT account,sum(amount) AS amount FROM journal_line GROUP BY account",
+            );
+            snapshot.balances = Object.fromEntries(
+              balances.map((r: any) => [
+                r.account,
+                decimal(r.account === "payable" ? -BigInt(r.amount) : r.amount),
+              ]),
+            );
+            snapshot.from = shop.history_from;
+            snapshot.to = shop.history_to;
+            snapshot.lastDate = shop.history_last_date;
+            if (kind === "historyFinish") {
+              if (
+                minor(data.cash) !== minor(snapshot.balances.cash || "0") ||
+                minor(data.bank) !== minor(snapshot.balances.bank || "0")
+              )
+                fail("HISTORY_BALANCE_MISMATCH", 409);
+              await tx.query(
+                "UPDATE shop SET history_active=false,history_finished_at=$1,history_last_date=history_to WHERE id=1",
+                [instant],
+              );
+            } else
+              await tx.query("UPDATE shop SET history_locked=true WHERE id=1");
+          } else if (kind === "opening" || kind === "historyStart") {
             const cash = minor(data.cash),
               bank = minor(data.bank);
             total = cash + bank;
@@ -132,6 +217,66 @@ export class PostingService {
               "UPDATE shop SET opened_at=$1,opening_date=$2 WHERE id=1",
               [instant, date],
             );
+            if (kind === "historyStart") {
+              snapshot.historical = true;
+              await tx.query(
+                "UPDATE shop SET history_active=true,history_from=$1,history_to=$2,history_last_date=$1 WHERE id=1",
+                [data.startDate, data.endDate],
+              );
+            }
+          } else if (kind === "openingAdjustment") {
+            const balances = await tx.query(
+              "SELECT account,sum(amount) AS amount FROM journal_line WHERE account IN ('cash','bank') GROUP BY account",
+            );
+            const cash =
+              minor(data.cash) -
+              BigInt(
+                balances.find((r: any) => r.account === "cash")?.amount || 0,
+              );
+            const bank =
+              minor(data.bank) -
+              BigInt(
+                balances.find((r: any) => r.account === "bank")?.amount || 0,
+              );
+            line("cash", cash);
+            line("bank", bank);
+            line("equity", -cash - bank);
+            snapshot.before = Object.fromEntries(
+              balances.map((r: any) => [r.account, decimal(r.amount)]),
+            );
+            total = minor(data.cash) + minor(data.bank);
+          } else if (kind === "openingDue") {
+            if (data.dueType === "advance") {
+              const [target] = await tx.query(
+                "SELECT id,name FROM app_user WHERE id=$1 AND role='STAFF' AND active",
+                [data.partyId],
+              );
+              if (!target) fail("NOT_FOUND", 404);
+              snapshot.staffId = target.id;
+              snapshot.staffName = target.name;
+            } else {
+              await party(
+                data.partyId,
+                data.dueType === "refund" ? "supplier" : data.dueType,
+              );
+              partyId = data.partyId;
+            }
+            total = amount();
+            due = total;
+            const payable = data.dueType === "supplier";
+            line(
+              payable
+                ? "payable"
+                : data.dueType === "customer"
+                  ? "receivable"
+                  : data.dueType === "refund"
+                    ? "supplierReceivable"
+                    : data.dueType === "advance"
+                      ? "advance"
+                      : "loan",
+              payable ? -total : total,
+            );
+            line("equity", payable ? total : -total);
           } else if (kind === "stockEdit" || kind === "purchaseReturn") {
             const [unit] = await tx.query(
               "SELECT * FROM inventory_unit WHERE id=$1 FOR UPDATE",
@@ -141,6 +286,14 @@ export class PostingService {
             const [purchase] = await tx.query(`${documentsSql} WHERE d.id=$1`, [
               unit.purchase_id,
             ]);
+            if (documentView(purchase).business_date > date)
+              fail("HISTORY_DATE_INVALID");
+            if (
+              kind === "purchaseReturn" &&
+              purchase.kind === "openingStock" &&
+              !purchase.party_id
+            )
+              fail("OPENING_STOCK_RETURN", 409);
             if (
               actor.role === "STAFF" &&
               documentView(purchase).business_date !== date
@@ -268,7 +421,7 @@ export class PostingService {
               }
               snapshot.supplierId = partyId;
             }
-            await party(partyId!, "supplier");
+            if (partyId) await party(partyId, "supplier");
             if (data.imei) {
               if (
                 (
@@ -287,10 +440,13 @@ export class PostingService {
               if (previousUnitId) snapshot.previousUnitId = previousUnitId;
             }
             const cost = positive(minor(data.cost)),
-              courier = individual ? 0n : minor(data.procurement),
-              paid = individual
-                ? minor(data.cash) + minor(data.bank)
-                : minor(data.paid);
+              courier =
+                individual || openingStock ? 0n : minor(data.procurement),
+              paid = openingStock
+                ? cost - minor(data.supplierDue)
+                : individual
+                  ? minor(data.cash) + minor(data.bank)
+                  : minor(data.paid);
             if (paid > cost) fail("PAYMENT_INVALID");
             total = cost;
             due = cost - paid;
@@ -312,7 +468,8 @@ export class PostingService {
               snapshot.actorRole = actor.role;
               line("cash", -minor(data.cash));
               line("bank", -minor(data.bank));
-            } else line(data.account, -paid - courier);
+            } else if (openingStock) line("equity", -paid);
+            else line(data.account, -paid - courier);
             line("payable", -due);
           } else if (kind === "sale") {
             const [u] = await tx.query(
@@ -321,6 +478,11 @@ export class PostingService {
             );
             if (!u) fail("NOT_FOUND", 404);
             if (u.status !== "IN_STOCK") fail("STOCK_CONFLICT", 409);
+            const [source] = await tx.query(
+              "SELECT to_char(business_date,'YYYY-MM-DD') AS date FROM document WHERE id=$1",
+              [u.purchase_id],
+            );
+            if (source.date > date) fail("HISTORY_DATE_INVALID");
             unitId = u.id;
             const price = positive(minor(data.price)),
               discount = minor(data.discount),
@@ -391,7 +553,9 @@ export class PostingService {
             const [target] = await tx.query(`${documentsSql} WHERE d.id=$1`, [
               data.documentId,
             ]);
-            if (!target || target.kind !== expected) fail("NOT_FOUND", 404);
+            if (!target || dueKind(target) !== expected) fail("NOT_FOUND", 404);
+            if (documentView(target).business_date > date)
+              fail("HISTORY_DATE_INVALID");
             if (
               actor.role === "STAFF" &&
               documentView(target).business_date !== date
@@ -464,7 +628,7 @@ export class PostingService {
             if (apply > total) fail("PAYMENT_INVALID");
             let remaining = apply;
             const advances = await tx.query(
-              `${documentsSql} WHERE d.kind='advance' AND d.snapshot->>'staffId'=$1 AND r.id IS NULL ORDER BY d.created_at,d.id`,
+              `${documentsSql} WHERE (d.kind='advance' OR (d.kind='openingDue' AND d.snapshot->>'dueType'='advance')) AND d.snapshot->>'staffId'=$1 AND r.id IS NULL ORDER BY d.created_at,d.id`,
               [data.staffId],
             );
             for (const a of advances) {
@@ -492,6 +656,20 @@ export class PostingService {
               data.documentId,
             ]);
             if (!target) fail("NOT_FOUND", 404);
+            if (documentView(target).business_date > date)
+              fail("HISTORY_DATE_INVALID");
+            if (
+              baseline &&
+              !["openingStock", "openingDue"].includes(target.kind)
+            )
+              fail("DEPENDENCY_CONFLICT", 409);
+            if (
+              ["historyLock", "historyFinish", "openingAdjustment"].includes(
+                target.kind,
+              ) ||
+              (isOpeningKind(target.kind) && !baseline)
+            )
+              fail("DEPENDENCY_CONFLICT", 409);
             if (
               actor.role === "STAFF" &&
               documentView(target).business_date !== date
@@ -528,7 +706,10 @@ export class PostingService {
                 "SELECT * FROM inventory_unit WHERE id=$1 FOR UPDATE",
                 [target.unit_id],
               );
-              if (target.kind === "purchase" && unit.status !== "IN_STOCK")
+              if (
+                ["purchase", "openingStock"].includes(target.kind) &&
+                unit.status !== "IN_STOCK"
+              )
                 fail("DEPENDENCY_CONFLICT", 409);
               if (target.kind === "sale" && unit.sale_id !== target.id)
                 fail("DEPENDENCY_CONFLICT", 409);
@@ -729,6 +910,14 @@ export class PostingService {
             await tx.query(
               "INSERT INTO allocation(document_id,target_id,amount) VALUES($1,$2,$3)",
               [id, a.target, String(a.amount)],
+            );
+          if (shop.history_active && shop.history_locked && !control)
+            await tx.query("UPDATE shop SET history_last_date=$1 WHERE id=1", [
+              date,
+            ]);
+          if (shop.history_active || kind === "historyStart")
+            await tx.query(
+              "UPDATE shop SET history_version=history_version+1 WHERE id=1",
             );
           if (kind === "cashCount")
             await tx.query(

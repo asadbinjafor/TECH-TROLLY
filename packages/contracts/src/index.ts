@@ -121,7 +121,7 @@ export const partySchema = z
     name: text,
     phone: z.string().trim().max(30).default(""),
     address: z.string().trim().max(300).default(""),
-    kind: z.enum(["customer", "supplier", "person"]),
+    kind: z.enum(["customer", "supplier", "person", "refund", "advance"]),
   })
   .strict();
 export const categorySchema = z
@@ -136,10 +136,118 @@ export const shopSchema = z
     phone: z.string().max(30),
   })
   .strict();
+export const calendarDate = z.iso
+  .date()
+  .refine((d) => d >= "1900-01-01", "HISTORY_DATE_INVALID");
+const datedFields = { businessDate: calendarDate.optional() };
+export const openingKinds = [
+  "opening",
+  "openingStock",
+  "openingDue",
+  "openingAdjustment",
+] as const;
+export const historyControlKinds = [
+  "historyStart",
+  "historyLock",
+  "historyFinish",
+  "openingStock",
+  "openingDue",
+  "openingAdjustment",
+] as const;
+export const isOpeningKind = (kind: string) =>
+  (openingKinds as readonly string[]).includes(kind);
+export const isHistoryControl = (kind: string) =>
+  (historyControlKinds as readonly string[]).includes(kind);
+export function dueKind(d: {
+  kind: string;
+  snapshot: Record<string, unknown>;
+}) {
+  if (d.kind === "openingStock") return "purchase";
+  return d.kind === "openingDue"
+    ? (
+        {
+          customer: "sale",
+          supplier: "purchase",
+          person: "loan",
+          advance: "advance",
+          refund: "purchaseReturn",
+        } as Record<string, string>
+      )[String(d.snapshot.dueType)]
+    : d.kind;
+}
 export const commands = {
-  opening: z.strictObject({ cash: money, bank: money }),
+  historyStart: z.strictObject({
+    startDate: calendarDate,
+    endDate: calendarDate,
+    cash: money,
+    bank: money,
+  }),
+  historyLock: z.strictObject({ setupVersion: z.number().int().min(0) }),
+  historyFinish: z.strictObject({
+    cash: money,
+    bank: money,
+    setupVersion: z.number().int().min(0),
+  }),
+  openingAdjustment: z.strictObject({ cash: money, bank: money, note: text }),
+  openingDue: z.strictObject({
+    dueType: z.enum(["customer", "supplier", "person", "refund", "advance"]),
+    partyId: id,
+    amount: money,
+    note,
+  }),
+  openingStock: z
+    .strictObject({
+      ...phoneSpecFields,
+      model: text,
+      brand: text,
+      storage: z.string().trim().max(60).optional(),
+      color: z.string().trim().max(60).optional(),
+      variant: z.string().max(120).default(""),
+      category: z.enum(["phone", "accessory"]),
+      condition: z.enum(["new", "used", "refurbished"]),
+      imei: z
+        .string()
+        .regex(/^\d{15}$/)
+        .nullable()
+        .default(null),
+      battery: z.number().int().min(0).max(100).nullable().default(null),
+      box: z.enum(["with", "without", "unspecified"]).default("unspecified"),
+      supplierId: id.nullable().optional(),
+      supplierDue: money.default("0"),
+      cost: money,
+      note,
+    })
+    .superRefine((v, c) => {
+      validatePhoneSpecs(v, c);
+      if (minor(v.supplierDue) > minor(v.cost))
+        c.addIssue({
+          code: "custom",
+          path: ["supplierDue"],
+          message: "PAYMENT_INVALID",
+        });
+      if (minor(v.supplierDue) > 0n && !v.supplierId)
+        c.addIssue({
+          code: "custom",
+          path: ["supplierId"],
+          message: "SUPPLIER_REQUIRED",
+        });
+      if (v.category === "phone" && !v.imei)
+        c.addIssue({
+          code: "custom",
+          path: ["imei"],
+          message: "IMEI_REQUIRED",
+        });
+      if (v.category === "accessory" && v.imei)
+        c.addIssue({
+          code: "custom",
+          path: ["imei"],
+          message: "ACCESSORY_IMEI",
+        });
+    }),
+  opening: z.strictObject({ ...datedFields, cash: money, bank: money }),
   stockEdit: z
     .strictObject({
+      ...datedFields,
       unitId: id,
       revision: z.number().int().min(0),
       ...phoneSpecFields,
@@ -174,12 +282,14 @@ export const commands = {
         });
     }),
   purchaseReturn: z.strictObject({
+    ...datedFields,
     unitId: id,
     revision: z.number().int().min(0),
     returnValue: money,
     note: text,
   }),
   supplierRefund: z.strictObject({
+    ...datedFields,
     documentId: id,
     amount: money,
     account,
@@ -187,6 +297,7 @@ export const commands = {
   }),
   purchase: z
     .strictObject({
+      ...datedFields,
       ...phoneSpecFields,
       model: text,
       brand: text,
@@ -227,6 +338,7 @@ export const commands = {
     }),
   individualPurchase: z
     .strictObject({
+      ...datedFields,
       ...individualSellerSchema.shape,
       ...phoneSpecFields,
       supplierId: id.optional(),
@@ -277,6 +389,7 @@ export const commands = {
     }),
   sale: z
     .strictObject({
+      ...datedFields,
       unitId: id,
       price: money,
       discount: money.default("0"),
@@ -296,8 +409,15 @@ export const commands = {
           message: "CUSTOMER_REQUIRED",
         });
     }),
-  collection: z.strictObject({ documentId: id, amount: money, account, note }),
+  collection: z.strictObject({
+    ...datedFields,
+    documentId: id,
+    amount: money,
+    account,
+    note,
+  }),
   supplierPayment: z.strictObject({
+    ...datedFields,
     documentId: id,
     amount: money,
     account,
@@ -305,6 +425,7 @@ export const commands = {
   }),
   expense: z
     .strictObject({
+      ...datedFields,
       categoryId: z.union([id, z.literal("custom")]),
       expenseName: z.string().trim().max(180).optional(),
       amount: money,
@@ -319,24 +440,54 @@ export const commands = {
           message: "EXPENSE_NAME_REQUIRED",
         });
     }),
-  transfer: z.strictObject({ from: account, amount: money, note }),
-  contribution: z.strictObject({ account, amount: money, note: text }),
-  withdrawal: z.strictObject({ account, amount: money, note: text }),
-  loan: z.strictObject({ partyId: id, account, amount: money, note: text }),
+  transfer: z.strictObject({
+    ...datedFields,
+    from: account,
+    amount: money,
+    note,
+  }),
+  contribution: z.strictObject({
+    ...datedFields,
+    account,
+    amount: money,
+    note: text,
+  }),
+  withdrawal: z.strictObject({
+    ...datedFields,
+    account,
+    amount: money,
+    note: text,
+  }),
+  loan: z.strictObject({
+    ...datedFields,
+    partyId: id,
+    account,
+    amount: money,
+    note: text,
+  }),
   loanRepayment: z.strictObject({
+    ...datedFields,
     documentId: id,
     account,
     amount: money,
     note,
   }),
-  advance: z.strictObject({ staffId: id, account, amount: money, note: text }),
+  advance: z.strictObject({
+    ...datedFields,
+    staffId: id,
+    account,
+    amount: money,
+    note: text,
+  }),
   advanceRepayment: z.strictObject({
+    ...datedFields,
     documentId: id,
     account,
     amount: money,
     note,
   }),
   salary: z.strictObject({
+    ...datedFields,
     staffId: id,
     month: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/),
     amount: money,
@@ -344,8 +495,8 @@ export const commands = {
     account,
     note,
   }),
-  cashCount: z.strictObject({ counted: money, note }),
-  reversal: z.strictObject({ documentId: id, note: text }),
+  cashCount: z.strictObject({ ...datedFields, counted: money, note }),
+  reversal: z.strictObject({ ...datedFields, documentId: id, note: text }),
 } as const;
 export type CommandKind = keyof typeof commands;
 export type CommandInput<K extends CommandKind> = z.input<(typeof commands)[K]>;
@@ -498,6 +649,13 @@ export interface State {
     address: string;
     phone: string;
     opened_at: string | null;
+    history_active?: boolean;
+    history_from?: string | null;
+    history_to?: string | null;
+    history_last_date?: string | null;
+    history_locked?: boolean;
+    history_version?: number;
+    history_finished_at?: string | null;
   };
   balances: Record<string, string>;
   units: Unit[];
@@ -596,6 +754,32 @@ export const forms: Record<CommandKind, Field[]> = {
     a,
     n,
   ],
+  historyStart: [
+    f("startDate", "date", { label: "historyStartDate" }),
+    f("endDate", "date", { label: "historyEndDate" }),
+    optionalMoney("cash", { label: "openingCash" }),
+    optionalMoney("bank", { label: "openingBank" }),
+  ],
+  historyLock: [f("setupVersion", "number")],
+  historyFinish: [
+    f("cash", "money", { label: "verifiedCash" }),
+    f("bank", "money", { label: "verifiedBank" }),
+    f("setupVersion", "number"),
+  ],
+  openingAdjustment: [
+    optionalMoney("cash", { label: "openingCash" }),
+    optionalMoney("bank", { label: "openingBank" }),
+    f("note"),
+  ],
+  openingDue: [
+    f("dueType", "select", {
+      options: ["customer", "supplier", "person", "refund", "advance"],
+    }),
+    f("partyId", "select", { source: "customers", label: "dueParty" }),
+    amount,
+    n,
+  ],
+  openingStock: [], // Populated from the same stock fields as a supplier purchase below.
   opening: [
     optionalMoney("cash", { label: "openingCash" }),
     optionalMoney("bank", { label: "openingBank" }),
@@ -729,6 +913,31 @@ export function customerInvoiceFields(customer?: Party) {
     customerAddress: customer?.address || "",
   };
 }
+// Keep stock input geometry and phone validation identical to ordinary purchases.
+forms.openingStock = forms.purchase
+  .filter(
+    (f) => !["procurement", "treatment", "paid", "account"].includes(f.key),
+  )
+  .map((f) => (f.key === "supplierId" ? { ...f, optional: true } : f));
+forms.openingStock.splice(
+  forms.openingStock.findIndex((f) => f.key === "cost") + 1,
+  0,
+  optionalMoney("supplierDue", { label: "openingStockPayable" }),
+);
+export function commandFields(
+  kind: CommandKind,
+  values: Record<string, string>,
+  state: State,
+) {
+  const fields = formFields(kind, values);
+  return state.shop?.history_active &&
+    state.shop.history_locked &&
+    !isHistoryControl(kind) &&
+    kind !== "opening"
+    ? [f("businessDate", "date"), ...fields]
+    : fields;
+}
+
 export function saleNeedsCustomer(values: {
   price?: string;
   discount?: string;
@@ -746,16 +955,34 @@ export function saleNeedsCustomer(values: {
 }
 export function formFields(kind: CommandKind, values: Record<string, string>) {
   return forms[kind]
+    .map((field) =>
+      kind === "openingDue" && field.key === "partyId"
+        ? {
+            ...field,
+            source:
+              (
+                {
+                  customer: "customers",
+                  supplier: "suppliers",
+                  refund: "suppliers",
+                  advance: "staff",
+                  person: "persons",
+                } as const
+              )[values.dueType as "customer"] || "customers",
+          }
+        : field,
+    )
     .filter(
       (f) =>
         f.key !== "revision" &&
+        f.key !== "setupVersion" &&
         (f.key !== "expenseName" || values.categoryId === "custom") &&
         (f.key !== "ram" || values.phoneType === "android") &&
         (!["phoneType", "ram"].includes(f.key) ||
           values.category !== "accessory") &&
         (!(kind === "sale" && f.key === "storage") || !!values.phoneType) &&
         !(
-          ["purchase", "stockEdit"].includes(kind) &&
+          ["purchase", "openingStock", "stockEdit"].includes(kind) &&
           f.key === "imei" &&
           values.category === "accessory"
         ),
@@ -784,6 +1011,17 @@ export function restoreFormDraft(
 ) {
   const values = { ...formDefaults(kind, today), ...draft };
   if (kind === "individualPurchase") delete values.supplierId;
+  if (
+    state?.shop?.history_active &&
+    state.shop.history_locked &&
+    !isHistoryControl(kind) &&
+    kind !== "opening"
+  )
+    values.businessDate ||=
+      state.shop.history_last_date || state.shop.history_from || "";
+  else delete values.businessDate;
+  if (["historyLock", "historyFinish"].includes(kind))
+    values.setupVersion = String(state?.shop?.history_version || 0);
   if (values.phoneType && values.storage)
     values.storage = normalizeCapacity(values.storage);
   if (kind === "sale" && state && values.unitId) {
@@ -811,7 +1049,11 @@ export function fieldRequired(
   values: Record<string, string>,
   state: State,
 ) {
-  if (["purchase", "individualPurchase", "stockEdit"].includes(kind)) {
+  if (
+    ["purchase", "openingStock", "individualPurchase", "stockEdit"].includes(
+      kind,
+    )
+  ) {
     if (field.key === "phoneType")
       return kind !== "stockEdit" && values.category !== "accessory";
     if (field.key === "ram")
@@ -819,9 +1061,17 @@ export function fieldRequired(
     if (field.key === "storage")
       return !!values.phoneType && values.category !== "accessory";
   }
+  if (kind === "openingStock" && field.key === "supplierId")
+    return (
+      money.safeParse(values.supplierDue).success &&
+      minor(values.supplierDue) > 0n
+    );
   if (kind === "sale" && field.key === "customerId")
     return saleNeedsCustomer(values);
-  if (["purchase", "stockEdit"].includes(kind) && field.key === "imei")
+  if (
+    ["purchase", "openingStock", "stockEdit"].includes(kind) &&
+    field.key === "imei"
+  )
     return values.category === "phone";
   if (kind === "purchase" && ["account", "treatment"].includes(field.key)) {
     try {
@@ -933,6 +1183,8 @@ export function selectionBlockers(
   state: State,
 ) {
   const issues: Record<string, string> = {};
+  const historyError = historyCommandError(kind, state);
+  if (historyError) issues._history = historyError;
   for (const field of formFields(kind, values).filter(
     (f) => f.type === "select",
   )) {
@@ -947,12 +1199,37 @@ export function selectionBlockers(
   }
   return issues;
 }
+export function historyCommandError(kind: CommandKind, state: State) {
+  if (!state.shop?.history_active) return "";
+  if (state.user.role !== "OWNER") return "HISTORY_OWNER_ONLY";
+  if (
+    !state.shop.history_locked &&
+    !isHistoryControl(kind) &&
+    !["stockEdit", "reversal"].includes(kind)
+  )
+    return "HISTORY_LOCK_REQUIRED";
+  return "";
+}
 export function prepareForm(
   kind: CommandKind,
   values: Record<string, string>,
   state: State,
 ) {
   const blocked = selectionBlockers(kind, values, state);
+  if (
+    state.shop?.history_active &&
+    state.shop.history_locked &&
+    !isHistoryControl(kind) &&
+    kind !== "opening"
+  ) {
+    const date = values.businessDate;
+    if (
+      !calendarDate.safeParse(date).success ||
+      date < (state.shop.history_last_date || "") ||
+      date > (state.shop.history_to || "")
+    )
+      blocked.businessDate = "HISTORY_DATE_INVALID";
+  }
   for (const field of formFields(kind, values))
     if (
       ["phoneType", "storage", "ram"].includes(field.key) &&
@@ -977,7 +1254,9 @@ export function prepareForm(
       money.safeParse(values.returnValue).success
     ) {
       const purchase = state.documents.find(
-        (d) => d.kind === "purchase" && d.unit_id === unit?.id,
+        (d) =>
+          ["purchase", "openingStock"].includes(d.kind) &&
+          d.unit_id === unit?.id,
       );
       if (purchase && minor(values.returnValue) > minor(purchase.total))
         blocked.returnValue = "RETURN_VALUE_INVALID";
@@ -1004,7 +1283,10 @@ export function prepare(kind: CommandKind, raw: Record<string, string>) {
   // Ordinary new forms use direct seller entry. Frozen pending commands bypass
   // preparation and retain their original supplier ID and idempotency hash.
   if (kind === "individualPurchase") delete data.supplierId;
-  if (["purchase", "stockEdit"].includes(kind) && raw.category === "accessory")
+  if (
+    ["purchase", "openingStock", "stockEdit"].includes(kind) &&
+    raw.category === "accessory"
+  )
     data.imei = null;
   for (const field of forms[kind]) {
     if (field.emptyValue !== undefined && !data[field.key])
@@ -1020,7 +1302,11 @@ export function prepare(kind: CommandKind, raw: Record<string, string>) {
       data[field.key] = Number(data[field.key]);
   }
   for (const field of forms[kind]) if (field.uiOnly) delete data[field.key];
-  if (["purchase", "individualPurchase", "stockEdit"].includes(kind)) {
+  if (
+    ["purchase", "openingStock", "individualPurchase", "stockEdit"].includes(
+      kind,
+    )
+  ) {
     if (data.category === "accessory" || !data.phoneType) {
       if (kind === "stockEdit") {
         data.phoneType = null;
@@ -1051,6 +1337,7 @@ export function prepare(kind: CommandKind, raw: Record<string, string>) {
     minor(String(data.amount)) === minor(String(data.applyAdvance))
   )
     data.account = "cash";
+  if (kind === "openingStock" && !data.supplierId) data.supplierId = null;
   const parsed = commands[kind].parse(data);
   const values = parsed as Record<string, unknown>;
   const issues: z.core.$ZodIssue[] = [];
@@ -1099,13 +1386,15 @@ export function choices(
     return field.options.map((value) => ({
       value,
       label:
-        value === "phone"
-          ? "phoneProduct"
-          : value === "cash"
-            ? "cashAccount"
-            : value === "bank"
-              ? "bankAccount"
-              : value,
+        field.key === "dueType"
+          ? "openingDue_" + value
+          : value === "phone"
+            ? "phoneProduct"
+            : value === "cash"
+              ? "cashAccount"
+              : value === "bank"
+                ? "bankAccount"
+                : value,
     }));
   if (field.source === "units" || field.source === "editableUnits")
     return state.units
@@ -1160,7 +1449,7 @@ export function choices(
       (d) =>
         !d.reversed_by &&
         (dk
-          ? d.kind === dk && minor(d.due) > 0n
+          ? dueKind(d) === dk && minor(d.due) > 0n
           : correctableDocument(d, state)),
     )
     .map((d) => ({
@@ -1169,6 +1458,14 @@ export function choices(
     }));
 }
 export function correctableDocument(d: Document, state: State) {
+  if (
+    isOpeningKind(d.kind) &&
+    d.kind !== "opening" &&
+    !(state.shop.history_active && !state.shop.history_locked)
+  )
+    return false;
+  if (["historyLock", "historyFinish", "openingAdjustment"].includes(d.kind))
+    return false;
   if (
     d.reversed_by ||
     [
@@ -1191,7 +1488,12 @@ export function correctableDocument(d: Document, state: State) {
   )
     return false;
   const unit = state.units.find((u) => u.id === d.unit_id);
-  if (d.kind === "purchase" && unit && unit.status !== "IN_STOCK") return false;
+  if (
+    ["purchase", "openingStock"].includes(d.kind) &&
+    unit &&
+    unit.status !== "IN_STOCK"
+  )
+    return false;
   if (d.kind === "sale" && unit && unit.sale_id !== d.id) return false;
   if (d.kind === "sale" && unit) {
     const descendants = new Set([unit.id]);
@@ -1358,13 +1660,15 @@ export function changeFormValue(
         bank: "",
       };
   }
+  if (kind === "openingDue" && key === "dueType") next.partyId = "";
   return next;
 }
 
 export function returnPreview(state: State, values: Record<string, string>) {
   const unit = state.units.find((u) => u.id === values.unitId);
   const purchase = state.documents.find(
-    (d) => d.kind === "purchase" && d.unit_id === unit?.id,
+    (d) =>
+      ["purchase", "openingStock"].includes(d.kind) && d.unit_id === unit?.id,
   );
   if (!unit || !purchase) return null;
   if (!values.returnValue)
@@ -1431,7 +1735,7 @@ export function loanAccounts(
       b.created_at.localeCompare(a.created_at) ||
       b.number.localeCompare(a.number),
   )) {
-    if (d.kind !== "loan" || !d.party_id) continue;
+    if (dueKind(d) !== "loan" || !d.party_id) continue;
     let group = accounts.get(d.party_id);
     if (!group) {
       const party = state.parties.find((p) => p.id === d.party_id);
@@ -1462,7 +1766,7 @@ export function loanAccounts(
       .filter(
         (d) =>
           d.party_id === group.partyId &&
-          (["loan", "loanRepayment"].includes(d.kind) ||
+          (["loan", "loanRepayment"].includes(dueKind(d)) ||
             (d.kind === "reversal" &&
               ["loan", "loanRepayment"].includes(
                 String(d.snapshot.originalKind),

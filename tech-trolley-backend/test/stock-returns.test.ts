@@ -68,6 +68,11 @@ test("stock edits and supplier returns preserve immutable accounting and actual 
     await db.query(
       "ALTER TABLE inventory_unit ADD COLUMN phone_type text, ADD COLUMN ram text",
     );
+    // Current state exposes additive onboarding metadata; remove these fixture-
+    // only columns again before exercising the actual startup migration.
+    await db.query(
+      "ALTER TABLE shop ADD COLUMN history_active boolean DEFAULT false, ADD COLUMN history_from date, ADD COLUMN history_to date, ADD COLUMN history_last_date date, ADD COLUMN history_locked boolean DEFAULT false, ADD COLUMN history_version integer DEFAULT 0, ADD COLUMN history_finished_at timestamptz",
+    );
     app = await createApp();
     await app.init();
     const http = app.getHttpServer();
@@ -166,7 +171,28 @@ test("stock edits and supplier returns preserve immutable accounting and actual 
         await db.query(
           "ALTER TABLE inventory_unit DROP COLUMN phone_type, DROP COLUMN ram",
         );
+        await db.query(
+          "ALTER TABLE shop DROP COLUMN history_active, DROP COLUMN history_from, DROP COLUMN history_to, DROP COLUMN history_last_date, DROP COLUMN history_locked, DROP COLUMN history_version, DROP COLUMN history_finished_at",
+        );
         await migrate();
+        const migratedShop = (
+          await db.query(
+            "SELECT history_active,history_from,history_finished_at FROM shop WHERE id=1",
+          )
+        )[0];
+        assert.deepEqual(migratedShop, {
+          history_active: false,
+          history_from: null,
+          history_finished_at: null,
+        });
+        const restart = await send("historyStart", {
+          startDate: "2026-10-01",
+          endDate: "2026-10-07",
+          cash: "0",
+          bank: "0",
+        });
+        assert.equal(restart.status, 409);
+        assert.equal(restart.body.code, "ALREADY_OPENED");
         assert.deepEqual(
           await db.query("SELECT * FROM document ORDER BY number"),
           documents,

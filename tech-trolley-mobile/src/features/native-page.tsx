@@ -270,6 +270,26 @@ export function NativePage({ navigation, route, section: initial }: any) {
             </View>
           )}
         </View>
+        {state.shop.history_version !== undefined &&
+          (!state.shop.opened_at || state.shop.history_active) && (
+            <Panel>
+              <Txt>
+                {tr(
+                  state.shop.history_active
+                    ? "historyActive"
+                    : "historyStartHint",
+                )}
+              </Txt>
+              {user?.role === "OWNER" && (
+                <Button
+                  label={tr("historySetup")}
+                  onPress={() =>
+                    navigation.navigate("Administration", { mode: "settings" })
+                  }
+                />
+              )}
+            </Panel>
+          )}
         {(error || problem) && (
           <Panel>
             <Txt accessibilityRole="alert" style={{ color: "#b95050" }}>

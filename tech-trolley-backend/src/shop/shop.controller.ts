@@ -15,7 +15,7 @@ export class ShopController {
   @Get("state") async state(@Req() req: any) {
     return db.transaction("REPEATABLE READ", async (em) => {
       const [shop] = await em.query(
-        "SELECT name,address,phone,opened_at FROM shop WHERE id=1",
+        "SELECT name,address,phone,opened_at,history_active,history_from,history_to,history_last_date,history_locked,history_version,history_finished_at FROM shop WHERE id=1",
       );
       const [{ now, today }] = await em.query(
         "SELECT now() AS now,to_char(now() AT TIME ZONE 'Asia/Dhaka','YYYY-MM-DD') AS today",
@@ -55,7 +55,7 @@ export class ShopController {
         })),
         documents: (
           await em.query(
-            `${documentsSql} WHERE ($1::boolean OR d.business_date=$2::date) ORDER BY d.created_at DESC,d.id`,
+            `${documentsSql} WHERE ($1::boolean OR d.business_date=$2::date) ORDER BY d.business_date DESC,d.created_at DESC,d.id`,
             [req.user.role === "OWNER", today],
           )
         ).map(documentView),

@@ -109,6 +109,24 @@ const fields = (kind: CommandKind, overrides: Record<string, string> = {}) => ({
   ...overrides,
 });
 const scenarios: Record<CommandKind, Record<string, string>> = {
+  historyStart: {
+    startDate: "2026-10-23",
+    endDate: "2026-10-29",
+    cash: "1",
+    bank: "0",
+  },
+  historyLock: { setupVersion: "0" },
+  historyFinish: { cash: "1", bank: "0", setupVersion: "0" },
+  openingAdjustment: { cash: "1", bank: "0", note: "Correct opening" },
+  openingDue: { dueType: "customer", partyId: id(3), amount: "1" },
+  openingStock: {
+    phoneType: "iphone",
+    storage: "128 GB",
+    model: "Phone",
+    brand: "Brand",
+    imei: "123456789012345",
+    cost: "1",
+  },
   stockEdit: {
     unitId: id(1),
     revision: "0",
@@ -296,7 +314,26 @@ test("every required input rejects a blank and every fixed dropdown option remai
         if (field.uiOnly || ["phoneType", "ram", "storage"].includes(field.key))
           continue;
         assert.ok(
-          prepareForm(kind, { ...raw, [field.key]: value }, populated),
+          prepareForm(
+            kind,
+            {
+              ...raw,
+              [field.key]: value,
+              ...(kind === "openingDue" && field.key === "dueType"
+                ? {
+                    partyId:
+                      value === "advance"
+                        ? populated.staff[0].id
+                        : populated.parties.find(
+                            (p) =>
+                              p.kind ===
+                              (value === "refund" ? "supplier" : value),
+                          )!.id,
+                  }
+                : {}),
+            },
+            populated,
+          ),
           `${kind}.${field.key}=${value}`,
         );
       }

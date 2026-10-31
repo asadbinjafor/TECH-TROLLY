@@ -13,6 +13,7 @@ import { useShop } from "../contexts/shop-context";
 import { Button, Input, Txt, Panel, useColors } from "../components/ui";
 import { api, tokenKey } from "../services/api";
 import * as SecureStore from "expo-secure-store";
+import { NativeHistoricalSetup } from "./native-historical-setup";
 import { NativePartyManager } from "./native-party-manager";
 import {
   profileSchema,
@@ -104,6 +105,9 @@ export function NativeAdministration({ route, navigation }: any) {
           <Txt accessibilityRole="alert" style={{ color: "#b95050" }}>
             {tr(error)}
           </Txt>
+        )}
+        {mode === "settings" && (
+          <NativeHistoricalSetup navigation={navigation} />
         )}
         {mode === "settings" && (
           <Panel>

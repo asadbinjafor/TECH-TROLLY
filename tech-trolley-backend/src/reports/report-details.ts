@@ -113,7 +113,10 @@ export function reportDetails(
     }
     const cash = BigInt(row.cash),
       bank = BigInt(row.bank);
-    if (row.kind !== "opening" && (cash !== 0n || bank !== 0n)) {
+    if (
+      !["opening", "openingAdjustment"].includes(row.kind) &&
+      (cash !== 0n || bank !== 0n)
+    ) {
       cashBalance += cash;
       bankBalance += bank;
       moneyStatement.push({

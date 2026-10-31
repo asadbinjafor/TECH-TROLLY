@@ -1991,3 +1991,49 @@ td b {
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+.history-setup {
+  margin-bottom: 24px;
+}
+.history-setup p {
+  line-height: 1.65;
+}
+.history-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-block: 16px;
+}
+.history-actions .button {
+  min-height: 48px;
+  white-space: normal;
+  text-align: center;
+}
+.history-balances {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 16px;
+  margin-block: 20px;
+}
+.history-balances > div {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 16px;
+}
+.history-balances dd {
+  margin: 8px 0 0;
+  font-weight: 700;
+}
+.history-opening-list article {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--line);
+}
+.history-opening-list article > div {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}

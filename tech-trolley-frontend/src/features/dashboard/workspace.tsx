@@ -46,6 +46,7 @@ import { api, apiBase } from "@/services/api";
 import { Login } from "@/features/auth/login";
 import { StartupScreen } from "@/features/auth/startup-screen";
 import { CommandForm } from "@/features/transactions/command-form";
+import { HistoricalSetup } from "@/features/settings/historical-setup";
 import { Administration } from "@/features/settings/administration";
 import { Invoice } from "@/features/transactions/invoice";
 import { PdfDownload } from "@/features/transactions/pdf-download";
@@ -615,6 +616,23 @@ export function Workspace({ section }: { section: string }) {
               </button>
             </div>
           )}
+          {state.shop.history_version !== undefined &&
+            (!state.shop.opened_at || state.shop.history_active) && (
+              <div className="notice" role="status">
+                <span>
+                  {tr(
+                    state.shop.history_active
+                      ? "historyActive"
+                      : "historyStartHint",
+                  )}
+                </span>
+                {user.role === "OWNER" && (
+                  <Link className="button" href="/settings">
+                    {tr("historySetup")}
+                  </Link>
+                )}
+              </div>
+            )}
           {!state.shop.opened_at && (
             <div className="notice opening-notice">
               <span>{tr("openingNotice")}</span>
@@ -1255,7 +1273,18 @@ export function Workspace({ section }: { section: string }) {
               )}
             </>
           )}
-          {section === "settings" && <Administration mode="settings" />}
+          {section === "settings" && (
+            <>
+              <HistoricalSetup
+                onAction={(kind, id) => {
+                  action(kind);
+                  if (kind === "stockEdit") setSelectedUnit(id);
+                  if (kind === "reversal") setSelectedDocument(id);
+                }}
+              />
+              <Administration mode="settings" />
+            </>
+          )}
           <footer className="page-footer">
             <span className={error ? "status-dot offline" : "status-dot"} />
             {tr(error ? "cached" : "connected")}
