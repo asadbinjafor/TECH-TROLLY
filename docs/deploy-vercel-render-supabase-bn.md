@@ -97,7 +97,7 @@ Render Settings-এর Build Filters `render.yaml`-এর included paths-এর 
 | `DATABASE_SSL_CA_BASE64` | Optional: downloaded certificate-এর base64; TLS chain error হলে ব্যবহার করুন |
 | `WEB_ORIGIN` | Vercel-এর আসল production origin, যেমন `https://YOUR_ACTUAL_PROJECT.vercel.app`; শেষে `/` নয় |
 | `BOOTSTRAP_OWNER_EMAIL` | আপনার master brief-এ দেওয়া initial Owner email |
-| `BOOTSTRAP_OWNER_PASSWORD` | আপনার master brief-এ দেওয়া initial Owner password |
+| `BOOTSTRAP_OWNER_PASSWORD` | নতুন installation-এর জন্য নিজের বেছে নেওয়া ঠিক ৪টি ইংরেজি সংখ্যা (0–9); আগে account থাকলে এই value বদলে password reset হয় না |
 
 Initial credentials এখানে লিখে commit করা হয়নি। এগুলো শুধু Render-এর secret environment values-এ দিন। `PORT` নিজে বসাতে হবে না; Render যে port দেয় API সেটিই ব্যবহার করে। এই application-এর জন্য `JWT_SECRET`, Supabase anon key বা Supabase Auth signup setting প্রয়োজন নেই।
 

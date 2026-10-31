@@ -11,7 +11,6 @@
     "export": "expo export --platform android --platform ios"
   },
   "dependencies": {
-    "@tech-trolley/invoice": "1.0.0",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-native-community/datetimepicker": "9.2.1",
     "@react-native-picker/picker": "2.11.4",
@@ -22,10 +21,11 @@
     "@tech-trolley/contracts": "1.0.0",
     "@tech-trolley/design-tokens": "1.0.0",
     "@tech-trolley/i18n": "1.0.0",
-    "expo": "~58.0.21",
+    "@tech-trolley/invoice": "1.0.0",
+    "expo": "~58.0.22",
     "expo-asset": "~58.0.19",
     "expo-crypto": "~58.0.7",
-    "expo-dev-client": "~58.0.17",
+    "expo-dev-client": "~58.0.18",
     "expo-file-system": "~58.0.13",
     "expo-font": "~58.0.11",
     "expo-print": "~58.0.8",
