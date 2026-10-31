@@ -168,7 +168,11 @@ function TabScreens() {
         headerShown: false,
         tabBarActiveTintColor: "#a58230",
         tabBarStyle: { backgroundColor: c.surface, borderTopColor: c.line },
-        tabBarLabelStyle: { fontFamily: "Shop", fontSize: 10 },
+        tabBarLabelStyle: {
+          fontFamily: "Shop",
+          fontSize: 10,
+          fontWeight: "500",
+        },
         tabBarIcon: () => null,
       }}
     >

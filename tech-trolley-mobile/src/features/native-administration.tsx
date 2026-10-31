@@ -10,7 +10,14 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Picker } from "@react-native-picker/picker";
 import { t } from "@tech-trolley/i18n";
 import { useShop } from "../contexts/shop-context";
-import { Button, Input, Txt, Panel, useColors } from "../components/ui";
+import {
+  Button,
+  Input,
+  FieldLabel,
+  Txt,
+  Panel,
+  useColors,
+} from "../components/ui";
 import { api, tokenKey } from "../services/api";
 import * as SecureStore from "expo-secure-store";
 import { NativeHistoricalSetup } from "./native-historical-setup";
@@ -325,11 +332,15 @@ export function NativeAdministration({ route, navigation }: any) {
                   {editor.fields.map((f) =>
                     f.options ? (
                       <View key={f.key} style={{ marginBottom: 15 }}>
-                        <Txt>{tr(f.label || f.key)}</Txt>
+                        <FieldLabel label={tr(f.label || f.key)} />
                         <Picker
                           accessibilityLabel={tr(f.label || f.key)}
                           selectedValue={values[f.key] || ""}
-                          style={{ color: c.text }}
+                          style={{
+                            color: c.text,
+                            fontFamily: "Shop",
+                            fontWeight: "500",
+                          }}
                           onValueChange={(value) =>
                             setValues((v) => ({ ...v, [f.key]: String(value) }))
                           }

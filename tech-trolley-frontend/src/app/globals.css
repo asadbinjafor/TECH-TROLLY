@@ -8,7 +8,12 @@
   --bg: #f5f6f8;
   --surface: #fff;
   --text: #23262b;
-  --muted: #81858d;
+  --muted: #626a76;
+  --text-weight: 500;
+  --label-weight: 700;
+  --navigation-weight: 550;
+  --navigation-active: #856719;
+  --optional-text: #ad4d5c;
   --line: #e9eaed;
   --gold: #e9ba4b;
   --pale: #fbf4df;
@@ -30,7 +35,9 @@
   --bg: #17191d;
   --surface: #222529;
   --text: #f0eee8;
-  --muted: #a1a4ab;
+  --muted: #b4bac4;
+  --optional-text: #eda4ae;
+  --navigation-active: #e9ba4b;
   --line: #35383e;
   --pale: #36301f;
   --sidebar: #1e2024;
@@ -52,6 +59,7 @@ body {
   color: var(--text);
   font-family: Shop, Arial, sans-serif;
   font-size: 14px;
+  font-weight: var(--text-weight);
 }
 button,
 input,
@@ -126,10 +134,10 @@ small {
 }
 label {
   font-size: var(--form-label-size);
-  font-weight: 550;
+  font-weight: var(--label-weight);
 }
 label small {
-  font-weight: 400;
+  font-weight: var(--text-weight);
 }
 .muted,
 .page-heading p {
@@ -299,13 +307,14 @@ label small {
   background: transparent;
   border-radius: 10px;
   font-size: 12px;
+  font-weight: var(--navigation-weight);
   color: var(--muted);
   text-align: left;
   margin: 3px 0;
 }
 .nav-item.selected {
   background: var(--pale);
-  color: #9d7b2d;
+  color: var(--navigation-active);
   font-weight: 700;
 }
 .nav-item.selected:before {
@@ -986,6 +995,7 @@ td b {
   border-radius: 8px;
   color: var(--muted);
   font-size: 11px;
+  font-weight: var(--text-weight);
   margin-bottom: 20px;
 }
 .form-layout {
@@ -1015,15 +1025,28 @@ td b {
   margin: 0;
   padding: 0 0 var(--form-label-gap);
   font-size: var(--form-label-size);
-  font-weight: 600;
+  font-weight: var(--label-weight);
   line-height: 22px;
   overflow-wrap: anywhere;
 }
 .field-optional {
-  color: var(--field-muted);
+  color: var(--optional-text);
   font-size: 12px;
-  font-weight: 400;
+  font-weight: var(--text-weight);
   white-space: nowrap;
+}
+/* Printed documents keep their established weights independently of app text. */
+.receipt-paper,
+.purchase-preview {
+  font-weight: 400;
+}
+.receipt-paper label,
+.purchase-preview label {
+  font-weight: 550;
+}
+.receipt-paper label small,
+.purchase-preview label small {
+  font-weight: 400;
 }
 .field-body,
 .field-control {

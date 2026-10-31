@@ -2,6 +2,8 @@ import React from "react";
 import { Pressable, Text, View, TextInput, StyleSheet } from "react-native";
 import { useShop } from "../contexts/shop-context";
 import { t } from "@tech-trolley/i18n";
+const legacyOptional =
+  /\s*(?:·\s*(?:optional|ঐচ্ছিক)|\((?:optional|ঐচ্ছিক)\))/i;
 export function useColors() {
   const { dark } = useShop();
   return dark
@@ -9,7 +11,8 @@ export function useColors() {
         bg: "#17191d",
         surface: "#23262b",
         text: "#f4f1e9",
-        muted: "#a3a6ae",
+        muted: "#b4bac4",
+        optional: "#eda4ae",
         line: "#393c42",
         pale: "#35301e",
       }
@@ -17,7 +20,8 @@ export function useColors() {
         bg: "#f5f6f8",
         surface: "#fff",
         text: "#23262b",
-        muted: "#777d86",
+        muted: "#626a76",
+        optional: "#ad4d5c",
         line: "#e7e8eb",
         pale: "#fbf4df",
       };
@@ -32,12 +36,42 @@ export function Txt({
     <Text
       {...rest}
       style={[
-        { fontFamily: "Shop", color: c.text, fontSize: 14, lineHeight: 22 },
+        {
+          fontFamily: "Shop",
+          color: c.text,
+          fontSize: 14,
+          lineHeight: 22,
+          fontWeight: "500",
+        },
         style,
       ]}
     >
       {children}
     </Text>
+  );
+}
+export function FieldLabel({
+  label,
+  optional = false,
+  style,
+}: {
+  label: string;
+  optional?: boolean;
+  style?: React.ComponentProps<typeof Text>["style"];
+}) {
+  const c = useColors(),
+    { lang } = useShop();
+  const fieldLabel = label.replace(legacyOptional, "");
+  return (
+    <Txt style={[{ fontSize: 12, fontWeight: "700" }, style]}>
+      {fieldLabel}
+      {(optional || legacyOptional.test(label)) && (
+        <Txt style={{ fontSize: 12, fontWeight: "500", color: c.optional }}>
+          {" "}
+          ({t("optional", lang)})
+        </Txt>
+      )}
+    </Txt>
   );
 }
 export function Button({
@@ -93,6 +127,7 @@ export function Input({
   numeric = false,
   money = false,
   maxLength,
+  optional = false,
 }: {
   label: string;
   value: string;
@@ -101,13 +136,23 @@ export function Input({
   numeric?: boolean;
   money?: boolean;
   maxLength?: number;
+  optional?: boolean;
 }) {
-  const c = useColors();
+  const c = useColors(),
+    { lang } = useShop();
   return (
     <View style={{ marginBottom: 15 }}>
-      <Txt style={{ fontSize: 12, marginBottom: 6 }}>{label}</Txt>
+      <FieldLabel
+        label={label}
+        optional={optional}
+        style={{ marginBottom: 6 }}
+      />
       <TextInput
-        accessibilityLabel={label}
+        accessibilityLabel={
+          optional || legacyOptional.test(label)
+            ? `${label.replace(legacyOptional, "")} (${t("optional", lang)})`
+            : label
+        }
         value={value}
         maxLength={maxLength}
         onChangeText={onChange}
@@ -128,6 +173,7 @@ export function Input({
         style={{
           fontFamily: "Shop",
           fontSize: 15,
+          fontWeight: "500",
           color: c.text,
           backgroundColor: c.surface,
           paddingHorizontal: 12,

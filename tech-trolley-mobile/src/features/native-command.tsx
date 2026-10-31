@@ -38,7 +38,14 @@ import {
 } from "@tech-trolley/contracts";
 import { t, currency } from "@tech-trolley/i18n";
 import { useShop } from "../contexts/shop-context";
-import { Button, Input, Txt, Panel, useColors } from "../components/ui";
+import {
+  Button,
+  Input,
+  FieldLabel,
+  Txt,
+  Panel,
+  useColors,
+} from "../components/ui";
 import { api } from "../services/api";
 import { NativePartyManager } from "./native-party-manager";
 import { readPrivateDraft, writePrivateDraft } from "../services/private-draft";
@@ -329,12 +336,10 @@ export function NativeCommand({ navigation, route }: any) {
             <View key={f.key}>
               {f.type === "select" ? (
                 <View style={{ marginBottom: 14 }}>
-                  <Txt style={{ fontSize: 12 }}>
-                    {tr(f.label) +
-                      (!fieldRequired(kind, f, values, state)
-                        ? " · " + tr("optional")
-                        : "")}
-                  </Txt>
+                  <FieldLabel
+                    label={tr(f.label)}
+                    optional={!fieldRequired(kind, f, values, state)}
+                  />
                   <View
                     style={{
                       borderWidth: 1,
@@ -347,7 +352,11 @@ export function NativeCommand({ navigation, route }: any) {
                       accessibilityLabel={tr(f.label)}
                       selectedValue={values[f.key] || ""}
                       enabled={!review && !pending}
-                      style={{ color: c.text }}
+                      style={{
+                        color: c.text,
+                        fontFamily: "Shop",
+                        fontWeight: "500",
+                      }}
                       onValueChange={(v) =>
                         kind === "individualPurchase" && f.key === "supplierId"
                           ? selectSeller(String(v))
@@ -380,14 +389,18 @@ export function NativeCommand({ navigation, route }: any) {
                 </View>
               ) : review || pending ? (
                 <Panel>
-                  <Txt style={{ fontSize: 11, color: c.muted }}>
-                    {tr(f.label)}
-                  </Txt>
+                  <FieldLabel
+                    label={tr(f.label)}
+                    optional={!fieldRequired(kind, f, values, state)}
+                  />
                   <Txt>{values[f.key] || "—"}</Txt>
                 </Panel>
               ) : f.type === "date" ? (
                 <Panel>
-                  <Txt>{tr(f.label)}</Txt>
+                  <FieldLabel
+                    label={tr(f.label)}
+                    optional={!fieldRequired(kind, f, values, state)}
+                  />
                   <Button
                     label={values[f.key] || tr("select")}
                     onPress={() => setDateField(f.key)}
@@ -430,12 +443,8 @@ export function NativeCommand({ navigation, route }: any) {
                 </Panel>
               ) : (
                 <Input
-                  label={
-                    tr(f.label) +
-                    (!fieldRequired(kind, f, values, state)
-                      ? " · " + tr("optional")
-                      : "")
-                  }
+                  label={tr(f.label)}
+                  optional={!fieldRequired(kind, f, values, state)}
                   value={values[f.key] || ""}
                   onChange={(v) =>
                     setValues((prev) => ({ ...prev, [f.key]: v }))

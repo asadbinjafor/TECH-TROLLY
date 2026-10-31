@@ -109,6 +109,7 @@ export function NativePartyManager({
           <Input
             key={k}
             label={tr(k === "address" ? "partyAddress" : k)}
+            optional={k !== "name"}
             value={values[k]}
             maxLength={k === "name" ? 180 : k === "phone" ? 30 : 300}
             onChange={(v) => !busy && setValues((p) => ({ ...p, [k]: v }))}
