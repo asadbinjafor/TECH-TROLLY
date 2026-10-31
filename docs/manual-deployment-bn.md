@@ -3,6 +3,9 @@
 **লেখা ও Optional-এর রং:** সাধারণ লেখা/তারিখ medium, sidebar কিছুটা bold এবং field title আরও bold। সব form-এর Optional/ঐচ্ছিক muted rose-red; dark theme-এ আলাদা হালকা rose ব্যবহার হয়। শুধু লেখার style বদলেছে—কোন field বাধ্যতামূলক বা হিসাব কীভাবে সেভ হয় তা আগের মতো। এই frontend/native update push করলে Vercel Git deployment হবে। API/schema বদলায়নি, তাই Render manual deploy বা Supabase SQL চালানোর প্রয়োজন নেই। Live CSS ও mobile view দেখে release মিলিয়ে নেবেন; native source-এর জন্য Android/iOS export যাচাই করবেন।
 
 
+
+লেখার update live: `14a561e`; [পূর্ণ CI সফল](https://github.com/asadbinjafor/TECH-TROLLY/actions/runs/41246458950)। Vercel-এ প্রকাশিত CSS ও live login-এর font weight মিলেছে। বাংলা/English, light/dark এবং mobile view পরীক্ষা করা হয়েছে। Refresh দিলে নতুন style পাবেন; API আগের যাচাই করা `4054eb8` version-এ চলছে।
+
 **আগের হিসাব থেকে শুরু:** Owner → Settings → আগের হিসাব থেকে শুরু। এটি সাধারণ Opening দেওয়ার আগের একবারের setup; চালু দোকানের ডেটা মুছবে না। শুরুর সকালের টাকা, stock ও বাকি → নিশ্চিত → আগের দিনের লেনদেন তারিখের ক্রমে → Reports মিলিয়ে বাস্তব Cash/Bank দিয়ে setup শেষ। [পুরো বাংলা নির্দেশনা](historical-accounts-bn.md) পড়ুন; একই পণ্যের বাকি দুই জায়গায় তুলবেন না।
 
 এই release-এ migration `011_historical_onboarding.sql` আছে। স্বাভাবিক production branch-এ commit/push করলে Vercel Git integration frontend deploy করবে; CI সফল হলে Render API deploy করে নিজস্ব startup runner-এ Supabase migration চালাবে। Dashboard থেকে আলাদা SQL, reset বা দ্বিতীয় migration pipeline চালাবেন না। আগে backup, পরে CI/দুই health revision/১১টি migration এবং পুরোনো business-record fingerprint যাচাই করতে হবে। কোনো আসল opening বা লেনদেন deployment-এর পরীক্ষা হিসেবে সেভ করবেন না।
