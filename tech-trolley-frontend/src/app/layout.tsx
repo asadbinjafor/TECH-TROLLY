@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { ShopProvider } from "@/contexts/shop-context";
+import { NavigationProvider } from "@/components/navigation/navigation-provider";
 import "./globals.css";
 export const viewport: Viewport = {
   width: "device-width",
@@ -14,7 +15,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="bn" suppressHydrationWarning>
       <body>
-        <ShopProvider>{children}</ShopProvider>
+        <NavigationProvider>
+          <ShopProvider>{children}</ShopProvider>
+        </NavigationProvider>
       </body>
     </html>
   );

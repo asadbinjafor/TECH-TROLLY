@@ -1,4 +1,5 @@
 "use client";
+import { useBackLayer } from "@/components/navigation/navigation-provider";
 import { useEffect, useState } from "react";
 import type {
   Language,
@@ -25,6 +26,7 @@ export function PurchaseDeclaration({
   const [data, setData] = useState<Declaration | null>(null),
     [error, setError] = useState(""),
     [attempt, setAttempt] = useState(0);
+  useBackLayer(true, onClose);
   useEffect(() => {
     let active = true;
     setData(null);

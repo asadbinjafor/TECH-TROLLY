@@ -1,6 +1,7 @@
 "use client";
 import { FormField } from "@/components/forms/form-field";
 import { useState } from "react";
+import { useBackLayer } from "@/components/navigation/navigation-provider";
 import {
   decimal,
   loanAccounts,
@@ -24,6 +25,8 @@ export function LoanDues({
   const [showAll, setShowAll] = useState(false);
   const [selected, setSelected] = useState<string | null>(null);
   const [manage, setManage] = useState(false);
+  useBackLayer(!!selected, () => setSelected(null), false);
+  useBackLayer(manage, () => setManage(false), false);
   if (!state) return null;
   const tr = (key: string) => t(key, lang);
   const money = (value: string) => currency(value, lang);

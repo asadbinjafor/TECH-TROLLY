@@ -193,3 +193,9 @@ API এখন shared invoice package ব্যবহার করে এবং �
 এই পরিবর্তন শুধু frontend-এর shared field/CSS ও screen markup-এ। Production branch-এ push করলে Vercel স্বাভাবিকভাবে deploy করবে; API dependency না বদলালে Render-এর আগের verified revision থাকাই ঠিক। Supabase-এ migration বা আলাদা কাজ নেই।
 
 Deploy শেষে refresh করে New sale/Purchases/Settings খুলুন। Label-এর পাশে `(Optional)`/`(ঐচ্ছিক)`, সমান উচ্চতার box এবং নিজের box-এর নিচে warning/error থাকবে। ছোট screen বা সরু dialog-এ এক কলাম হওয়া স্বাভাবিক। Android নিলে RAM এবং iPhone নিলে RAM ছাড়া storage থাকবে; আগের payment/due নিয়ম বজায় আছে। [সম্পূর্ণ audit ও আগে/পরের screenshot](form-layout-audit.md) দেখুন। বাস্তব দোকানে নকল লেনদেন Confirm করে পরীক্ষা করবেন না।
+
+### Back / Close-এর আপডেট যাচাই
+
+এই পরিবর্তন frontend navigation/CSS-এ; production branch-এ push → CI → connected Vercel deploy হবে। API dependency ও migration না বদলালে Render/Supabase-এ আলাদা deployment লাগবে না। Deploy শেষে একবার refresh দিন।
+
+Page-এর Back আগের app page-এ ফেরাবে; সরাসরি link খুললে Dashboard-এ যাবে। Mobile Workspace-এর উপরের বামমুখী arrow, menu-র বাইরে tap অথবা browser Back দিয়ে menu বন্ধ করুন। Form/রসিদের Close উপরে থাকবে; লম্বা form scroll করলেও চাপা যাবে। Nested dialog খোলা থাকলে browser Back আগে সেটি বন্ধ করবে। Review থেকে Back editing-এ ফেরাবে। অনিশ্চিত submission বন্ধ করে আবার খুললে আগের key/data থাকবে—নতুন করে একই বিক্রি/খরচ লিখবেন না; আগের status/retry নিয়ম অনুসরণ করুন। [অডিট ও ছবি](navigation-audit.md) দেখুন।

@@ -1,4 +1,5 @@
 "use client";
+import { useBackLayer } from "@/components/navigation/navigation-provider";
 import { FormField } from "@/components/forms/form-field";
 import { useCallback, useEffect, useState, useRef } from "react";
 import { Eye, EyeOff, X } from "lucide-react";
@@ -72,6 +73,7 @@ export function RevealBalances({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const active = useRef(true);
+  useBackLayer(true, onClose);
   useEffect(() => {
     active.current = true;
     return () => {

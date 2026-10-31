@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useId, useRef, useState } from "react";
 import { FormField, FormGrid } from "@/components/forms/form-field";
+import { useBackLayer } from "@/components/navigation/navigation-provider";
 import {
   choices,
   prepareForm,
@@ -106,6 +107,9 @@ export function CommandForm({
     [review, setReview] = useState(false),
     [busy, setBusy] = useState(false),
     [partyField, setPartyField] = useState<Field | null>(null);
+  useBackLayer(!embedded, onClose);
+  useBackLayer(review && !pending, () => setReview(false), false);
+  useBackLayer(!!partyField, () => setPartyField(null));
   useEffect(() => {
     sessionStorage.setItem(storage, JSON.stringify(values));
   }, [storage, values]);

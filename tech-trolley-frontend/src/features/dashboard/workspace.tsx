@@ -1,8 +1,11 @@
 "use client";
 import { FormField } from "@/components/forms/form-field";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useNavigation,
+  useBackLayer,
+} from "@/components/navigation/navigation-provider";
+import { useEffect, useRef, useState, type MouseEvent } from "react";
 import {
   LayoutDashboard,
   CalendarDays,
@@ -70,7 +73,18 @@ const icons = [
   Settings,
 ];
 export function Workspace({ section }: { section: string }) {
-  const router = useRouter();
+  const navigation = useNavigation();
+  const [compact, setCompact] = useState(false);
+  useEffect(() => {
+    const media = window.matchMedia("(max-width: 760px)");
+    const update = () => {
+      setCompact(media.matches);
+      if (!media.matches) setMenu(false);
+    };
+    update();
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, []);
   const [saleVersion, setSaleVersion] = useState(0);
   const [declarationId, setDeclarationId] = useState<string | null>(null);
   const [purchaseTab, setPurchaseTab] = useState("allPurchases");
@@ -111,6 +125,10 @@ export function Workspace({ section }: { section: string }) {
     visible: privacy.visible,
   };
   const [revealOpen, setRevealOpen] = useState(false);
+  useBackLayer(menu && compact, () => setMenu(false));
+  useBackLayer(!!receipt, () => setReceipt(null));
+  useBackLayer(!!detail, () => setDetail(null));
+  useBackLayer(!!historyUnit, () => setHistoryUnit(null), false);
   useEffect(() => {
     setCommand(null);
     setReceipt(null);
@@ -359,13 +377,35 @@ export function Workspace({ section }: { section: string }) {
     d.setUTCDate(d.getUTCDate() + n);
     setDate(d.toISOString().slice(0, 10));
   };
+  const go = (e: MouseEvent<HTMLAnchorElement>, path: string) => {
+    if (e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey)
+      return;
+    e.preventDefault();
+    navigation.navigate(path);
+  };
+  const backLabel = lang === "bn" ? "ফিরে যান" : "Back";
   return (
     <div className="app">
       <a href="#main" className="skip-link">
         {lang === "bn" ? "মূল অংশে যান" : "Skip to main content"}
       </a>
-      <aside className={menu ? "sidebar open" : "sidebar"}>
-        <Link href="/" className="brand">
+      {menu && compact && (
+        <button
+          type="button"
+          className="sidebar-scrim"
+          aria-label={tr("close")}
+          onClick={() => setMenu(false)}
+        />
+      )}
+      <aside
+        id="workspace-sidebar"
+        className={menu ? "sidebar open" : "sidebar"}
+        role={compact && menu ? "dialog" : undefined}
+        aria-modal={compact && menu ? true : undefined}
+        aria-label={tr("workspace")}
+        inert={compact && !menu ? true : undefined}
+      >
+        <Link href="/" className="brand" onClick={(e) => go(e, "/")}>
           <img
             src="/tech-trolley-logo.png"
             alt="Tech Trolley"
@@ -377,7 +417,17 @@ export function Workspace({ section }: { section: string }) {
             <small>SHOP MANAGER</small>
           </div>
         </Link>
-        <p className="nav-label">{tr("workspace")}</p>
+        <div className="sidebar-heading">
+          <p className="nav-label">{tr("workspace")}</p>
+          <button
+            type="button"
+            className="icon-button sidebar-close"
+            aria-label={tr("close")}
+            onClick={() => setMenu(false)}
+          >
+            <ChevronLeft size={22} />
+          </button>
+        </div>
         <nav>
           {pages.map((p, i) => {
             const Icon = icons[i];
@@ -386,7 +436,7 @@ export function Workspace({ section }: { section: string }) {
                 className={section === p ? "nav-item selected" : "nav-item"}
                 key={p}
                 href={p === "overview" ? "/" : "/" + p}
-                onClick={() => setMenu(false)}
+                onClick={(e) => go(e, p === "overview" ? "/" : "/" + p)}
               >
                 <Icon size={19} />
                 <span>{tr(p)}</span>
@@ -399,7 +449,13 @@ export function Workspace({ section }: { section: string }) {
             );
           })}
           {section === "overview" && (
-            <button className="nav-item" onClick={() => action("cashCount")}>
+            <button
+              className="nav-item"
+              onClick={() => {
+                setMenu(false);
+                action("cashCount");
+              }}
+            >
               <CheckCheck size={19} />
               {tr("cashCount")}
             </button>
@@ -420,12 +476,14 @@ export function Workspace({ section }: { section: string }) {
           </button>
         </div>
       </aside>
-      <div className="workspace">
+      <div className="workspace" inert={compact && menu ? true : undefined}>
         <header className="topbar">
           <button
             className="icon-button mobile-menu"
             onClick={() => setMenu(!menu)}
             aria-label={tr("workspace")}
+            aria-expanded={menu && compact}
+            aria-controls="workspace-sidebar"
           >
             <Menu />
           </button>
@@ -468,9 +526,24 @@ export function Workspace({ section }: { section: string }) {
               (section === "purchases" ? " purchase-heading" : "")
             }
           >
-            <div>
-              <h1>{tr(section)}</h1>
-              <p>{dateLabel(state.today, lang)}</p>
+            <div className="page-title">
+              {navigation.canBack(
+                section === "overview" ? "/" : "/" + section,
+              ) && (
+                <button
+                  type="button"
+                  className="button page-back"
+                  onClick={() => navigation.back()}
+                  disabled={navigation.busy}
+                >
+                  <ChevronLeft size={19} />
+                  <span>{backLabel}</span>
+                </button>
+              )}
+              <div>
+                <h1>{tr(section)}</h1>
+                <p>{dateLabel(state.today, lang)}</p>
+              </div>
             </div>
             {section === "overview" && (
               <div className="heading-actions">
@@ -696,7 +769,7 @@ export function Workspace({ section }: { section: string }) {
               key={`sale-page-${saleVersion}`}
               kind="sale"
               embedded
-              onClose={() => router.push("/")}
+              onClose={() => navigation.back()}
               onSaved={(id) => {
                 setSaleVersion((value) => value + 1);
                 setToast(tr("saved"));
@@ -1190,37 +1263,46 @@ export function Workspace({ section }: { section: string }) {
           </footer>
         </main>
       </div>
-      <nav className="mobile-nav">
+      <nav className="mobile-nav" inert={compact && menu ? true : undefined}>
         {[
           "overview",
           "inventory",
           ...(section === "overview" ? ["sale"] : []),
           "daybook",
           "settings",
-        ].map((p) => (
-          <button
-            key={p}
-            className={p === "sale" ? "sell-nav" : ""}
-            onClick={() =>
-              p === "sale"
-                ? action("sale")
-                : location.assign(p === "overview" ? "/" : "/" + p)
-            }
-          >
-            {p === "sale" ? (
+        ].map((p) =>
+          p === "sale" ? (
+            <button
+              type="button"
+              className="sell-nav"
+              key={p}
+              onClick={() => action("sale")}
+            >
               <Plus size={24} />
-            ) : p === "overview" ? (
-              <LayoutDashboard size={19} />
-            ) : p === "inventory" ? (
-              <Package size={19} />
-            ) : p === "daybook" ? (
-              <CalendarDays size={19} />
-            ) : (
-              <Menu size={19} />
-            )}
-            <small>{tr(p)}</small>
-          </button>
-        ))}
+              <small>{tr(p)}</small>
+            </button>
+          ) : (
+            <Link
+              key={p}
+              className={p === "sale" ? "sell-nav" : ""}
+              href={p === "overview" ? "/" : "/" + p}
+              onClick={(e) => go(e, p === "overview" ? "/" : "/" + p)}
+            >
+              {p === "sale" ? (
+                <Plus size={24} />
+              ) : p === "overview" ? (
+                <LayoutDashboard size={19} />
+              ) : p === "inventory" ? (
+                <Package size={19} />
+              ) : p === "daybook" ? (
+                <CalendarDays size={19} />
+              ) : (
+                <Menu size={19} />
+              )}
+              <small>{tr(p)}</small>
+            </Link>
+          ),
+        )}
       </nav>
       {command && (
         <CommandForm

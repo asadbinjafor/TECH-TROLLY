@@ -5,6 +5,7 @@ import { useShop } from "@/contexts/shop-context";
 import { api } from "@/services/api";
 import { PartyManager } from "./party-manager";
 import { FormField, FormGrid } from "@/components/forms/form-field";
+import { useBackLayer } from "@/components/navigation/navigation-provider";
 import {
   profileSchema,
   profileIdentityChanged,
@@ -32,6 +33,7 @@ export function Administration({ mode }: { mode: "parties" | "settings" }) {
     [values, setValues] = useState<Record<string, string>>({}),
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false);
+  useBackLayer(!!editor, () => setEditor(null));
   const tr = (k: string) => t(k, lang);
   const loadUsers = async () => {
     if (user?.role === "OWNER" && mode === "settings")
