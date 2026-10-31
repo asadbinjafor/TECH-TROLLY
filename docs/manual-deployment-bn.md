@@ -5,6 +5,9 @@
 এই release-এ migration `011_historical_onboarding.sql` আছে। স্বাভাবিক production branch-এ commit/push করলে Vercel Git integration frontend deploy করবে; CI সফল হলে Render API deploy করে নিজস্ব startup runner-এ Supabase migration চালাবে। Dashboard থেকে আলাদা SQL, reset বা দ্বিতীয় migration pipeline চালাবেন না। আগে backup, পরে CI/দুই health revision/১১টি migration এবং পুরোনো business-record fingerprint যাচাই করতে হবে। কোনো আসল opening বা লেনদেন deployment-এর পরীক্ষা হিসেবে সেভ করবেন না।
 
 
+
+আগের হিসাবের update live হয়েছে: `4054eb8`; [পূর্ণ CI সফল](https://github.com/asadbinjafor/TECH-TROLLY/actions/runs/41244755242)। Vercel/Render-এর version, startup-এ ১১টি migration এবং পুরোনো ডেটা/Owner password অক্ষত থাকা যাচাই হয়েছে। Live-এ কোনো opening বা পরীক্ষার লেনদেন দেওয়া হয়নি। Settings refresh করে নির্দেশনা মেনে শুরু করুন।
+
 **প্রিন্ট ছাড়া বিক্রি:** New sale পূরণ করে Review চাপুন। এরপর **প্রিন্ট ছাড়া বিক্রি সেভ করুন** বেছে নিলে বিক্রি, স্টক, Cash/Bank, বাকি ও লাভ স্বাভাবিকভাবে জমা হবে; invoice screen খুলবে না। **বিক্রি সেভ করে ইনভয়েস দেখুন** বেছে নিলে আগের মতো invoice খুলবে। পরে Daybook/লেনদেন থেকে একই বিক্রির Receipt খুলে PDF/Print করা যাবে। বাকি রাখলে Customer বাছতে হবে। Network সমস্যা হলে দেখানো status/retry ব্যবহার করবেন; একই বিক্রি নতুন করে লিখবেন না। এই update-এ migration/হাতে SQL লাগে না; shared ভাষার label বদলানোয় বর্তমান build filters অনুযায়ী Vercel এবং Render স্বাভাবিক Git/CI পথে deploy হবে।
 
 এই update live: `cf1dc8f`; [পূর্ণ CI সফল](https://github.com/asadbinjafor/TECH-TROLLY/actions/runs/41240415298)। Vercel/Render-এর প্রকাশিত revision ও নতুন বাটনের code যাচাই হয়েছে। Credit sale, discount/লোকসান, Staff, double-click, refresh/retry/status recovery, পরে বাকি আদায় ও একই invoice খোলার পরীক্ষা আলাদা test database-এ হয়েছে; Live হিসাব বদলানো হয়নি।
