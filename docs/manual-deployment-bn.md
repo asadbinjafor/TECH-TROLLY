@@ -4,6 +4,8 @@
 
 এই update-এ database migration বা data reset নেই। বর্তমান production branch-এ commit/push → CI সফল → Vercel এবং Render-এর স্বাভাবিক auto-deploy। এরপর দুই health endpoint-এর revision, live Details এবং invalid report-date validation যাচাই করুন। কোনো আসল লেনদেন/নাম/পাসওয়ার্ড পরিবর্তনকে deployment test হিসেবে ব্যবহার করবেন না। Native source ও Android/iOS export আলাদা; ফোনে install করা app আপডেট করতে signed build/distribution প্রয়োজন, শুধু Vercel deploy করলে native binary আপডেট হয় না।
 
+অডিট সংশোধনের release `147fd41` live হয়েছে; [পূর্ণ CI সফল](https://github.com/asadbinjafor/TECH-TROLLY/actions/runs/41284733593)। Vercel/Render-এর health revision ও নতুন web labels মিলেছে; আগের ১৩টি account/business/schema table অপরিবর্তিত। Local-এ ৮০টি backend ও ৩৯টি form/hosting check পাস। সংরক্ষিত login গ্রহণ না করায় protected live validation করা হয়নি; password reset/guess বা আসল লেনদেন দিয়ে পরীক্ষা করা হয়নি। নিজের বর্তমান login দিয়ে ব্যবহার করুন; native device acceptance এখনও আলাদা কাজ।
+
 **লেখা ও Optional-এর রং:** সাধারণ লেখা/তারিখ medium, sidebar কিছুটা bold এবং field title আরও bold। সব form-এর Optional/ঐচ্ছিক muted rose-red; dark theme-এ আলাদা হালকা rose ব্যবহার হয়। শুধু লেখার style বদলেছে—কোন field বাধ্যতামূলক বা হিসাব কীভাবে সেভ হয় তা আগের মতো। এই frontend/native update push করলে Vercel Git deployment হবে। API/schema বদলায়নি, তাই Render manual deploy বা Supabase SQL চালানোর প্রয়োজন নেই। Live CSS ও mobile view দেখে release মিলিয়ে নেবেন; native source-এর জন্য Android/iOS export যাচাই করবেন।
 
 
