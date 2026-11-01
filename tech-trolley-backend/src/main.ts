@@ -15,6 +15,13 @@ export async function createApp() {
   });
   app.use(helmet());
   app.use(cookieParser());
+  app.use(
+    "/purchases/files",
+    express.raw({
+      type: ["image/jpeg", "image/png", "image/webp"],
+      limit: "512kb",
+    }),
+  );
   app.use(express.json({ limit: "64kb" }));
   const origins = (process.env.WEB_ORIGIN || "http://localhost:3001").split(
     ",",

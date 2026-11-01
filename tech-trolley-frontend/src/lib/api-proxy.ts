@@ -108,7 +108,19 @@ export async function proxyApi(
       response.ok &&
       pdfRoute &&
       contentType.split(";")[0].trim() === "application/pdf";
-    if (!contentType.includes("application/json") && !csvExport && !pdfExport)
+    const imageExport =
+      response.ok &&
+      ["GET", "HEAD"].includes(method) &&
+      path.length === 3 &&
+      path[0] === "purchases" &&
+      path[1] === "files" &&
+      contentType.split(";")[0].trim() === "image/jpeg";
+    if (
+      !contentType.includes("application/json") &&
+      !csvExport &&
+      !pdfExport &&
+      !imageExport
+    )
       return error(
         ["GET", "HEAD"].includes(method)
           ? "UPSTREAM_UNAVAILABLE"
@@ -122,6 +134,22 @@ export async function proxyApi(
     }
     for (const cookie of response.headers.getSetCookie())
       outgoing.append("Set-Cookie", cookie);
+    if (imageExport && method === "GET") {
+      const bytes = await response.arrayBuffer();
+      const signature = new Uint8Array(bytes.slice(0, 3));
+      if (
+        bytes.byteLength > 524288 ||
+        signature[0] !== 255 ||
+        signature[1] !== 216 ||
+        signature[2] !== 255
+      )
+        return error("UPSTREAM_UNAVAILABLE", 502);
+      outgoing.set("X-Content-Type-Options", "nosniff");
+      return new Response(bytes, {
+        status: response.status,
+        headers: outgoing,
+      });
+    }
     if (pdfExport && method === "GET") {
       const bytes = await response.arrayBuffer();
       if (

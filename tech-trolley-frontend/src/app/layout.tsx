@@ -3,6 +3,7 @@ import { ShopProvider } from "@/contexts/shop-context";
 import { NavigationProvider } from "@/components/navigation/navigation-provider";
 import "./globals.css";
 import "./workspace.css";
+import "@/features/transactions/purchase-images.css";
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,

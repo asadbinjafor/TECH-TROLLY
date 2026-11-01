@@ -1,4 +1,5 @@
 "use client";
+import { PurchaseImages } from "@/features/transactions/purchase-images";
 import { FormField } from "@/components/forms/form-field";
 import Link from "next/link";
 import {
@@ -1491,6 +1492,13 @@ export function Workspace({ section }: { section: string }) {
                   {tr("supplierRefund")}
                 </button>
               )}
+            {detail.kind === "purchase" && (
+              <PurchaseImages
+                key={detail.id}
+                id={detail.id}
+                individual={detail.snapshot.purchaseSource === "individual"}
+              />
+            )}
             {Object.entries(detail.snapshot)
               .filter(
                 ([k, v]) =>

@@ -12,16 +12,16 @@ export function fail(code: string, status = 400): never {
 export class Errors implements ExceptionFilter {
   catch(error: any, host: ArgumentsHost) {
     const res = host.switchToHttp().getResponse();
+    if (error?.type === "entity.too.large")
+      return res.status(413).json({ code: "IMAGE_TOO_LARGE" });
     if (error instanceof ZodError)
-      return res
-        .status(400)
-        .json({
-          code: "VALIDATION_ERROR",
-          details: error.issues.map((i) => ({
-            field: i.path.join("."),
-            code: /^[A-Z_]+$/.test(i.message) ? i.message : "VALIDATION_ERROR",
-          })),
-        });
+      return res.status(400).json({
+        code: "VALIDATION_ERROR",
+        details: error.issues.map((i) => ({
+          field: i.path.join("."),
+          code: /^[A-Z_]+$/.test(i.message) ? i.message : "VALIDATION_ERROR",
+        })),
+      });
     if (error instanceof HttpException)
       return res
         .status(error.getStatus())

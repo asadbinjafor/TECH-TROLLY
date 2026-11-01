@@ -4,6 +4,83 @@ import { createServer } from "node:http";
 import { once } from "node:events";
 import { proxyApi } from "../src/lib/api-proxy";
 
+test("private JPEG evidence is bounded, authenticated through the same-origin proxy and never accepted on an unrelated route", async () => {
+  let cookie = "",
+    body = Buffer.alloc(0);
+  const server = createServer(async (req, res) => {
+    cookie = String(req.headers.cookie || "");
+    for await (const chunk of req)
+      body = Buffer.concat([body, Buffer.from(chunk)]);
+    if (req.method === "POST") {
+      res.setHeader("content-type", "application/json");
+      res.end('{"id":"synthetic"}');
+      return;
+    }
+    res.setHeader("content-type", "image/jpeg");
+    res.setHeader("content-disposition", 'attachment; filename="memo.jpg"');
+    res.end(
+      req.url?.includes("invalid")
+        ? Buffer.from("not jpeg")
+        : Buffer.from([255, 216, 255, 0]),
+    );
+  });
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  const options = {
+    upstream: `http://127.0.0.1:${(server.address() as any).port}`,
+    production: false,
+  };
+  try {
+    const headers = {
+      Cookie: "tt_session=synthetic; unrelated=secret",
+      "Content-Type": "image/jpeg",
+      Origin: "https://shop.example",
+    };
+    const upload = await proxyApi(
+      new Request("https://shop.example/api/purchases/files/test", {
+        method: "POST",
+        headers,
+        body: new Uint8Array([255, 216, 255, 0]),
+      }),
+      ["purchases", "files", "test"],
+      options,
+    );
+    assert.equal(upload.status, 200);
+    assert.equal(cookie, "tt_session=synthetic");
+    assert.deepEqual([...body], [255, 216, 255, 0]);
+    const response = await proxyApi(
+      new Request("https://shop.example/api/purchases/files/test", { headers }),
+      ["purchases", "files", "test"],
+      options,
+    );
+    assert.equal(response.status, 200);
+    assert.equal(response.headers.get("cache-control"), "no-store");
+    assert.equal(response.headers.get("x-content-type-options"), "nosniff");
+    assert.match(response.headers.get("content-disposition")!, /attachment/);
+    assert.deepEqual(
+      [...new Uint8Array(await response.arrayBuffer())],
+      [255, 216, 255, 0],
+    );
+    const invalid = await proxyApi(
+      new Request("https://shop.example/api/purchases/files/invalid", {
+        headers,
+      }),
+      ["purchases", "files", "invalid"],
+      options,
+    );
+    assert.equal(invalid.status, 502);
+    const wrong = await proxyApi(
+      new Request("https://shop.example/api/commands/test", { headers }),
+      ["commands", "test"],
+      options,
+    );
+    assert.equal(wrong.status, 502);
+  } finally {
+    server.close();
+    await once(server, "close");
+  }
+});
+
 test("same-origin proxy preserves cookies, command keys, CSV and uncertain results", async () => {
   const seen: { url: string; headers: Record<string, any>; body: string }[] =
     [];

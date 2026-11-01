@@ -31,6 +31,11 @@ import { t, currency } from "@tech-trolley/i18n";
 import { api } from "@/services/api";
 import { useShop } from "@/contexts/shop-context";
 import { PartyManager } from "@/features/settings/party-manager";
+import {
+  PurchasePhotoFields,
+  photoCopy,
+  type PurchasePhoto,
+} from "./purchase-images";
 export function CommandForm({
   kind,
   onClose,
@@ -60,6 +65,20 @@ export function CommandForm({
   );
   const storage = `tt-${user!.id}-draft-${kind}`,
     pendingKey = `tt-${user!.id}-pending-${kind}`;
+  const photosKey = storage + "-photos";
+  const [photos, setPhotos] = useState<PurchasePhoto[]>(() => {
+    try {
+      return JSON.parse(sessionStorage.getItem(photosKey) || "[]");
+    } catch {
+      return [];
+    }
+  });
+  const [photoBusy, setPhotoBusy] = useState(false),
+    [photoProblem, setPhotoProblem] = useState(false);
+  const hasPhotos = kind === "purchase" || kind === "individualPurchase";
+  useEffect(() => {
+    if (hasPhotos) sessionStorage.setItem(photosKey, JSON.stringify(photos));
+  }, [photosKey, photos, hasPhotos]);
   const [values, setValues] = useState<Record<string, string>>(() => {
       try {
         const p = JSON.parse(sessionStorage.getItem(pendingKey) || "null");
@@ -104,6 +123,8 @@ export function CommandForm({
       key: string;
       data: any;
       showInvoice?: boolean;
+      images?: PurchasePhoto[];
+      documentId?: string;
     } | null>(() => {
       try {
         return JSON.parse(sessionStorage.getItem(pendingKey) || "null");
@@ -162,8 +183,18 @@ export function CommandForm({
     if (p) sessionStorage.setItem(pendingKey, JSON.stringify(p));
     else sessionStorage.removeItem(pendingKey);
   };
-  const finish = async (id: string, showInvoice = true) => {
+  const finish = async (
+    id: string,
+    showInvoice = true,
+    images: PurchasePhoto[] = [],
+    skipPhotos = false,
+  ) => {
+    if (images.length && !skipPhotos)
+      await api.request(`/purchases/${id}/attachments`, "POST", {
+        ids: images.map((i) => i.id),
+      });
     sessionStorage.removeItem(storage);
+    sessionStorage.removeItem(photosKey);
     persist(null);
     await refresh();
     onSaved(id, kind, showInvoice);
@@ -185,11 +216,18 @@ export function CommandForm({
           key: crypto.randomUUID(),
           data: prepareForm(kind, values, state),
           ...(kind === "sale" ? { showInvoice } : {}),
+          ...(hasPhotos && photos.length ? { images: photos } : {}),
         };
         persist(p);
       }
-      const result = await api.command(kind, p.data, p.key);
-      await finish(result.id, p.showInvoice !== false);
+      const result = p.documentId
+        ? { id: p.documentId }
+        : await api.command(kind, p.data, p.key);
+      if (hasPhotos && p.images?.length) {
+        p = { ...p, documentId: result.id };
+        persist(p);
+      }
+      await finish(result.id, p.showInvoice !== false, p.images);
     } catch (e: any) {
       if (e.issues) {
         setIssues(
@@ -204,7 +242,7 @@ export function CommandForm({
           )
         )
           await refresh();
-        if (e.status >= 400 && e.status < 500) persist(null);
+        if (e.status >= 400 && e.status < 500 && !p?.documentId) persist(null);
         if (e.details)
           setIssues(
             Object.fromEntries(e.details.map((i: any) => [i.field, i.code])),
@@ -305,6 +343,7 @@ export function CommandForm({
         <form
           onSubmit={(e) => {
             e.preventDefault();
+            if (photoBusy || photoProblem) return;
             if (review || pending) void submit();
             else {
               try {
@@ -473,6 +512,16 @@ export function CommandForm({
               );
             })}
           </FormGrid>
+          {hasPhotos && (
+            <PurchasePhotoFields
+              individual={kind === "individualPurchase"}
+              images={pending?.images || photos}
+              setImages={setPhotos}
+              disabled={busy || review || !!pending}
+              onBusy={setPhotoBusy}
+              onProblem={setPhotoProblem}
+            />
+          )}
           {preview && (
             <div className="review-strip">
               <span>
@@ -533,7 +582,11 @@ export function CommandForm({
           )}
           {pending && !busy && (
             <div className="notice">
-              <p>{t("uncertain", lang)}</p>
+              <p>
+                {pending.documentId
+                  ? photoCopy(lang === "bn").saved
+                  : t("uncertain", lang)}
+              </p>
               <code>{pending.key}</code>
               <button
                 type="button"
@@ -545,9 +598,15 @@ export function CommandForm({
                   setBusy(true);
                   try {
                     const r = await api.status(pending.key);
-                    if (r.found)
-                      await finish(r.result!.id, pending.showInvoice !== false);
-                    else setError("notFound");
+                    if (r.found) {
+                      if (hasPhotos && pending.images?.length)
+                        persist({ ...pending, documentId: r.result!.id });
+                      await finish(
+                        r.result!.id,
+                        pending.showInvoice !== false,
+                        pending.images,
+                      );
+                    } else setError("notFound");
                   } catch (e: any) {
                     setError(e.code);
                   } finally {
@@ -574,7 +633,9 @@ export function CommandForm({
           )}
           {error && (
             <p role="alert" className="error">
-              {t(error, lang)}
+              {pending?.documentId
+                ? photoCopy(lang === "bn").saved
+                : t(error, lang)}
             </p>
           )}
           {kind === "sale" && (review || pending) && (
@@ -584,11 +645,20 @@ export function CommandForm({
             <button
               type="button"
               className="button"
-              onClick={() =>
-                review && !pending ? setReview(false) : onClose()
-              }
+              disabled={busy || photoBusy}
+              onClick={() => {
+                if (pending?.documentId) {
+                  setBusy(true);
+                  void finish(pending.documentId, true, [], true)
+                    .catch(() => setError("NETWORK_ERROR"))
+                    .finally(() => setBusy(false));
+                } else if (review && !pending) setReview(false);
+                else onClose();
+              }}
             >
-              {t("cancel", lang)}
+              {pending?.documentId
+                ? photoCopy(lang === "bn").closeSaved
+                : t("cancel", lang)}
             </button>
             {kind === "sale" && review && !pending && (
               <button
@@ -602,20 +672,28 @@ export function CommandForm({
             )}
             <button
               className="button primary"
-              disabled={busy || connection !== "ready" || blocked}
+              disabled={
+                busy ||
+                photoBusy ||
+                photoProblem ||
+                connection !== "ready" ||
+                blocked
+              }
             >
-              {t(
-                busy
-                  ? "saving"
-                  : review || pending
-                    ? kind === "sale"
-                      ? pending?.showInvoice === false
-                        ? "saleWithoutPrint"
-                        : "saleWithInvoice"
-                      : "confirm"
-                    : "review",
-                lang,
-              )}
+              {pending?.documentId
+                ? photoCopy(lang === "bn").linkRetry
+                : t(
+                    busy
+                      ? "saving"
+                      : review || pending
+                        ? kind === "sale"
+                          ? pending?.showInvoice === false
+                            ? "saleWithoutPrint"
+                            : "saleWithInvoice"
+                          : "confirm"
+                        : "review",
+                    lang,
+                  )}
             </button>
           </footer>
         </form>

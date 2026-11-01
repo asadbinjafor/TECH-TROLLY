@@ -690,7 +690,7 @@ test("historical onboarding carries real stock, dues and dated journals into tod
               "SELECT count(*)::int AS n FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND c.relkind='r' AND c.relrowsecurity",
             )
           )[0].n,
-          19,
+          21,
         );
         assert.equal(
           (

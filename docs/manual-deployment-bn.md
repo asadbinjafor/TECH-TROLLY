@@ -1,5 +1,13 @@
 # নিজে deployment করার নির্দেশনা
 
+## Purchase memo / NID ছবি — ২০২৬-১১-০২
+
+**New purchase**-এ Supplier-এর memo এবং **ব্যক্তির কাছ থেকে ফোন ক্রয়**-এ NID-এর সামনে/পেছনের ছবি—সবগুলো ঐচ্ছিক। Camera বা gallery দিয়ে ছবি নিন, preview-তে লেখা পরিষ্কার কি না দেখুন, তারপর আগের মতো Review/Confirm। পরে Purchases → Details → ক্রয়ের সংযুক্ত ছবি থেকেও যোগ/বড় করে দেখা/download করা যাবে। ভুল ছবি সরালে Owner-এর ইতিহাসে থাকবে; হিসাব বদলাবে না। Upload/link ব্যর্থ হলে Retry ব্যবহার করুন; “Purchase সংরক্ষিত” দেখালে নতুন purchase তৈরি করবেন না। ছবির ধাপ বাদ দিয়ে এগোনোর বিকল্পও আছে।
+
+প্রতি ছবির সংরক্ষিত সীমা 512 KiB, memo-তে চার পৃষ্ঠা, NID-এর প্রতি পাশে একটি। Browser বড় ছবি ছোট করবে; iPhone-এর কোনো HEIC না খুললে JPEG/PNG নিন। অসম্পূর্ণ draft ছবির মেয়াদ ২৪ ঘণ্টা; মেয়াদ পেরোলে নতুন করে ছবি নিন। বর্তমান private database-এ ছবির মোট budget 128 MiB; পূর্ণ হলে ছবি ছাড়া purchase চলবে। সরানো ইতিহাসও জায়গা নেয়। বেশি ছবি জমলে private object storage-এ স্থানান্তর/hosting capacity নিয়ে সিদ্ধান্ত লাগবে; budget নিজে থেকে বাড়াবেন না। Backup-এ NID/memo-ও থাকে, তাই dump ফাইল private রাখুন।
+
+এই পরিবর্তনে backend dependency ও migration আছে: production branch push → CI সফল → Render After CI Checks Pass; Vercel Git deployment আগের মতো। Supabase migration 012 শুধু API startup runner চালাবে; SQL Editor-এ হাতে চালাবেন না। পুরোনো app/account/হিসাব reset করতে হবে না। Web আগে deploy হলে ছবির সুবিধা প্রস্তুত হওয়ার বার্তা আসতে পারে; API প্রস্তুত হলে Retry/refresh দিন। Release শেষে health revision, 12 migrations, 21 RLS tables ও zero direct Data API grants মিলিয়ে নিন। [অডিট ও সীমা](purchase-photos-audit.md) দেখুন।
+
 ## নতুন Dashboard / DUE design — ২০২৬-১১-০২
 
 এই update শুধু Web UI-তে। বর্তমান `codex/tech-trolley-production` branch-এ commit/push করলে Vercel-এর Git integration নিজে deploy করবে। [GitHub Actions](https://github.com/asadbinjafor/TECH-TROLLY/actions) সবুজ এবং [লাইভ অ্যাপ](https://tech-trolley-internal.vercel.app/) নতুন design দেখাচ্ছে কি না মিলিয়ে নিন। API dependency বদলায়নি, তাই Render-এর পুরোনো verified `147fd41` revision থাকাই ঠিক; Supabase-এ migration/SQL বা manual deploy লাগবে না।
