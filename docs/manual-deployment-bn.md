@@ -1,5 +1,9 @@
 # নিজে deployment করার নির্দেশনা
 
+**অডিটে পাওয়া সমস্যার সংশোধন:** Native receipt-এ আগের বিক্রির আসল business date দেখাবে। Contact-এর ধরন Supplier/Customer/Person-ই থাকবে; invalid ধরন বা report-এর year zero-তে 500 নয়, validation error আসবে। Details-এর নির্দিষ্ট label/option বাংলা-ইংরেজি হবে; নিজের লেখা নাম/model/note বদলাবে না। পুরোনো guide-এ Staff history ও initial password change-এর অমিলও ঠিক করা হয়েছে।
+
+এই update-এ database migration বা data reset নেই। বর্তমান production branch-এ commit/push → CI সফল → Vercel এবং Render-এর স্বাভাবিক auto-deploy। এরপর দুই health endpoint-এর revision, live Details এবং invalid report-date validation যাচাই করুন। কোনো আসল লেনদেন/নাম/পাসওয়ার্ড পরিবর্তনকে deployment test হিসেবে ব্যবহার করবেন না। Native source ও Android/iOS export আলাদা; ফোনে install করা app আপডেট করতে signed build/distribution প্রয়োজন, শুধু Vercel deploy করলে native binary আপডেট হয় না।
+
 **লেখা ও Optional-এর রং:** সাধারণ লেখা/তারিখ medium, sidebar কিছুটা bold এবং field title আরও bold। সব form-এর Optional/ঐচ্ছিক muted rose-red; dark theme-এ আলাদা হালকা rose ব্যবহার হয়। শুধু লেখার style বদলেছে—কোন field বাধ্যতামূলক বা হিসাব কীভাবে সেভ হয় তা আগের মতো। এই frontend/native update push করলে Vercel Git deployment হবে। API/schema বদলায়নি, তাই Render manual deploy বা Supabase SQL চালানোর প্রয়োজন নেই। Live CSS ও mobile view দেখে release মিলিয়ে নেবেন; native source-এর জন্য Android/iOS export যাচাই করবেন।
 
 

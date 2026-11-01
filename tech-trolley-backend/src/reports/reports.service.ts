@@ -10,22 +10,15 @@ export function shift(date: string, days: number) {
   d.setUTCDate(d.getUTCDate() + days);
   return d.toISOString().slice(0, 10);
 }
+// PostgreSQL has no year zero. Validate the calendar before any date reaches SQL.
+const reportDate = z.iso.date().refine((date) => date >= "0001-01-01");
 export const periodSchema = z
   .object({
     lang: z.enum(["bn", "en"]).default("en"),
     period: z.enum(["today", "week", "month", "range"]).default("today"),
-    from: z
-      .string()
-      .regex(/^\d{4}-\d{2}-\d{2}$/)
-      .optional(),
-    to: z
-      .string()
-      .regex(/^\d{4}-\d{2}-\d{2}$/)
-      .optional(),
-    date: z
-      .string()
-      .regex(/^\d{4}-\d{2}-\d{2}$/)
-      .optional(),
+    from: reportDate.optional(),
+    to: reportDate.optional(),
+    date: reportDate.optional(),
   })
   .strict();
 @Injectable()
@@ -47,9 +40,7 @@ export class ReportsService {
     if (v.period === "range" ? !v.from || !v.to : v.from || v.to)
       fail("VALIDATION_ERROR");
     const validDate = (d: string) =>
-      Number.isFinite(new Date(`${d}T00:00:00Z`).valueOf()) &&
-      new Date(`${d}T00:00:00Z`).toISOString().slice(0, 10) === d &&
-      d <= today;
+      reportDate.safeParse(d).success && d <= today;
     const to = v.period === "range" ? v.to! : v.date || today;
     const from =
       v.period === "range"

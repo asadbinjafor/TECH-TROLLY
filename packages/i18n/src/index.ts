@@ -1,5 +1,18 @@
 export type Language = "bn" | "en";
 const words: Record<string, [string, string]> = {
+  actorRole: [
+    "Recorded account role",
+    "যে অ্যাকাউন্ট থেকে লেখা হয়েছে তার ভূমিকা",
+  ],
+  partyPhone: ["Contact phone", "যোগাযোগের ফোন"],
+  staffName: ["Staff name", "কর্মীর নাম"],
+  originalKind: ["Original transaction type", "মূল লেনদেনের ধরন"],
+  historical: ["Previous accounts", "আগের হিসাব"],
+  lastDate: ["Latest business date", "সর্বশেষ লেনদেনের তারিখ"],
+  setupVersion: ["Setup revision", "প্রারম্ভিক হিসাবের সংস্করণ"],
+  yes: ["Yes", "হ্যাঁ"],
+  no: ["No", "না"],
+  expenseTreatment: ["Expense immediately", "সরাসরি খরচ হিসেবে ধরুন"],
   historyStartHint: [
     "Need to enter previous days? Choose Start from previous accounts in Settings before saving ordinary opening balances.",
     "আগের দিনের হিসাব তুলতে চান? সাধারণ opening সংরক্ষণের আগে Settings-এ ‘আগের হিসাব থেকে শুরু’ বাছুন।",
@@ -829,6 +842,38 @@ export function t(key: string, lang: Language = "en") {
       ? words.VALIDATION_ERROR[lang === "bn" ? 1 : 0]
       : key)
   );
+}
+/** Translate only application-owned enum fields, never names/models/notes. */
+export function detailValue(
+  key: string,
+  value: unknown,
+  lang: Language = "en",
+) {
+  if (value === null || value === undefined) return "—";
+  if (typeof value === "boolean") return t(value ? "yes" : "no", lang);
+  const text = String(value);
+  if (["account", "from"].includes(key) && ["cash", "bank"].includes(text))
+    return t(text + "Account", lang);
+  if (
+    key === "dueType" &&
+    ["customer", "supplier", "person", "refund", "advance"].includes(text)
+  )
+    return t("openingDue_" + text, lang);
+  if (key === "treatment" && text === "expense")
+    return t("expenseTreatment", lang);
+  const enums: Record<string, readonly string[]> = {
+    box: ["with", "without", "unspecified"],
+    condition: ["new", "used", "refurbished"],
+    category: ["phone", "accessory"],
+    phoneType: ["android", "iphone"],
+    actorRole: ["OWNER", "STAFF"],
+    purchaseSource: ["individual"],
+    treatment: ["capitalize"],
+  };
+  if (enums[key]?.includes(text))
+    return t(text === "phone" ? "phoneProduct" : text, lang);
+  if (key === "originalKind" && words[text]) return t(text, lang);
+  return text;
 }
 export function currency(value: string, lang: Language = "en") {
   return new Intl.NumberFormat(lang === "bn" ? "bn-BD" : "en-BD", {

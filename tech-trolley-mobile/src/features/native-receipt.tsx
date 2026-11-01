@@ -94,7 +94,7 @@ export function NativeReceipt({ route }: any) {
                 {receipt.number}
               </Txt>
               <Txt style={{ textAlign: "center", fontSize: 11 }}>
-                {dateLabel(receipt.createdAt, lang)}
+                {dateLabel(receipt.date, lang)}
               </Txt>
               <Txt style={{ textAlign: "center", marginVertical: 12 }}>
                 {receipt.customer || tr("walkIn")}

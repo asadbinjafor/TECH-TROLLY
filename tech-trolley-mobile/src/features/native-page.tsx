@@ -5,7 +5,7 @@ import DateTimePicker from "@react-native-community/datetimepicker";
 import { File, Paths } from "expo-file-system";
 import * as Sharing from "expo-sharing";
 import * as SecureStore from "expo-secure-store";
-import { t, currency, dateLabel } from "@tech-trolley/i18n";
+import { t, currency, dateLabel, detailValue } from "@tech-trolley/i18n";
 import {
   productDetails,
   canChangeStock,
@@ -173,10 +173,12 @@ export function NativePage({ navigation, route, section: initial }: any) {
                 ([k, v]) => (
                   <Txt key={k}>
                     {tr(k)}:{" "}
-                    {String(
-                      (d.snapshot.before as Record<string, unknown>)[k] ?? "—",
+                    {detailValue(
+                      k,
+                      (d.snapshot.before as Record<string, unknown>)[k],
+                      lang,
                     )}{" "}
-                    → {String(v ?? "—")}
+                    → {detailValue(k, v, lang)}
                   </Txt>
                 ),
               )}

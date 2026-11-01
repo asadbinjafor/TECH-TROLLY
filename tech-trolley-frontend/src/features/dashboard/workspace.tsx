@@ -40,7 +40,7 @@ import {
   type Document,
   type Report,
 } from "@tech-trolley/contracts";
-import { t, currency, dateLabel } from "@tech-trolley/i18n";
+import { t, currency, dateLabel, detailValue } from "@tech-trolley/i18n";
 import { useShop } from "@/contexts/shop-context";
 import { api, apiBase } from "@/services/api";
 import { Login } from "@/features/auth/login";
@@ -1437,13 +1437,15 @@ export function Workspace({ section }: { section: string }) {
                     <tr key={k}>
                       <td>{tr(k)}</td>
                       <td>
-                        {String(
+                        {detailValue(
+                          k,
                           (detail.snapshot.before as Record<string, unknown>)[
                             k
-                          ] ?? "—",
+                          ],
+                          lang,
                         )}
                       </td>
-                      <td>{String(v ?? "—")}</td>
+                      <td>{detailValue(k, v, lang)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -1484,7 +1486,7 @@ export function Workspace({ section }: { section: string }) {
                         : k,
                     )}
                   </span>
-                  <b>{String(v)}</b>
+                  <b>{detailValue(k, v, lang)}</b>
                 </div>
               ))}
             {detail.kind !== "stockEdit" && (

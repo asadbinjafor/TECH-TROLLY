@@ -135,6 +135,24 @@ test("isolated PostgreSQL acceptance, authorization, accounting and retry safety
     const supplier = await createParty("supplier", "Test supplier"),
       customer = await createParty("customer", "Test customer"),
       person = await createParty("person", "Test borrower");
+    await t.test(
+      "unsupported contact kinds are rejected before persistence",
+      async () => {
+        const count = async () =>
+          (await db.query("SELECT count(*) FROM party"))[0].count;
+        const before = await count();
+        for (const kind of ["refund", "advance", "OWNER", "unknown"]) {
+          const r = await api("post", "/parties", {
+            kind,
+            name: "Invalid contact",
+          });
+          assert.equal(r.status, 400);
+          assert.equal(r.body.code, "VALIDATION_ERROR");
+          assert.ok(r.body.details.some((d: any) => d.field === "kind"));
+        }
+        assert.equal(await count(), before);
+      },
+    );
     let purchase: any, sale: any;
     const buy = (
       imei: string,
@@ -751,6 +769,26 @@ test("isolated PostgreSQL acceptance, authorization, accounting and retry safety
           (await api("get", "/reports?period=today&date=2026-02-30")).status,
           400,
         );
+        for (const path of ["/reports", "/reports/export"]) {
+          for (const query of [
+            "period=today&date=0000-01-01",
+            "period=range&from=0000-01-01&to=2000-01-01",
+            "period=range&from=2000-01-01&to=0000-01-01",
+            "period=today&date=1900-02-29",
+            "period=today&date=2026-02-30",
+            "period=today&date=2026-2-01",
+          ]) {
+            const invalid = await api("get", path + "?" + query);
+            assert.equal(invalid.status, 400, path + "?" + query);
+            assert.equal(invalid.body.code, "VALIDATION_ERROR");
+          }
+        }
+        // A valid early AD calendar date remains a valid read; no new 1900 floor.
+        for (const date of ["0001-01-01", "2000-02-29", "2024-02-29"])
+          assert.equal(
+            (await api("get", "/reports?period=today&date=" + date)).status,
+            200,
+          );
         assert.equal(
           (await api("get", "/reports?period=week&date=2026-10-01")).status,
           400,

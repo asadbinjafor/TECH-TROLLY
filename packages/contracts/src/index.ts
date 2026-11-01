@@ -121,7 +121,7 @@ export const partySchema = z
     name: text,
     phone: z.string().trim().max(30).default(""),
     address: z.string().trim().max(300).default(""),
-    kind: z.enum(["customer", "supplier", "person", "refund", "advance"]),
+    kind: z.enum(["customer", "supplier", "person"]),
   })
   .strict();
 export const categorySchema = z
