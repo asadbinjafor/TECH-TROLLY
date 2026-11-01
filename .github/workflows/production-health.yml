@@ -2,8 +2,9 @@ name: Production health
 
 on:
   schedule:
-    # Every five minutes, offset from the busy start of each hour (UTC).
-    - cron: "2-59/5 * * * *"
+    # Best-effort fallback during approved 09:00-24:00 Asia/Dhaka shop hours only.
+    # GitHub cron is UTC; cron-job.org supplies the regular five-minute checks.
+    - cron: "2-59/5 3-17 * * *"
   workflow_dispatch:
   push:
     branches: [codex/tech-trolley-production]
@@ -30,4 +31,13 @@ jobs:
         with:
           persist-credentials: false
       - name: Check database-backed API readiness
-        run: node scripts/check-production-health.mjs
+        run: |
+          # A delayed scheduled run must not wake Render after shop hours.
+          # Explicit manual/push checks remain available for recovery/release verification.
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            case "$(date -u +%H)" in
+              0[3-9]|1[0-7]) ;;
+              *) echo "Skipped delayed scheduled check outside Asia/Dhaka shop hours."; exit 0 ;;
+            esac
+          fi
+          node scripts/check-production-health.mjs

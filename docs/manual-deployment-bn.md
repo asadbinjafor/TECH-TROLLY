@@ -187,6 +187,19 @@ Website-এর public screen আগে থেকেই তৈরি static HTML 
 
 ### ফ্রিতে sleep কমানোর health check
 
+২০২৬-১১-০১ update: Owner-এর পছন্দ অনুযায়ী [cron-job.org → Cronjobs](https://console.cron-job.org/jobs)-এ দুটি enabled job আছে। দুটির Time zone **Asia/Dhaka**, method **GET**, URL `https://tech-trolley-internal-api.onrender.com/health`, timeout **30 seconds**। কোনো authentication, cookie, API key বা দোকানের password লাগে না।
+
+| Job | Crontab expression | বাংলাদেশ সময় |
+| --- | --- | --- |
+| Tech Trolley — shop hours health | `*/5 9-23 * * *` | প্রতিদিন ৯:০০–২৩:৫৫, প্রতি ৫ মিনিটে |
+| Tech Trolley — 08:50 and 08:55 warm-up | `50,55 8 * * *` | প্রতিদিন ৮:৫০ ও ৮:৫৫, দোকান খোলার আগে |
+
+**Edit → Common** থেকে সময় বদলে Save করুন; **Advanced**-এ timezone ও GET মিলিয়ে নিন। বন্ধ রাখতে Enable job বন্ধ করে Save করুন। **History**-তে actual scheduled result এবং **Test run**-এ বর্তমান readiness দেখুন। HTTP 200-এর সঙ্গে JSON `status: "ok"` ও `Content-Type: application/json` মিলিয়ে নিন; Render loading HTML readiness নয়। প্রথম cold test বড় response-এর জন্য abort হয়েছিল; server প্রস্তুত হওয়ার পর একই scheduler-এর test **200 OK / 536 ms / JSON status ok** দেয়। ৩০ সেকেন্ডের বেশি cold start হলে প্রথম warm-up ব্যর্থ হতে পারে; পরের ৮:৫৫ check আবার চেষ্টা করে। ভবিষ্যতের uptime guarantee নয়।
+
+আগের GitHub check এখন শুধু daytime fallback: UTC `2-59/5 3-17 * * *`, বাংলাদেশ সময় ৯:০২–২৩:৫৭। রাতের scheduled check বাদ গেছে। Configured পাঁচ মিনিটের বদলে দুটি GitHub run-এর মধ্যে প্রায় ছয় ঘণ্টা ব্যবধান পাওয়া গেছে, তাই নিয়মিত check-এর প্রধান ব্যবস্থা cron-job.org। চারটি Free service একই ৭৫০ ঘণ্টা ভাগ করে। ১৫ ঘণ্টা/দিনে ৩০ দিনের মাসে ৪৫০ ঘণ্টা; pre-warm ও idle tail মিলিয়ে প্রায় ৪৬০ ঘণ্টা হতে পারে। অন্য service, restart, manual checks ও দোকান বন্ধের পর traffic বাড়তি usage যোগ করবে। Quota নজরে রাখবেন; শেষ হলে সব Free web service suspend হতে পারে।
+
+GitHub job দেরি করে শুরু হলে execution-time guard বাংলাদেশ সময় ৯:০০–২৩:৫৯-এর বাইরে scheduled probe skip করে। Explicit manual/push check recovery/release যাচাইয়ের জন্য বহাল। নিচের GitHub পরিচালনার নির্দেশনা বহাল; তার আগের সারাদিনের schedule-কে উপরের daytime সময় supersede করে।
+
 [GitHub → Actions → Production health](https://github.com/asadbinjafor/TECH-TROLLY/actions/workflows/production-health.yml)-এ প্রতি ৫ মিনিটে public Render health endpoint পরীক্ষা হয়। এতে নিয়মিত inbound request যায়, service সাধারণত সচল থাকে এবং browser বন্ধ থাকলেও কাজটি চলে। এটি login করে না বা দোকানের কোনো হিসাব বদলায় না। Repository-টি বর্তমানে public; standard public runner-এ এই check-এর GitHub charge নেই। Private করলে খরচ এড়াতে workflow নিজে থেকে skip করবে।
 
 - সর্বশেষ run সবুজ কি না ও log-এর `elapsedMs` দেখুন। Manual পরীক্ষা করতে **Run workflow → Run workflow** দিন।

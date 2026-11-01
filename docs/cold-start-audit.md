@@ -2,7 +2,17 @@
 
 The Owner reported about 70 seconds after idle and asked to reduce the wait while preserving the approved animation and other behavior.
 
-## Findings
+## Shop-hours external monitor — 2026-11-01
+
+This dated section supersedes the original all-day GitHub operation below. Billing/service headers confirm four Free web services sharing 750 hours. After disclosure the Owner chooses every day 09:00-midnight Asia/Dhaka and creates/verifies/logs into their own cron-job.org account. Private billing/per-service evidence stays under .local/cron-readiness-audit-20261101.json.
+
+Two enabled unauthenticated GET jobs use direct Render /health, 30-second timeout and Asia/Dhaka: `*/5 9-23 * * *` and pre-opening `50,55 8 * * *`. No credentials, keys, cookies or business commands are sent. Existing GitHub fallback is narrowed to UTC `2-59/5 3-17 * * *` to avoid scheduled overnight wake-ups. No competing deployment pipeline is added.
+
+The first external cold test fails with "output too large" before actual JSON is available. Direct public health returns exact revision 147fd41 and JSON status ok after 42.527 seconds. An actual cron-job.org warm test then returns 200 OK, application/json, status ok and the same revision in 536 ms. Saved next-execution previews show the intended Dhaka times. This does not verify next morning's wake-up or guarantee punctuality. A first cold response may exceed output/timeout limits; a second pre-opening check follows five minutes later.
+
+The window is about 450 hours in a 30-day month, approximately 460 including pre-warm/idle tails before other traffic, shared services and restarts. A GitHub execution-time guard also skips delayed scheduled checks outside UTC 03-17; explicit manual/push recovery checks remain available. No paid plan, other-service suspension/deletion, app source, DB/schema/password change. Editing/disabling instructions are in manual-deployment-bn.md; private screenshot: .local/cron-health-test-20261101.png.
+
+## Original findings — 2026-10-30
 
 - Render Free stops a service after 15 minutes without inbound traffic. Render documents roughly one minute to start it again. This platform allocation time cannot be removed by changing a browser spinner or a Nest timeout. We did not deliberately suspend the production service to reproduce the Owner's observation.
 - An already-awake production sample returned the direct database-backed `/health` in 575 ms and the same-origin Vercel proxy in 2,038 ms. These are individual measurements, not a latency guarantee or a trace of the reported 70 seconds.
