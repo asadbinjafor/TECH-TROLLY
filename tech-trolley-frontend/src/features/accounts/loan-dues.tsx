@@ -1,6 +1,13 @@
 "use client";
 import { FormField } from "@/components/forms/form-field";
 import { useState } from "react";
+import {
+  ArrowDownLeft,
+  ChevronRight,
+  HandCoins,
+  Plus,
+  Users,
+} from "lucide-react";
 import { useBackLayer } from "@/components/navigation/navigation-provider";
 import {
   decimal,
@@ -48,27 +55,46 @@ export function LoanDues({
     received: string;
     due: string;
   }) => (
-    <div className="metrics-grid three">
-      {[
-        ["totalLent", values.given],
-        ["totalRepaid", values.received],
-        ["loanOutstanding", values.due],
-      ].map(([label, value]) => (
-        <article className="metric" key={label}>
-          <div className="metric-label">{tr(label)}</div>
-          <strong className="amount">{money(value)}</strong>
-        </article>
-      ))}
-    </div>
+    <section className="loan-summary">
+      <div className="loan-summary-heading">
+        <span className="loan-summary-icon">
+          <Users size={24} aria-hidden="true" />
+        </span>
+        <div>
+          <p>{tr("loanOutstanding")}</p>
+          <strong>{money(values.due)}</strong>
+          {!selected && (
+            <small>
+              {accounts
+                .filter((a) => minor(a.due) > 0n)
+                .length.toLocaleString(lang === "bn" ? "bn-BD" : "en-GB")}{" "}
+              {lang === "bn"
+                ? "জনের কাছে পাওনা"
+                : "people with outstanding loans"}
+            </small>
+          )}
+        </div>
+      </div>
+      <div className="loan-summary-totals">
+        <span>
+          {tr("totalLent")}
+          <b>{money(values.given)}</b>
+        </span>
+        <span>
+          {tr("totalRepaid")}
+          <b>{money(values.received)}</b>
+        </span>
+      </div>
+    </section>
   );
   return (
-    <>
-      <p className="notice">{tr("loanDuesHelp")}</p>
+    <div className="loans-view">
       {state.user.role === "STAFF" && (
         <p className="notice">{tr("loanScopeToday")}</p>
       )}
       <div className="section-tools loan-tools">
         <button className="button primary" onClick={() => onCommand("loan")}>
+          <Plus size={18} aria-hidden="true" />
           {tr("loan")}
         </button>
         <button
@@ -242,33 +268,83 @@ export function LoanDues({
                     .includes(search.trim().toLocaleLowerCase()),
               )
               .map((a) => (
-                <article className="panel" key={a.partyId}>
-                  <h2>{a.name}</h2>
-                  <p className="muted">{a.phone}</p>
-                  {[
-                    ["totalLent", a.given],
-                    ["totalRepaid", a.received],
-                    ["loanOutstanding", a.due],
-                  ].map(([key, value]) => (
-                    <div className="pnl-row" key={key}>
-                      <span>{tr(key)}</span>
-                      <b>{money(value)}</b>
+                <article className="panel loan-account-card" key={a.partyId}>
+                  <div className="loan-account-heading">
+                    <span className="loan-person-avatar" aria-hidden="true">
+                      {a.name.slice(0, 1)}
+                    </span>
+                    <div className="loan-person-identity">
+                      <h2>{a.name}</h2>
+                      {a.phone && <p className="muted">{a.phone}</p>}
                     </div>
-                  ))}
-                  <div className="loan-tools section-tools">
                     <button
-                      className="button primary"
+                      className="icon-button"
+                      aria-label={`${tr("details")} · ${a.name}`}
                       onClick={() => setSelected(a.partyId)}
                     >
+                      <ChevronRight size={20} />
+                    </button>
+                  </div>
+                  <div className="loan-outstanding">
+                    <span>{tr("loanOutstanding")}</span>
+                    <strong>{money(a.due)}</strong>
+                    <span
+                      className={`badge ${minor(a.due) === 0n ? "cleared" : "unpaid"}`}
+                    >
+                      {minor(a.due) === 0n
+                        ? tr("loanCleared")
+                        : minor(a.received) > 0n
+                          ? lang === "bn"
+                            ? "আংশিক ফেরত"
+                            : "Part paid"
+                          : tr("openLoans")}
+                    </span>
+                  </div>
+                  <div className="loan-card-totals">
+                    {[
+                      ...new Set(
+                        a.loans
+                          .filter((d) => !d.reversed_by)
+                          .map((d) => String(d.snapshot.account || ""))
+                          .filter(
+                            (value) => value === "cash" || value === "bank",
+                          ),
+                      ),
+                    ].map((value) => (
+                      <span className="loan-source" key={value}>
+                        {tr(value)}
+                      </span>
+                    ))}
+                    <span>
+                      {tr("totalLent")} <b>{money(a.given)}</b>
+                    </span>
+                    <span>
+                      {tr("totalRepaid")} <b>{money(a.received)}</b>
+                    </span>
+                  </div>
+                  <div className="loan-card-actions">
+                    <button
+                      className="text-button"
+                      onClick={() => setSelected(a.partyId)}
+                    >
+                      {tr("details")}{" "}
+                      <ChevronRight size={15} aria-hidden="true" />
+                    </button>
+                    <button
+                      className="text-button receive-loan"
+                      onClick={() => setSelected(a.partyId)}
+                    >
+                      <ArrowDownLeft size={17} aria-hidden="true" />
                       {minor(a.due) > 0n
                         ? tr("receiveRepayment")
                         : tr("loanHistory")}
                     </button>
                     {a.active && (
                       <button
-                        className="button"
+                        className="text-button"
                         onClick={() => onCommand("loan", a.partyId)}
                       >
+                        <HandCoins size={17} aria-hidden="true" />
                         {tr("lendAgain")}
                       </button>
                     )}
@@ -285,6 +361,7 @@ export function LoanDues({
           ) && <p className="empty-state">{tr("noLoanAccounts")}</p>}
         </>
       )}
-    </>
+      <p className="notice">{tr("loanDuesHelp")}</p>
+    </div>
   );
 }

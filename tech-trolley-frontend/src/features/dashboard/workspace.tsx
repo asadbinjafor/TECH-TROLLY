@@ -28,6 +28,9 @@ import {
   ChevronRight,
   ArrowDownToLine,
   Coins,
+  Landmark,
+  TrendingUp,
+  ChartNoAxesColumn,
 } from "lucide-react";
 import {
   pages,
@@ -215,10 +218,11 @@ export function Workspace({ section }: { section: string }) {
         ? "৳ ••••••"
         : currency(v, lang),
     tr = (k: string) => t(k, lang);
-  const balanceToggle = () => (
+  const balanceToggle = (compact = false) => (
     <BalanceToggle
       visible={privacy.visible}
       lang={lang}
+      compact={compact}
       onClick={() => (privacy.visible ? privacy.hide() : setRevealOpen(true))}
     />
   );
@@ -254,16 +258,30 @@ export function Workspace({ section }: { section: string }) {
         {tr(k)}
       </button>
     ));
-  const card = (label: string, value: string, style = "") => (
-    <article className={"metric " + style} key={label}>
-      <div className="metric-label">
-        {tr(label)}
-        <Coins size={17} />
-      </div>
-      <strong className="amount">{money(value)}</strong>
-      {section === "overview" && balanceToggle()}
-    </article>
-  );
+  const card = (label: string, value: string, style = "") => {
+    const Icon =
+      label === "revenue"
+        ? TrendingUp
+        : label === "netProfit"
+          ? ChartNoAxesColumn
+          : label === "expenses"
+            ? ReceiptText
+            : label === "stockCost"
+              ? Package
+              : Coins;
+    return (
+      <article className={`metric ${style} metric-${label}`} key={label}>
+        <div className="metric-label">
+          <span className="metric-icon">
+            <Icon size={18} aria-hidden="true" />
+          </span>
+          {tr(label)}
+        </div>
+        <strong className="amount">{money(value)}</strong>
+        {section === "overview" && balanceToggle(true)}
+      </article>
+    );
+  };
   const table = (documents: Document[], title = "recent") => (
     <section className="panel">
       <div className="panel-heading">
@@ -386,7 +404,7 @@ export function Workspace({ section }: { section: string }) {
   };
   const backLabel = lang === "bn" ? "ফিরে যান" : "Back";
   return (
-    <div className="app">
+    <div className={`app page-${section}`}>
       <a href="#main" className="skip-link">
         {lang === "bn" ? "মূল অংশে যান" : "Skip to main content"}
       </a>
@@ -437,6 +455,7 @@ export function Workspace({ section }: { section: string }) {
                 className={section === p ? "nav-item selected" : "nav-item"}
                 key={p}
                 href={p === "overview" ? "/" : "/" + p}
+                aria-current={section === p ? "page" : undefined}
                 onClick={(e) => go(e, p === "overview" ? "/" : "/" + p)}
               >
                 <Icon size={19} />
@@ -550,13 +569,15 @@ export function Workspace({ section }: { section: string }) {
               <div className="heading-actions">
                 <button
                   className="button reconcile-action"
+                  aria-label={tr("cashCount")}
+                  title={tr("cashCount")}
                   onClick={() => action("cashCount")}
                 >
                   <CheckCheck size={17} />
-                  {tr("cashCount")}
+                  <span>{tr("cashCount")}</span>
                 </button>
                 <button
-                  className="button primary"
+                  className="button primary overview-sale"
                   onClick={() => action("sale")}
                 >
                   <Plus size={19} />
@@ -646,6 +667,84 @@ export function Workspace({ section }: { section: string }) {
           )}
           {section === "overview" && (
             <>
+              <div className="balance-grid">
+                <article className="balance-card cash-card">
+                  <div>
+                    <Wallet size={20} />
+                    {tr("cash")}
+                  </div>
+                  <div className="balance-main">
+                    <strong>{money(state.balances.cash)}</strong>
+                    {balanceToggle()}
+                  </div>
+                  <details className="balance-breakdown" open={!compact}>
+                    <summary aria-label={tr("details")} title={tr("details")}>
+                      {tr("details")}{" "}
+                      <ChevronRight size={14} aria-hidden="true" />
+                    </summary>
+                    <div className="balance-foot">
+                      <span>
+                        {tr("openingCash")}
+                        <b>{money(r.openingCash)}</b>
+                      </span>
+                      <span>
+                        {tr("cashIn")}
+                        <b className="positive">+ {money(r.cashIn)}</b>
+                      </span>
+                      <span>
+                        {tr("cashOut")}
+                        <b className="negative">− {money(r.cashOut)}</b>
+                      </span>
+                    </div>
+                  </details>
+                </article>
+                <article className="balance-card bank-card">
+                  <div>
+                    <Landmark size={20} />
+                    {tr("bank")}
+                  </div>
+                  <div className="balance-main">
+                    <strong>{money(state.balances.bank)}</strong>
+                    {balanceToggle()}
+                  </div>
+                  <details className="balance-breakdown" open={!compact}>
+                    <summary aria-label={tr("details")} title={tr("details")}>
+                      {tr("details")}{" "}
+                      <ChevronRight size={14} aria-hidden="true" />
+                    </summary>
+                    <p className="muted">
+                      {lang === "bn"
+                        ? "দোকানের ব্যাংক অ্যাকাউন্ট"
+                        : "Shop bank account"}
+                    </p>
+                    <div className="balance-foot">
+                      <span>
+                        {tr("openingBank")}
+                        <b>{money(r.openingBank)}</b>
+                      </span>
+                      <button
+                        className="text-button"
+                        onClick={() => action("transfer")}
+                      >
+                        {tr("transfer")} →
+                      </button>
+                    </div>
+                  </details>
+                </article>
+              </div>
+              <div className="metrics-grid">
+                {card("revenue", r.revenue)}
+                {card("netProfit", r.netProfit, "profit")}
+                {card("expenses", r.expense)}
+                {card("stockCost", state.balances.inventory)}
+              </div>
+              <QuickActions lang={lang} onAction={action} />
+              <button
+                className="button primary overview-mobile-sale"
+                onClick={() => action("sale")}
+              >
+                <Plus size={20} aria-hidden="true" /> {tr("sale")}
+              </button>
               <Link href="/daybook" className="notice daybook-link">
                 <span>
                   {lang === "bn"
@@ -657,62 +756,6 @@ export function Workspace({ section }: { section: string }) {
                   {tr("daybook")}
                 </span>
               </Link>
-              <div className="balance-grid">
-                <article className="balance-card cash-card">
-                  <div>
-                    <Wallet size={20} />
-                    {tr("cash")}
-                  </div>
-                  <strong>{money(state.balances.cash)}</strong>
-                  {balanceToggle()}
-                  <div className="balance-foot">
-                    <span>
-                      {tr("openingCash")}
-                      <b>{money(r.openingCash)}</b>
-                    </span>
-                    <span>
-                      {tr("cashIn")}
-                      <b className="positive">+ {money(r.cashIn)}</b>
-                    </span>
-                    <span>
-                      {tr("cashOut")}
-                      <b className="negative">− {money(r.cashOut)}</b>
-                    </span>
-                  </div>
-                </article>
-                <article className="balance-card">
-                  <div>
-                    <Wallet size={20} />
-                    {tr("bank")}
-                  </div>
-                  <strong>{money(state.balances.bank)}</strong>
-                  {balanceToggle()}
-                  <p className="muted">
-                    {lang === "bn"
-                      ? "দোকানের ব্যাংক অ্যাকাউন্ট"
-                      : "Shop bank account"}
-                  </p>
-                  <div className="balance-foot">
-                    <span>
-                      {tr("openingBank")}
-                      <b>{money(r.openingBank)}</b>
-                    </span>
-                    <button
-                      className="text-button"
-                      onClick={() => action("transfer")}
-                    >
-                      {tr("transfer")} →
-                    </button>
-                  </div>
-                </article>
-              </div>
-              <div className="metrics-grid">
-                {card("revenue", r.revenue)}
-                {card("netProfit", r.netProfit, "profit")}
-                {card("expenses", r.expense)}
-                {card("stockCost", state.balances.inventory)}
-              </div>
-              <QuickActions lang={lang} onAction={action} />
               <div className="overview-lower">
                 <div>{table(docs.slice(0, 6))}</div>
                 {user.role === "OWNER" && (
@@ -1293,45 +1336,26 @@ export function Workspace({ section }: { section: string }) {
         </main>
       </div>
       <nav className="mobile-nav" inert={compact && menu ? true : undefined}>
-        {[
-          "overview",
-          "inventory",
-          ...(section === "overview" ? ["sale"] : []),
-          "daybook",
-          "settings",
-        ].map((p) =>
-          p === "sale" ? (
-            <button
-              type="button"
-              className="sell-nav"
-              key={p}
-              onClick={() => action("sale")}
-            >
-              <Plus size={24} />
-              <small>{tr(p)}</small>
-            </button>
-          ) : (
-            <Link
-              key={p}
-              className={p === "sale" ? "sell-nav" : ""}
-              href={p === "overview" ? "/" : "/" + p}
-              onClick={(e) => go(e, p === "overview" ? "/" : "/" + p)}
-            >
-              {p === "sale" ? (
-                <Plus size={24} />
-              ) : p === "overview" ? (
-                <LayoutDashboard size={19} />
-              ) : p === "inventory" ? (
-                <Package size={19} />
-              ) : p === "daybook" ? (
-                <CalendarDays size={19} />
-              ) : (
-                <Menu size={19} />
-              )}
-              <small>{tr(p)}</small>
-            </Link>
-          ),
-        )}
+        {["overview", "inventory", "daybook", "settings"].map((p) => (
+          <Link
+            key={p}
+            className={p === section ? "selected" : ""}
+            aria-current={p === section ? "page" : undefined}
+            href={p === "overview" ? "/" : "/" + p}
+            onClick={(e) => go(e, p === "overview" ? "/" : "/" + p)}
+          >
+            {p === "overview" ? (
+              <LayoutDashboard size={19} />
+            ) : p === "inventory" ? (
+              <Package size={19} />
+            ) : p === "daybook" ? (
+              <CalendarDays size={19} />
+            ) : (
+              <Settings size={19} />
+            )}
+            <small>{tr(p)}</small>
+          </Link>
+        ))}
       </nav>
       {command && (
         <CommandForm

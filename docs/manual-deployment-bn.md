@@ -1,5 +1,11 @@
 # নিজে deployment করার নির্দেশনা
 
+## নতুন Dashboard / DUE design — ২০২৬-১১-০২
+
+এই update শুধু Web UI-তে। বর্তমান `codex/tech-trolley-production` branch-এ commit/push করলে Vercel-এর Git integration নিজে deploy করবে। [GitHub Actions](https://github.com/asadbinjafor/TECH-TROLLY/actions) সবুজ এবং [লাইভ অ্যাপ](https://tech-trolley-internal.vercel.app/) নতুন design দেখাচ্ছে কি না মিলিয়ে নিন। API dependency বদলায়নি, তাই Render-এর পুরোনো verified `147fd41` revision থাকাই ঠিক; Supabase-এ migration/SQL বা manual deploy লাগবে না।
+
+Refresh করে light/dark ও বাংলা/ইংরেজিতে দেখুন: Cash/Bank card, চারটি রঙিন Quick actions, mobile Dashboard-এর New sale, নিচের চারটি navigation, DUE-তে ব্যক্তির card এবং Details/টাকা ফেরত নিন। অঙ্ক দেখতে নিজের password লাগবে। Cash/Bank card-এর ডানদিকের arrow-তে opening ও চলতি টাকা দেখা যাবে। পরীক্ষার জন্য আসল sale/repayment post করবেন না। [আলাদা test database-এর audit](ui-concept-audit.md) দেখুন।
+
 **অডিটে পাওয়া সমস্যার সংশোধন:** Native receipt-এ আগের বিক্রির আসল business date দেখাবে। Contact-এর ধরন Supplier/Customer/Person-ই থাকবে; invalid ধরন বা report-এর year zero-তে 500 নয়, validation error আসবে। Details-এর নির্দিষ্ট label/option বাংলা-ইংরেজি হবে; নিজের লেখা নাম/model/note বদলাবে না। পুরোনো guide-এ Staff history ও initial password change-এর অমিলও ঠিক করা হয়েছে।
 
 এই update-এ database migration বা data reset নেই। বর্তমান production branch-এ commit/push → CI সফল → Vercel এবং Render-এর স্বাভাবিক auto-deploy। এরপর দুই health endpoint-এর revision, live Details এবং invalid report-date validation যাচাই করুন। কোনো আসল লেনদেন/নাম/পাসওয়ার্ড পরিবর্তনকে deployment test হিসেবে ব্যবহার করবেন না। Native source ও Android/iOS export আলাদা; ফোনে install করা app আপডেট করতে signed build/distribution প্রয়োজন, শুধু Vercel deploy করলে native binary আপডেট হয় না।

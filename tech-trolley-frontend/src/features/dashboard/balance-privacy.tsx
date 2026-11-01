@@ -44,19 +44,28 @@ export function BalanceToggle({
   visible,
   onClick,
   lang,
+  compact = false,
 }: {
   visible: boolean;
   onClick: () => void;
   lang: Language;
+  compact?: boolean;
 }) {
   return (
-    <button className="balance-toggle" onClick={onClick}>
+    <button
+      className={"balance-toggle" + (compact ? " compact" : "")}
+      onClick={onClick}
+      aria-label={t(visible ? "hideBalance" : "tapBalance", lang)}
+      title={
+        compact ? t(visible ? "hideBalance" : "tapBalance", lang) : undefined
+      }
+    >
       {visible ? (
         <EyeOff size={15} aria-hidden="true" />
       ) : (
         <Eye size={15} aria-hidden="true" />
       )}
-      {t(visible ? "hideBalance" : "tapBalance", lang)}
+      {!compact && t(visible ? "hideBalance" : "tapBalance", lang)}
     </button>
   );
 }
