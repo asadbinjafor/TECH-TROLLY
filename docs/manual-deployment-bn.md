@@ -265,3 +265,9 @@ Page-এর Back আগের app page-এ ফেরাবে; সরাসর�
 - চার অঙ্কের password policy অক্ষত। অতিরিক্ত login/একসঙ্গে password check-এ RATE_LIMIT এলে কিছুক্ষণ পরে চেষ্টা করুন। Proxy দিয়ে আসা request একই network budget ভাগ করতে পারে; forwarding header বানিয়ে এটি এড়ানো যায় না।
 - Production branch push-এর পর CI পাস ও Vercel/Render rollout শেষ হওয়া পর্যন্ত অপেক্ষা করুন। Migration 013-এর expiry index API startup নিজে যোগ করবে; dashboard SQL চালাবেন না। বাংলা নির্দেশনা শেখার জন্য; প্রতিবার হাতে deployment দরকার নেই।
 - Render Free-এর cold start পুরোপুরি দূর হওয়ার নিশ্চয়তা নেই। অনুমোদিত health checks শুধু প্রতিদিন বাংলাদেশ সময় 09:00–24:00; paid compute বা অন্য service বন্ধ করার সিদ্ধান্ত স্বয়ংক্রিয়ভাবে নেওয়া হবে না।
+
+### Cron বন্ধ হয়ে গেলে startup delay
+
+Cronjob-এর History-তে বারবার `output too large` হলে ২৫টির বেশি ধারাবাহিক failure-এর পরে job নিজে থেকে বন্ধ হতে পারে। ২ নভেম্বর মূল job এভাবেই বন্ধ পাওয়া গেছে। দুইটি বিদ্যমান job-এর Advanced → Request method এখন **HEAD**; body নামায় না। URL একই `/health`, timezone Asia/Dhaka, timeout 30 seconds; মূল job enabled। সময় বদলাবেন না: মূলটি `*/5 9-23 * * *`, warm-up `50,55 8 * * *`। API-এর GET health এবং GitHub fallback আগের মতো থাকবে।
+
+Save-এর পরে History-তে বাস্তব scheduled execution সফল কি না দেখুন। পুরোনো failure ইতিহাসে থাকবে; সেটি নতুন failure বোঝায় না। HEAD-এর 200 status এবং app-এর GET health JSON আলাদা করে যাচাই করুন। Free hosting-এর restart/quota বা রাতের ঘুম পুরোপুরি দূর হয় না; সারাক্ষণ সচল compute চাইলে আগে paid plan-এর সিদ্ধান্ত প্রয়োজন। এই monitor repair-এ application deployment, SQL বা account password বদলাতে হয় না।
