@@ -57,6 +57,7 @@ import { Login } from "@/features/auth/login";
 import { StartupScreen } from "@/features/auth/startup-screen";
 import { CommandForm } from "@/features/transactions/command-form";
 import { HistoricalSetup } from "@/features/settings/historical-setup";
+import { CategoryManager } from "@/features/expenses/category-manager";
 import { Administration } from "@/features/settings/administration";
 import { Invoice } from "@/features/transactions/invoice";
 import { PdfDownload } from "@/features/transactions/pdf-download";
@@ -112,6 +113,7 @@ export function Workspace({ section }: { section: string }) {
       refresh,
       logout,
     } = useShop(),
+    [categoriesOpen, setCategoriesOpen] = useState(false),
     [command, setCommand] = useState<CommandKind | null>(null),
     [selectedUnit, setSelectedUnit] = useState<string | undefined>(),
     [selectedDocument, setSelectedDocument] = useState<string | undefined>(),
@@ -141,6 +143,7 @@ export function Workspace({ section }: { section: string }) {
   useBackLayer(!!detail, () => setDetail(null));
   useBackLayer(!!historyUnit, () => setHistoryUnit(null), false);
   useEffect(() => {
+    setCategoriesOpen(false);
     setCommand(null);
     setReceipt(null);
     setDetail(null);
@@ -1145,6 +1148,27 @@ export function Workspace({ section }: { section: string }) {
               )}
             </>
           )}
+          {section === "profit" && (
+            <section className="panel expense-tools">
+              <div className="panel-heading">
+                <h2>{tr("expenses")}</h2>
+                <div className="expense-tool-actions">
+                  <button
+                    className="button primary"
+                    onClick={() => setCommand("expense")}
+                  >
+                    {tr("expense")}
+                  </button>
+                  <button
+                    className="button"
+                    onClick={() => setCategoriesOpen(true)}
+                  >
+                    {tr("manageCategories")}
+                  </button>
+                </div>
+              </div>
+            </section>
+          )}
           {["daybook", "reports", "profit"].includes(section) && (
             <>
               <div className="section-tools">
@@ -1533,6 +1557,9 @@ export function Workspace({ section }: { section: string }) {
             )}
           </section>
         </div>
+      )}
+      {categoriesOpen && (
+        <CategoryManager onClose={() => setCategoriesOpen(false)} />
       )}
       {declarationId && (
         <PurchaseDeclaration

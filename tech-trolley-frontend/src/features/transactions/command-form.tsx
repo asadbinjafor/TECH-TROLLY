@@ -30,6 +30,7 @@ import {
 import { t, currency } from "@tech-trolley/i18n";
 import { api } from "@/services/api";
 import { useShop } from "@/contexts/shop-context";
+import { CategoryManager } from "@/features/expenses/category-manager";
 import { PartyManager } from "@/features/settings/party-manager";
 import {
   PurchasePhotoFields,
@@ -136,6 +137,7 @@ export function CommandForm({
     [issues, setIssues] = useState<Record<string, string>>({}),
     [review, setReview] = useState(false),
     [busy, setBusy] = useState(false),
+    [categoriesOpen, setCategoriesOpen] = useState(false),
     [partyField, setPartyField] = useState<Field | null>(null);
   useBackLayer(!embedded, onClose);
   useBackLayer(review && !pending, () => setReview(false), false);
@@ -425,6 +427,17 @@ export function CommandForm({
                       >
                         {t("manageParties", lang)}
                       </button>
+                    ) : kind === "expense" &&
+                      field.key === "categoryId" &&
+                      !review &&
+                      !pending ? (
+                      <button
+                        type="button"
+                        className="text-button party-manage-button"
+                        onClick={() => setCategoriesOpen(true)}
+                      >
+                        {t("manageExpenseCategories", lang)}
+                      </button>
                     ) : undefined
                   }
                 >
@@ -698,6 +711,12 @@ export function CommandForm({
           </footer>
         </form>
       </section>
+      {categoriesOpen && (
+        <CategoryManager
+          onClose={() => setCategoriesOpen(false)}
+          onCreated={(id) => setValues((v) => ({ ...v, categoryId: id }))}
+        />
+      )}
       {partyField && (
         <div className="modal-backdrop party-modal">
           <section

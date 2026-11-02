@@ -697,6 +697,38 @@ main#main {
   font-size: 10px;
   margin-bottom: 5px;
 }
+.expense-tool-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  width: min(100%, 440px);
+  gap: 12px;
+}
+.expense-tools .panel-heading,
+.expense-category-list .panel-heading,
+.expense-category-row,
+.expense-category-row .row-actions {
+  flex-wrap: wrap;
+}
+.expense-category-names {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.expense-category-names > * {
+  display: block;
+}
+.expense-category-row .text-button {
+  min-height: 44px;
+}
+.expense-category-list .button,
+.expense-tools .button {
+  min-height: var(--form-control-height);
+}
+@media (max-width: 480px) {
+  .expense-tool-actions {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
 .table-scroll {
   overflow-x: auto;
   margin: 15px -22px -10px;

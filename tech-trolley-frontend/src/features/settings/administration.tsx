@@ -26,7 +26,13 @@ type Editor = {
   fixed?: Record<string, unknown>;
   profile?: boolean;
 };
-export function Administration({ mode }: { mode: "parties" | "settings" }) {
+export function Administration({
+  mode,
+  onCategoryCreated,
+}: {
+  mode: "parties" | "settings" | "categories";
+  onCategoryCreated?: (id: string) => void;
+}) {
   const { state, user, lang, refresh } = useShop(),
     [users, setUsers] = useState<any[]>([]),
     [editor, setEditor] = useState<Editor | null>(null),
@@ -163,66 +169,6 @@ export function Administration({ mode }: { mode: "parties" | "settings" }) {
             <p>{state.shop.address}</p>
             <p>{state.shop.phone}</p>
           </section>
-          <section className="panel">
-            <div className="panel-heading">
-              <h2>{tr("categories")}</h2>
-              <button
-                className="button"
-                onClick={() =>
-                  open({
-                    title: "addCategory",
-                    path: "/expense-categories",
-                    method: "POST",
-                    fields: [
-                      { key: "bn", required: true },
-                      { key: "en", required: true },
-                    ],
-                    fixed: { active: true },
-                  })
-                }
-              >
-                {tr("addCategory")}
-              </button>
-            </div>
-            {state.categories.map((c) => (
-              <div className="list-row" key={c.id}>
-                <b className={!c.active ? "muted" : ""}>{c[lang]}</b>
-                <span className="muted">{c[lang === "bn" ? "en" : "bn"]}</span>
-                <div className="row-actions">
-                  <button
-                    className="text-button"
-                    onClick={() =>
-                      open({
-                        title: "rename",
-                        path: "/expense-categories/" + c.id,
-                        method: "PATCH",
-                        fields: [
-                          { key: "bn", required: true },
-                          { key: "en", required: true },
-                        ],
-                        initial: { bn: c.bn, en: c.en },
-                        fixed: { active: c.active },
-                      })
-                    }
-                  >
-                    {tr("rename")}
-                  </button>
-                  <button
-                    className="text-button"
-                    onClick={() =>
-                      void mutate("/expense-categories/" + c.id, {
-                        bn: c.bn,
-                        en: c.en,
-                        active: !c.active,
-                      })
-                    }
-                  >
-                    {tr(c.active ? "archive" : "restore")}
-                  </button>
-                </div>
-              </div>
-            ))}
-          </section>
           {user?.role === "OWNER" && (
             <section className="panel">
               <div className="panel-heading">
@@ -322,6 +268,70 @@ export function Administration({ mode }: { mode: "parties" | "settings" }) {
           )}
         </>
       )}
+      {mode === "categories" && (
+        <section className="panel expense-category-list">
+          <div className="panel-heading">
+            <h2>{tr("categories")}</h2>
+            <button
+              className="button"
+              onClick={() =>
+                open({
+                  title: "addCategory",
+                  path: "/expense-categories",
+                  method: "POST",
+                  fields: [
+                    { key: "bn", required: true },
+                    { key: "en", required: true },
+                  ],
+                  fixed: { active: true },
+                })
+              }
+            >
+              {tr("addCategory")}
+            </button>
+          </div>
+          {state.categories.map((c) => (
+            <div className="list-row expense-category-row" key={c.id}>
+              <div className="expense-category-names">
+                <b className={!c.active ? "muted" : ""}>{c[lang]}</b>
+                <span className="muted">{c[lang === "bn" ? "en" : "bn"]}</span>
+              </div>
+              <div className="row-actions">
+                <button
+                  className="text-button"
+                  onClick={() =>
+                    open({
+                      title: "rename",
+                      path: "/expense-categories/" + c.id,
+                      method: "PATCH",
+                      fields: [
+                        { key: "bn", required: true },
+                        { key: "en", required: true },
+                      ],
+                      initial: { bn: c.bn, en: c.en },
+                      fixed: { active: c.active },
+                    })
+                  }
+                >
+                  {tr("rename")}
+                </button>
+                <button
+                  className="text-button"
+                  onClick={() =>
+                    void mutate("/expense-categories/" + c.id, {
+                      bn: c.bn,
+                      en: c.en,
+                      active: !c.active,
+                    })
+                  }
+                >
+                  {tr(c.active ? "archive" : "restore")}
+                </button>
+              </div>
+            </div>
+          ))}
+        </section>
+      )}
       {editor && (
         <div className="modal-backdrop">
           <section
@@ -360,11 +370,10 @@ export function Administration({ mode }: { mode: "parties" | "settings" }) {
                       return;
                     }
                   }
-                  const result = await api.request<{ requiresLogin?: boolean }>(
-                    editor.path,
-                    editor.method,
-                    data,
-                  );
+                  const result = await api.request<{
+                    requiresLogin?: boolean;
+                    id?: string;
+                  }>(editor.path, editor.method, data);
                   setEditor(null);
                   setValues({});
                   if (
@@ -375,6 +384,8 @@ export function Administration({ mode }: { mode: "parties" | "settings" }) {
                     return;
                   }
                   await refresh();
+                  if (editor.path === "/expense-categories" && result.id)
+                    onCategoryCreated?.(result.id);
                   await loadUsers();
                 } catch (e: any) {
                   setError(

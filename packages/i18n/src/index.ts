@@ -678,6 +678,8 @@ const words: Record<string, [string, string]> = {
   supplier: ["Supplier", "সরবরাহকারী"],
   person: ["Person", "ব্যক্তি"],
   categories: ["Expense categories", "খরচের ধরন"],
+  manageCategories: ["Manage categories", "খরচের ধরন পরিচালনা"],
+  manageExpenseCategories: ["Add / manage categories", "খরচের ধরন যোগ / পরিচালনা"],
   addCategory: ["Add category", "নতুন ধরন"],
   bn: ["Bengali label", "বাংলা নাম"],
   en: ["English label", "ইংরেজি নাম"],

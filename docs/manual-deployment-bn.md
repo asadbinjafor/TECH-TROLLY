@@ -271,3 +271,9 @@ Page-এর Back আগের app page-এ ফেরাবে; সরাসর�
 Cronjob-এর History-তে বারবার `output too large` হলে ২৫টির বেশি ধারাবাহিক failure-এর পরে job নিজে থেকে বন্ধ হতে পারে। ২ নভেম্বর মূল job এভাবেই বন্ধ পাওয়া গেছে। দুইটি বিদ্যমান job-এর Advanced → Request method এখন **HEAD**; body নামায় না। URL একই `/health`, timezone Asia/Dhaka, timeout 30 seconds; মূল job enabled। সময় বদলাবেন না: মূলটি `*/5 9-23 * * *`, warm-up `50,55 8 * * *`। API-এর GET health এবং GitHub fallback আগের মতো থাকবে।
 
 Save-এর পরে History-তে বাস্তব scheduled execution সফল কি না দেখুন। পুরোনো failure ইতিহাসে থাকবে; সেটি নতুন failure বোঝায় না। HEAD-এর 200 status এবং app-এর GET health JSON আলাদা করে যাচাই করুন। Free hosting-এর restart/quota বা রাতের ঘুম পুরোপুরি দূর হয় না; সারাক্ষণ সচল compute চাইলে আগে paid plan-এর সিদ্ধান্ত প্রয়োজন। এই monitor repair-এ application deployment, SQL বা account password বদলাতে হয় না।
+
+### খরচের ধরন পরিচালনার নতুন জায়গা
+
+Settings-এর বদলে Profit & expenses → Shop expenses → Manage categories খুলুন। খরচ লেখার form-এর category dropdown-এর নিচেও Add / manage categories আছে। একই তালিকা থেকে নতুন ধরন, নাম পরিবর্তন, archive ও restore করা যায়। নতুন category যোগ করলে সেটি খরচের form-এ select হবে; লেখা টাকা ও Cash/Bank বদলাবে না। আগে থেকে নির্বাচিত category archive করলে অন্য active category বেছে নিন। Review/pending অবস্থায় এই shortcut থাকে না।
+
+এটি Web layout ও shared ভাষার label পরিবর্তন। Production branch push করলে Vercel এবং shared-i18n filter অনুযায়ী Render স্বাভাবিকভাবে deploy হবে। আলাদা SQL, data reset বা manual migration লাগবে না। Refresh দিয়ে নতুন বোতাম দেখুন; বাস্তব দোকানে নকল খরচ Confirm করবেন না।
