@@ -34,8 +34,10 @@ export async function createApp() {
       "Authorization",
       "Idempotency-Key",
       "X-Native-Client",
+      "If-None-Match",
     ],
     methods: ["GET", "POST", "PATCH"],
+    exposedHeaders: ["ETag"],
   });
   app.use(
     (

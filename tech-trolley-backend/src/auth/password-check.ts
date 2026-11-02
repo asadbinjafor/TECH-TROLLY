@@ -2,6 +2,7 @@ import bcrypt from "bcrypt";
 import { createHash } from "node:crypto";
 import { db } from "../database/database";
 import { fail } from "../common/errors";
+import { withPasswordBudget } from "./resource-budget";
 
 export const passwordAttemptKey = (userId: string) =>
   createHash("sha256")
@@ -32,13 +33,15 @@ export async function verifyAccountPassword(
   user: { id: string; password_hash: string },
   password: string,
 ) {
-  const key = passwordAttemptKey(user.id);
-  const [attempt] = await db.query(
-    `INSERT INTO auth_attempt(key,count,reset_at) VALUES($1,1,now()+interval '15 minutes') ON CONFLICT(key) DO UPDATE SET count=CASE WHEN auth_attempt.reset_at<now() THEN 1 ELSE auth_attempt.count+1 END,reset_at=CASE WHEN auth_attempt.reset_at<now() THEN now()+interval '15 minutes' ELSE auth_attempt.reset_at END RETURNING count`,
-    [key],
-  );
-  if (attempt.count > 5) fail("RATE_LIMIT", 429);
-  const valid = await bcrypt.compare(password, user.password_hash);
-  if (valid) await db.query("DELETE FROM auth_attempt WHERE key=$1", [key]);
-  return valid;
+  return withPasswordBudget(async () => {
+    const key = passwordAttemptKey(user.id);
+    const [attempt] = await db.query(
+      `INSERT INTO auth_attempt(key,count,reset_at) VALUES($1,1,now()+interval '15 minutes') ON CONFLICT(key) DO UPDATE SET count=CASE WHEN auth_attempt.reset_at<now() THEN 1 ELSE auth_attempt.count+1 END,reset_at=CASE WHEN auth_attempt.reset_at<now() THEN now()+interval '15 minutes' ELSE auth_attempt.reset_at END RETURNING count`,
+      [key],
+    );
+    if (attempt.count > 5) fail("RATE_LIMIT", 429);
+    const valid = await bcrypt.compare(password, user.password_hash);
+    if (valid) await db.query("DELETE FROM auth_attempt WHERE key=$1", [key]);
+    return valid;
+  });
 }

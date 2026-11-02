@@ -9,6 +9,7 @@ import {
   renderInvoiceHtml,
   renderPurchaseHtml,
   fitPurchaseLayout,
+  fitInvoiceLayout,
 } from "@tech-trolley/invoice";
 import type { Receipt, PurchaseDeclaration } from "@tech-trolley/contracts";
 import { fail } from "../common/errors";
@@ -111,33 +112,7 @@ export class InvoicePdfService {
       await page.emulateMediaType("print");
       const fits = purchase
         ? await page.evaluate(fitPurchaseLayout)
-        : await page.evaluate(async () => {
-            await document.fonts.ready;
-            const rect = (selector: string) =>
-              document.querySelector(selector)!.getBoundingClientRect();
-            const body = document.querySelector(
-              ".tt-memo__items-body",
-            ) as HTMLElement;
-            const front = rect(".tt-memo__front"),
-              back = rect(".tt-memo__back");
-            return (
-              body.scrollHeight <= body.clientHeight + 1 &&
-              Array.from(
-                document.querySelectorAll(".tt-memo__product-row"),
-              ).every(
-                (row) =>
-                  row.getBoundingClientRect().bottom <=
-                  body.getBoundingClientRect().bottom + 1,
-              ) &&
-              rect(".tt-memo__accounting").bottom <
-                rect(".tt-memo__authorised").top &&
-              rect(".tt-memo__warranty ul").bottom <=
-                rect(".tt-memo__warranty").bottom + 1 &&
-              rect(".tt-memo__terms").bottom < rect(".tt-memo__delivery").top &&
-              rect(".tt-memo__thanks").bottom <= front.bottom + 1 &&
-              rect(".tt-memo__back-footer").bottom <= back.bottom + 1
-            );
-          });
+        : await page.evaluate(fitInvoiceLayout);
       if (!fits) return fail("PDF_LAYOUT_ERROR", 503);
       const bytes = await page.pdf({
         format: "A4",

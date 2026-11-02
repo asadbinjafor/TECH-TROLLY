@@ -73,6 +73,13 @@ export async function proxyApi(
     .find((value) => value.startsWith("tt_session="));
   if (sessionCookie) headers.set("Cookie", sessionCookie);
   const method = request.method;
+  const stateRead =
+    method === "GET" &&
+    path.length === 2 &&
+    path[0] === "shop" &&
+    path[1] === "state";
+  if (stateRead && request.headers.has("if-none-match"))
+    headers.set("If-None-Match", request.headers.get("if-none-match")!);
   const pdfRoute =
     ["GET", "HEAD"].includes(method) &&
     path.length === 3 &&
@@ -95,6 +102,19 @@ export async function proxyApi(
         ),
       ]),
     });
+    if (response.status === 304 && stateRead) {
+      const tag = response.headers.get("etag");
+      if (
+        !tag ||
+        tag !== headers.get("if-none-match") ||
+        !/^(?:W\/)?"tt-state-[a-f0-9]{64}"$/.test(tag)
+      )
+        return error("UPSTREAM_UNAVAILABLE", 502);
+      return new Response(null, {
+        status: 304,
+        headers: { "Cache-Control": "no-store", ETag: tag, Vary: "Cookie" },
+      });
+    }
     if (response.status >= 300 && response.status < 400)
       return error("UPSTREAM_UNAVAILABLE", 502);
     const contentType = response.headers.get("content-type") || "";
@@ -128,7 +148,12 @@ export async function proxyApi(
         502,
       );
     const outgoing = new Headers({ "Cache-Control": "no-store" });
-    for (const name of ["content-type", "content-disposition", "retry-after"]) {
+    for (const name of [
+      "content-type",
+      "content-disposition",
+      "retry-after",
+      ...(stateRead ? ["etag"] : []),
+    ]) {
       const value = response.headers.get(name);
       if (value) outgoing.set(name, value);
     }

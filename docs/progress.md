@@ -1,5 +1,11 @@
 # Progress and release handover
 
+## Final audit remediation — 2026-11-02
+
+The Owner authorizes fixes and deployment after the read-only audit of 0e3ba38. Bounded typography fitting keeps all accepted long product/customer/seller values inside the unchanged two-page A4 sales invoice; the screen preview uses the same fit. Snapshot Cash/Bank labels become contextual paid/received/opening labels without rewriting amounts. Public login adds a persisted 60/minute network-peer budget, an eight-comparison work cap and bounded expired-counter cleanup/index, preserving the separate account/PIN protections and untrusted-forwarding-header policy. Exact transitive glob/minimatch patches retain TypeORM/Expo versions. Authenticated state validators and memory-only client reuse remove unchanged full-history polling; large initial/changed snapshots use gzip, and full history remains available. The revision includes audit count for late lower-ID commits and user/day/release scope; authorization still runs before any 304. Source handover now points to the active managed deployment. Checks, monitor investigation and normal Git/CI/startup-migration/live verification are in progress; no production business/password write is authorized as a test.
+
+Fresh-install builds/typechecks, 89 isolated backend/PostgreSQL/PDF and 45 hosting/client tests pass; Android/iOS exports and Expo Doctor 20/20 pass. Both full-workspace and production Web/API dependency audits are clear. A 2,001-document fixture retains every record, compresses full state from 3,701,596 to 308,659 bytes and returns zero-body 304 on unchanged reads. Optimized Web proxy login/cookies/304/privacy and actual mobile-viewport PDF Download are verified. Real production baseline/backup captured read-only; normal rollout and post-release preservation checks follow. Authenticated cron execution history and physical devices are unavailable; Free cold starts and initial/changed full-history size remain explicit limits. See [remediation evidence](final-audit-fixes-20261102.md).
+
 ## Optional purchase memo / NID evidence — 2026-11-02
 
 The Owner approves implementation and deployment of optional Supplier memo and optional individual-seller NID front/back images, with existing field dimensions. Web camera/gallery fields, preview, protected view/download and later Purchase Details upload/removal history use a private API. Migration 012 adds two Nest-owned RLS/no-grant tables; bounded re-encoded JPEG bytes persist with existing private DB backups (no new object-storage key/public bucket/local Render files). Evidence limits and Free-plan budget are explicit in [audit](purchase-photos-audit.md). Financial command data/hashes, PostingService and canonical PDF sources remain unchanged. Pending sidecars persist staged IDs and committed purchase ID; retry/status/reload associates only images. Optional images never become mandatory for payment or identity validation.
@@ -328,6 +334,10 @@ Verification: provider JSON schemas validated for both manifests; web/API builds
 
 ---
 
+## Archived original local handover — 2026-10-30
+
+This dated section records the original local-only state before managed hosting was configured. Its local process/data counts, deployment blockers and dependency counts are historical, not the current deployment status. Use the dated release entries above and deployment.md for the active Vercel/Render/Supabase setup.
+
 Updated 2026-10-30 (Asia/Dhaka). Canonical integrated checkout: `E:\Taki`.
 Branch: [codex/tech-trolley-production](https://github.com/asadbinjafor/TECH-TROLLY/tree/codex/tech-trolley-production).
 Remote: `origin`, verified as `https://github.com/asadbinjafor/TECH-TROLLY.git`.
@@ -362,7 +372,7 @@ The canonical local application is running at http://localhost:3001, API at http
 
 Separate synthetic databases: `trolley_browser_test` for UI verification, unique acceptance `_test` databases that are dropped after tests, and isolated restore-test databases. They use a task-owned PostgreSQL instance on loopback port 55432 under ignored `.local/postgres-test`; the existing Windows PostgreSQL service was not used. Dumps and credentials remain ignored. QA servers on ports 3100/3101 were stopped after testing; the canonical app uses 3000/3001.
 
-Final component status:
+Original local component status (superseded by the release entries above):
 
 | Component | State |
 | --- | --- |

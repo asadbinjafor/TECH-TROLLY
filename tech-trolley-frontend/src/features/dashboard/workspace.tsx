@@ -44,7 +44,13 @@ import {
   type Document,
   type Report,
 } from "@tech-trolley/contracts";
-import { t, currency, dateLabel, detailValue } from "@tech-trolley/i18n";
+import {
+  t,
+  currency,
+  dateLabel,
+  detailLabel,
+  detailValue,
+} from "@tech-trolley/i18n";
 import { useShop } from "@/contexts/shop-context";
 import { api, apiBase } from "@/services/api";
 import { Login } from "@/features/auth/login";
@@ -1511,13 +1517,7 @@ export function Workspace({ section }: { section: string }) {
               )
               .map(([k, v]) => (
                 <div className="pnl-row" key={k}>
-                  <span>
-                    {tr(
-                      detail.kind === "purchaseReturn" && k === "refundDue"
-                        ? "originalRefundDue"
-                        : k,
-                    )}
-                  </span>
+                  <span>{detailLabel(detail.kind, k, lang)}</span>
                   <b>{detailValue(k, v, lang)}</b>
                 </div>
               ))}

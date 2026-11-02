@@ -4,6 +4,66 @@ import { createServer } from "node:http";
 import { once } from "node:events";
 import { proxyApi } from "../src/lib/api-proxy";
 
+test("only authenticated state transport forwards its private validator and accepts matching bodyless 304", async () => {
+  const tag = 'W/"tt-state-' + "a".repeat(64) + '"';
+  const seen: { tag?: string; cookie?: string }[] = [];
+  const server = createServer((req, res) => {
+    seen.push({
+      tag: req.headers["if-none-match"],
+      cookie: req.headers.cookie,
+    });
+    res.setHeader("etag", tag);
+    if (req.headers["if-none-match"] || req.url === "/reports") {
+      res.statusCode = 304;
+      res.end();
+      return;
+    }
+    res.setHeader("content-type", "application/json");
+    res.end('{"user":{"id":"qa"}}');
+  });
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  const options = {
+    upstream: `http://127.0.0.1:${(server.address() as any).port}`,
+    production: false,
+  };
+  try {
+    const first = await proxyApi(
+      new Request("https://shop.example/api/shop/state"),
+      ["shop", "state"],
+      options,
+    );
+    assert.equal(first.status, 200);
+    assert.equal(first.headers.get("etag"), tag);
+    const next = await proxyApi(
+      new Request("https://shop.example/api/shop/state", {
+        headers: {
+          "if-none-match": tag,
+          cookie: "tt_session=qa; unrelated=no",
+        },
+      }),
+      ["shop", "state"],
+      options,
+    );
+    assert.equal(next.status, 304);
+    assert.equal((await next.arrayBuffer()).byteLength, 0);
+    assert.equal(next.headers.get("cache-control"), "no-store");
+    assert.equal(seen.at(-1)?.cookie, "tt_session=qa");
+    const other = await proxyApi(
+      new Request("https://shop.example/api/reports", {
+        headers: { "if-none-match": tag },
+      }),
+      ["reports"],
+      options,
+    );
+    assert.equal(other.status, 502);
+    assert.equal(seen.at(-1)?.tag, undefined);
+  } finally {
+    server.closeAllConnections();
+    await new Promise<void>((r) => server.close(() => r()));
+  }
+});
+
 test("private JPEG evidence is bounded, authenticated through the same-origin proxy and never accepted on an unrelated route", async () => {
   let cookie = "",
     body = Buffer.alloc(0);

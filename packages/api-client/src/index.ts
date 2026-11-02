@@ -17,6 +17,8 @@ export function createClient(
   base: string,
   token?: () => Promise<string | null>,
 ) {
+  let cache: { tag: string; value: State; bearer: string | null } | undefined;
+  let accountEpoch = 0;
   async function request<T>(
     path: string,
     method = "GET",
@@ -24,9 +26,18 @@ export function createClient(
     key?: string,
     signal?: AbortSignal,
   ): Promise<T> {
+    if (method !== "GET" && ["/auth/login", "/auth/logout"].includes(path)) {
+      accountEpoch++;
+      cache = undefined;
+    }
+    const epoch = accountEpoch;
+    const stateRead = method === "GET" && path === "/shop/state";
+    let bearer: string | null = null;
+    let previous: typeof cache;
     let r: Response;
     try {
-      const bearer = await token?.();
+      bearer = (await token?.()) || null;
+      previous = stateRead && cache?.bearer === bearer ? cache : undefined;
       r = await fetch(`${base}${path}`, {
         method,
         credentials: "include",
@@ -35,8 +46,10 @@ export function createClient(
           ...(bearer ? { Authorization: `Bearer ${bearer}` } : {}),
           ...(token ? { "X-Native-Client": "1" } : {}),
           ...(key ? { "Idempotency-Key": key } : {}),
+          ...(previous ? { "If-None-Match": previous.tag } : {}),
         },
         body: body === undefined ? undefined : JSON.stringify(body),
+        ...(stateRead ? { cache: "no-store" as const } : {}),
         signal: signal
           ? AbortSignal.any([signal, AbortSignal.timeout(25000)])
           : AbortSignal.timeout(25000),
@@ -47,6 +60,13 @@ export function createClient(
         method === "GET" ? "NETWORK_ERROR" : "SUBMISSION_UNCERTAIN",
         0,
       );
+    }
+    if (r.status === 304) {
+      if (signal?.aborted) throw signal.reason;
+      if (epoch !== accountEpoch) throw new ApiError("SESSION_EXPIRED", 401);
+      if (!previous || r.headers.get("etag") !== previous.tag)
+        throw new ApiError("UPSTREAM_UNAVAILABLE", 502);
+      return previous.value as T;
     }
     let data: any;
     try {
@@ -60,8 +80,23 @@ export function createClient(
         502,
       );
     }
-    if (!r.ok)
+    if (stateRead && epoch !== accountEpoch)
+      throw new ApiError("SESSION_EXPIRED", 401);
+    if (!r.ok) {
+      if (r.status === 401) {
+        accountEpoch++;
+        cache = undefined;
+      }
       throw new ApiError(data.code || "SERVER_ERROR", r.status, data.details);
+    }
+    const tag = r.headers.get("etag");
+    if (
+      stateRead &&
+      epoch === accountEpoch &&
+      tag &&
+      /^(?:W\/)?"tt-state-[a-f0-9]{64}"$/.test(tag)
+    )
+      cache = { tag, value: data, bearer };
     return data;
   }
   return {

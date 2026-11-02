@@ -7,6 +7,7 @@ import { fail } from "../common/errors";
 import type { User } from "@tech-trolley/contracts";
 import { updateProfile, profileDetails } from "../users/profile";
 import { verifyAccountPassword, verifyCurrentPassword } from "./password-check";
+import { checkLoginSource, withPasswordBudget } from "./resource-budget";
 export const digest = (s: string) =>
   createHash("sha256").update(s).digest("hex");
 export const safeUser = (u: any): User => ({
@@ -38,6 +39,7 @@ export class AuthService {
     });
   }
   async login(identity: string, password: string, ip: string) {
+    await checkLoginSource(ip);
     const normalized = identity.trim().toLowerCase().normalize("NFC");
     const key = digest(`${ip}:${normalized}`);
     const [attempt] = await db.query(
@@ -51,9 +53,11 @@ export class AuthService {
     );
     const valid = u
       ? await verifyAccountPassword(u, password)
-      : await bcrypt.compare(
-          password,
-          "$2b$12$Zuc0ypmVn4HXFg1H8.VLF.26KLlrQHTeE9FSEVpmJlgyKlw8.0Hny",
+      : await withPasswordBudget(() =>
+          bcrypt.compare(
+            password,
+            "$2b$12$Zuc0ypmVn4HXFg1H8.VLF.26KLlrQHTeE9FSEVpmJlgyKlw8.0Hny",
+          ),
         );
     if (!u || !valid || !u.active) fail("INVALID_CREDENTIALS", 401);
     return db.transaction(async (em) => {

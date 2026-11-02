@@ -875,6 +875,21 @@ export function detailValue(
   if (key === "originalKind" && words[text]) return t(text, lang);
   return text;
 }
+// A transaction snapshot is a payment fact, not the current account balance.
+export function detailLabel(kind: string, key: string, lang: Language = "en") {
+  if (key === "cash" || key === "bank") {
+    if (kind === "purchase") return t(key + "Paid", lang);
+    if (kind === "sale") return t(key + "Received", lang);
+    if (["opening", "openingAdjustment"].includes(kind))
+      return t(key === "cash" ? "openingCash" : "openingBank", lang);
+  }
+  return t(
+    kind === "purchaseReturn" && key === "refundDue"
+      ? "originalRefundDue"
+      : key,
+    lang,
+  );
+}
 export function currency(value: string, lang: Language = "en") {
   return new Intl.NumberFormat(lang === "bn" ? "bn-BD" : "en-BD", {
     style: "currency",

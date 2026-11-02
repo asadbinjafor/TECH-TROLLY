@@ -68,5 +68,20 @@ test(
     });
     assert.ok(!changed.equals(first));
     assert.equal((await PDFDocument.load(changed)).getPageCount(), 2);
+    const maximum = await service.render({
+      ...receipt,
+      number: "MAXIMUM-ACCEPTED-SALE",
+      customer: "Customer " + "W".repeat(171),
+      address: "Address " + "W".repeat(292),
+      seller: { ...receipt.seller, name: "Seller " + "W".repeat(173) },
+      unit: {
+        ...receipt.unit,
+        brand: "Brand " + "W".repeat(174),
+        model: "Model " + "M".repeat(174),
+        color: "C".repeat(60),
+        variant: "V".repeat(120),
+      },
+    });
+    assert.equal((await PDFDocument.load(maximum)).getPageCount(), 2);
   },
 );

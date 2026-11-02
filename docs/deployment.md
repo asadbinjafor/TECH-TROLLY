@@ -1,10 +1,10 @@
 # Deployment, backups and recovery
 
-The selected managed-hosting setup is now **Vercel web + Render API + Supabase PostgreSQL**. Follow the [বাংলা deployment guide](deploy-vercel-render-supabase-bn.md), `render.yaml` and `tech-trolley-frontend/vercel.json`. Actual new project URLs/accounts/secrets have not been supplied, so live deployment remains unverified. Historical Vercel/Render/Supabase settings belong to the read-only reference; no reference credentials or databases were accessed. The portable Docker alternative below remains available; Docker is unavailable on this computer, so container startup has not been verified locally.
+The active managed deployment is **Vercel web + Render API + Supabase PostgreSQL**: [Tech Trolley Web](https://tech-trolley-internal.vercel.app/) and [API health](https://tech-trolley-internal-api.onrender.com/health), with the private Supabase project recorded in server configuration. Current release evidence and limitations are in [progress.md](progress.md); operator instructions are in [the Bengali manual](manual-deployment-bn.md). Follow `render.yaml` and `tech-trolley-frontend/vercel.json`. Production-branch pushes use Vercel Git and Render **After CI Checks Pass**; the existing API startup runner alone applies migrations. Manual deployment is recovery, not the normal release path. Secrets stay outside Git and client bundles. The portable Docker alternative below is not the active deployment; container startup has not been verified here.
 
 ## Local Windows
 
-The task created an isolated PostgreSQL instance under `.local/postgres-test`, listening only on `127.0.0.1:55432`. It is separate from the existing PostgreSQL 18 Windows service. Its trust authentication is test-only. `trolley_local` is the empty local application database; `trolley_browser_test` contains explicitly synthetic browser QA records. Acceptance tests create and drop their own unique `_test` databases. Nothing touches the reference's database.
+Historical local setup used a separate loopback PostgreSQL instance under `.local/postgres-test` on port 55432. Its trust authentication is test-only. Do not assume any currently configured local database is empty or disposable. New audits/releases create their own explicitly owned cluster and UUID test databases; ownership must be verified before writes or cleanup. The reference database remains untouched.
 
 ```powershell
 Set-Location E:\Taki
@@ -62,4 +62,4 @@ Use separate secrets, database, volumes and hostname for staging. Apply each mig
 
 CI installs from the one lockfile, builds shared/API/web, typechecks native, runs isolated real-PostgreSQL acceptance tests, exports Android/iOS bundles and runs Expo Doctor. A local passing check is distinct from a successful hosted CI run. Do not merge the implementation branch into a release/default branch without the requested review process.
 
-Concrete external inputs remaining: hosting account/server and DNS domain; production database/secrets and off-host backup/alert destination; Expo account/project; Android signing/distribution account; Apple team/signing/devices or TestFlight; real shop contact/support/privacy details. No paid service has been provisioned.
+The existing Vercel/Render/Supabase accounts, HTTPS endpoints and production secrets are configured; they are not outstanding release inputs. Remaining external work includes off-host recovery/alert acceptance, Expo/signing/distribution accounts and physical Android/iOS devices or TestFlight acceptance. A custom domain is optional. No paid hosting upgrade or store release is authorized by these instructions.

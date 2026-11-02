@@ -70,7 +70,11 @@ export function ShopProvider({ children }: { children: ReactNode }) {
         if (!hasState.current) setConnection("account");
         const u = await api.me(signal);
         if (signal.aborted) return;
-        setUser(u);
+        setUser((current) =>
+          current && JSON.stringify(current) === JSON.stringify(u)
+            ? current
+            : u,
+        );
         if (!u.must_change) {
           const next = await api.state(signal);
           if (signal.aborted) return;

@@ -1,6 +1,32 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { detailValue, t } from "@tech-trolley/i18n";
+import { detailLabel, detailValue, t } from "@tech-trolley/i18n";
+
+test("snapshot payment labels distinguish paid, received and opening amounts from live balances", () => {
+  for (const lang of ["en", "bn"] as const) {
+    for (const account of ["cash", "bank"]) {
+      assert.equal(
+        detailLabel("purchase", account, lang),
+        t(account + "Paid", lang),
+      );
+      assert.equal(
+        detailLabel("sale", account, lang),
+        t(account + "Received", lang),
+      );
+      assert.notEqual(detailLabel("purchase", account, lang), t(account, lang));
+    }
+    assert.equal(detailLabel("opening", "cash", lang), t("openingCash", lang));
+    assert.equal(
+      detailLabel("openingAdjustment", "bank", lang),
+      t("openingBank", lang),
+    );
+    assert.equal(
+      detailLabel("purchaseReturn", "refundDue", lang),
+      t("originalRefundDue", lang),
+    );
+    assert.equal(detailLabel("stockEdit", "model", lang), t("model", lang));
+  }
+});
 
 test("transaction details localize owned fields without translating customer data", () => {
   assert.equal(

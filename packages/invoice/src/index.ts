@@ -195,3 +195,4 @@ export function renderInvoiceHtml(
     : "";
   return `<!doctype html><html lang="${lang}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(receipt.number)} - ${esc(receipt.shop.name)}</title><style>${font}html,body{margin:0;padding:0;background:white}${invoiceStyles}</style></head><body>${renderInvoiceBody(receipt, lang, assets)}</body></html>`;
 }
+export { fitInvoiceLayout } from "./fit";

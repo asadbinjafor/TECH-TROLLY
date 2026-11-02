@@ -258,3 +258,10 @@ Deploy শেষে refresh করে New sale/Purchases/Settings খুলু�
 এই পরিবর্তন frontend navigation/CSS-এ; production branch-এ push → CI → connected Vercel deploy হবে। API dependency ও migration না বদলালে Render/Supabase-এ আলাদা deployment লাগবে না। Deploy শেষে একবার refresh দিন।
 
 Page-এর Back আগের app page-এ ফেরাবে; সরাসরি link খুললে Dashboard-এ যাবে। Mobile Workspace-এর উপরের বামমুখী arrow, menu-র বাইরে tap অথবা browser Back দিয়ে menu বন্ধ করুন। Form/রসিদের Close উপরে থাকবে; লম্বা form scroll করলেও চাপা যাবে। Nested dialog খোলা থাকলে browser Back আগে সেটি বন্ধ করবে। Review থেকে Back editing-এ ফেরাবে। অনিশ্চিত submission বন্ধ করে আবার খুললে আগের key/data থাকবে—নতুন করে একই বিক্রি/খরচ লিখবেন না; আগের status/retry নিয়ম অনুসরণ করুন। [অডিট ও ছবি](navigation-audit.md) দেখুন।
+## ২ নভেম্বরের audit fixes ব্যবহার
+
+- দীর্ঘ product বিবরণেও একই দুই পৃষ্ঠার A4 invoice-এ সব তথ্য থাকবে; অঙ্ক/লেখা কাটা হবে না। Details-এ Cash/Bank paid/received লেখা transaction-এর টাকা বোঝায়; Dashboard-এর balance আগের অর্থেই থাকবে।
+- একই ডেটা থাকলে background refresh পুরো history আবার নামাবে না। নতুন entry/পরিবর্তন হলে নতুন হিসাব আসবে; প্রথম/বদলানো বড় response compressed হবে। History মুছবে বা সীমিত করে দেখাবে না। প্রথমে/পরিবর্তনে এখনও সম্পূর্ণ authorized snapshot লাগে; এটি archive pagination নয়।
+- চার অঙ্কের password policy অক্ষত। অতিরিক্ত login/একসঙ্গে password check-এ RATE_LIMIT এলে কিছুক্ষণ পরে চেষ্টা করুন। Proxy দিয়ে আসা request একই network budget ভাগ করতে পারে; forwarding header বানিয়ে এটি এড়ানো যায় না।
+- Production branch push-এর পর CI পাস ও Vercel/Render rollout শেষ হওয়া পর্যন্ত অপেক্ষা করুন। Migration 013-এর expiry index API startup নিজে যোগ করবে; dashboard SQL চালাবেন না। বাংলা নির্দেশনা শেখার জন্য; প্রতিবার হাতে deployment দরকার নেই।
+- Render Free-এর cold start পুরোপুরি দূর হওয়ার নিশ্চয়তা নেই। অনুমোদিত health checks শুধু প্রতিদিন বাংলাদেশ সময় 09:00–24:00; paid compute বা অন্য service বন্ধ করার সিদ্ধান্ত স্বয়ংক্রিয়ভাবে নেওয়া হবে না।
