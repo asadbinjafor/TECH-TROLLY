@@ -277,3 +277,6 @@ Save-এর পরে History-তে বাস্তব scheduled execution স�
 Settings-এর বদলে Profit & expenses → Shop expenses → Manage categories খুলুন। খরচ লেখার form-এর category dropdown-এর নিচেও Add / manage categories আছে। একই তালিকা থেকে নতুন ধরন, নাম পরিবর্তন, archive ও restore করা যায়। নতুন category যোগ করলে সেটি খরচের form-এ select হবে; লেখা টাকা ও Cash/Bank বদলাবে না। আগে থেকে নির্বাচিত category archive করলে অন্য active category বেছে নিন। Review/pending অবস্থায় এই shortcut থাকে না।
 
 এটি Web layout ও shared ভাষার label পরিবর্তন। Production branch push করলে Vercel এবং shared-i18n filter অনুযায়ী Render স্বাভাবিকভাবে deploy হবে। আলাদা SQL, data reset বা manual migration লাগবে না। Refresh দিয়ে নতুন বোতাম দেখুন; বাস্তব দোকানে নকল খরচ Confirm করবেন না।
+# Settings-এর UI পরিবর্তন যাচাই
+
+Settings-এর মতো শুধু Web layout বদলালে production branch-এ push দেওয়ার পর GitHub Verify এবং Vercel deployment শেষ হওয়া পর্যন্ত অপেক্ষা করুন। এই repository-তে shared i18n package-ও Render-এর build filter-এ আছে; অনুবাদ বদলালে Verify সফল হওয়ার পর Render নিজে deploy করতে পারে। Vercel-এর স্থায়ী লিংকের `/settings` পাতা desktop ও ফোনে খুলে Profile, Shop details, account Manage এবং Back পরীক্ষা করুন। Staff দিয়ে login করে account management লুকানো আছে কি না দেখুন। বাস্তব ব্যবসার হিসাব পরীক্ষা করতে test entry দেবেন না।

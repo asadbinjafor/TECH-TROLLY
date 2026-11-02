@@ -1,5 +1,15 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import {
+  ChevronDown,
+  Pencil,
+  KeyRound,
+  Plus,
+  Store,
+  ShieldCheck,
+  UserRoundPen,
+  UserRoundX,
+} from "lucide-react";
 import { t } from "@tech-trolley/i18n";
 import { useShop } from "@/contexts/shop-context";
 import { api } from "@/services/api";
@@ -37,9 +47,28 @@ export function Administration({
     [users, setUsers] = useState<any[]>([]),
     [editor, setEditor] = useState<Editor | null>(null),
     [values, setValues] = useState<Record<string, string>>({}),
+    [managedAccount, setManagedAccount] = useState<string | null>(null),
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false);
+  const manageTrigger = useRef<HTMLButtonElement | null>(null);
+  useBackLayer(
+    !!managedAccount,
+    () => {
+      setManagedAccount(null);
+      manageTrigger.current?.focus({ preventScroll: true });
+    },
+    false,
+  );
   useBackLayer(!!editor, () => setEditor(null));
+  useEffect(() => {
+    if (!managedAccount) return;
+    const dismiss = (event: PointerEvent) => {
+      if (!(event.target as Element).closest("[data-account-actions]"))
+        setManagedAccount(null);
+    };
+    document.addEventListener("pointerdown", dismiss);
+    return () => document.removeEventListener("pointerdown", dismiss);
+  }, [managedAccount]);
   const tr = (k: string) => t(k, lang);
   const loadUsers = async () => {
     if (user?.role === "OWNER" && mode === "settings")
@@ -50,6 +79,8 @@ export function Administration({
   }, [user, mode]);
   if (!state) return null;
   const open = (v: Editor) => {
+    if (managedAccount) manageTrigger.current?.focus({ preventScroll: true });
+    setManagedAccount(null);
     setEditor(v);
     setValues(v.initial || {});
     setError("");
@@ -73,6 +104,7 @@ export function Administration({
       ],
     });
   const mutate = async (path: string, body: any) => {
+    setManagedAccount(null);
     try {
       await api.request(path, "PATCH", body);
       await refresh();
@@ -95,85 +127,145 @@ export function Administration({
         </section>
       )}
       {mode === "settings" && (
-        <>
-          <section className="panel">
-            <div className="panel-heading">
-              <h2>{tr("myProfile")}</h2>
-              <button
-                className="button"
-                onClick={() => editProfile(user!, true)}
-              >
-                {tr("editProfile")}
-              </button>
-            </div>
-            <b>{user?.name}</b>
-            <p>
-              {user?.login}
-              {user?.email ? " · " + user.email : ""} · {tr(user!.role)}
-            </p>
-            <p className="muted">{tr("profileHelp")}</p>
-            <button
-              className="button"
-              onClick={() =>
-                open({
-                  title: "changePassword",
-                  path: "/auth/password",
-                  method: "POST",
-                  fields: [
-                    {
-                      key: "currentPassword",
-                      type: "password",
-                      required: true,
-                    },
-                    {
-                      key: "password",
-                      label: "newPassword",
-                      type: "password",
-                      required: true,
-                    },
-                  ],
-                })
-              }
+        <div className="settings-overview">
+          <div className="settings-card-grid">
+            <section
+              className="panel settings-card"
+              aria-labelledby="profile-heading"
             >
-              {tr("changePassword")}
-            </button>
-          </section>
-          <section className="panel">
-            <div className="panel-heading">
-              <h2>{state.shop.name}</h2>
-              {user?.role === "OWNER" && (
+              <div className="settings-card-heading">
+                <h2 id="profile-heading">{tr("myProfile")}</h2>
+                <p>{tr("profileSummary")}</p>
+              </div>
+              <div className="settings-profile-identity">
+                <span className="avatar" aria-hidden="true">
+                  {user?.name.slice(0, 1)}
+                </span>
+                <strong>{user?.name}</strong>
+                <span className="badge">{tr(user!.role)}</span>
+              </div>
+              <dl className="settings-details">
+                <div>
+                  <dt>{tr("loginId")}</dt>
+                  <dd>{user?.login}</dd>
+                </div>
+                {user?.email && (
+                  <div>
+                    <dt>{tr("emailLabel")}</dt>
+                    <dd>{user.email}</dd>
+                  </div>
+                )}
+              </dl>
+              <div className="settings-card-actions">
                 <button
+                  type="button"
+                  className="button"
+                  onClick={() => editProfile(user!, true)}
+                >
+                  <Pencil size={17} aria-hidden="true" />
+                  {tr("editProfile")}
+                </button>
+                <button
+                  type="button"
                   className="button"
                   onClick={() =>
                     open({
-                      title: "settings",
-                      path: "/shop",
-                      method: "PATCH",
-                      initial: {
-                        name: state.shop.name,
-                        address: state.shop.address,
-                        phone: state.shop.phone,
-                      },
+                      title: "changePassword",
+                      path: "/auth/password",
+                      method: "POST",
                       fields: [
-                        { key: "name", label: "shopName", required: true },
-                        { key: "address" },
-                        { key: "phone", label: "shopPhone" },
+                        {
+                          key: "currentPassword",
+                          type: "password",
+                          required: true,
+                        },
+                        {
+                          key: "password",
+                          label: "newPassword",
+                          type: "password",
+                          required: true,
+                        },
                       ],
                     })
                   }
                 >
-                  {tr("settings")}
+                  <KeyRound size={17} aria-hidden="true" />
+                  {tr("changePassword")}
                 </button>
+              </div>
+            </section>
+            <section
+              className="panel settings-card"
+              aria-labelledby="shop-heading"
+            >
+              <div className="settings-card-heading">
+                <h2 id="shop-heading">{tr("shopDetails")}</h2>
+              </div>
+              <div className="settings-shop-identity">
+                <Store size={27} aria-hidden="true" />
+                <strong>{state.shop.name}</strong>
+              </div>
+              <p className="settings-shop-summary">
+                {tr("shopDetailsSummary")}
+              </p>
+              {state.shop.address || state.shop.phone ? (
+                <dl className="settings-details settings-shop-details">
+                  {state.shop.address && (
+                    <div>
+                      <dt>{tr("addressLabel")}</dt>
+                      <dd>{state.shop.address}</dd>
+                    </div>
+                  )}
+                  {state.shop.phone && (
+                    <div>
+                      <dt>{tr("phoneLabel")}</dt>
+                      <dd>{state.shop.phone}</dd>
+                    </div>
+                  )}
+                </dl>
+              ) : null}
+              {user?.role === "OWNER" && (
+                <div className="settings-card-actions">
+                  <button
+                    type="button"
+                    className="button"
+                    onClick={() =>
+                      open({
+                        title: "editShopDetails",
+                        path: "/shop",
+                        method: "PATCH",
+                        initial: {
+                          name: state.shop.name,
+                          address: state.shop.address,
+                          phone: state.shop.phone,
+                        },
+                        fields: [
+                          { key: "name", label: "shopName", required: true },
+                          { key: "address" },
+                          { key: "phone", label: "shopPhone" },
+                        ],
+                      })
+                    }
+                  >
+                    <Pencil size={17} aria-hidden="true" />
+                    {tr("editShopDetails")}
+                  </button>
+                </div>
               )}
-            </div>
-            <p>{state.shop.address}</p>
-            <p>{state.shop.phone}</p>
-          </section>
+            </section>
+          </div>
           {user?.role === "OWNER" && (
-            <section className="panel">
-              <div className="panel-heading">
-                <h2>{tr("users")}</h2>
+            <section
+              className="panel settings-team"
+              aria-labelledby="users-heading"
+            >
+              <div className="settings-team-heading">
+                <div className="settings-card-heading">
+                  <h2 id="users-heading">{tr("users")}</h2>
+                  <p>{tr("usersSummary")}</p>
+                </div>
                 <button
+                  type="button"
                   className="button primary"
                   onClick={() =>
                     open({
@@ -194,79 +286,144 @@ export function Administration({
                     })
                   }
                 >
+                  <Plus size={18} aria-hidden="true" />
                   {tr("createUser")}
                 </button>
               </div>
-              {users.map((u) => (
-                <div className="list-row" key={u.id}>
-                  <span className="avatar">{u.name.slice(0, 1)}</span>
-                  <div>
-                    <b>{u.name}</b>
-                    <small>
-                      {u.login} · {u.email}
-                    </small>
-                  </div>
-                  <span className="badge">{tr(u.role)}</span>
-                  <div className="row-actions">
-                    <button
-                      className="text-button"
-                      onClick={() => editProfile(u, u.id === user.id)}
+              <div className="settings-account-head" aria-hidden="true">
+                <span>{tr("accountLabel")}</span>
+                <span>{tr("role")}</span>
+                <span>{tr("status")}</span>
+                <span>{tr("actions")}</span>
+              </div>
+              <ul className="settings-account-list">
+                {users.map((u) => (
+                  <li className="settings-account" key={u.id}>
+                    <div className="settings-account-identity">
+                      <span className="avatar" aria-hidden="true">
+                        {u.name.slice(0, 1)}
+                      </span>
+                      <div>
+                        <strong>{u.name}</strong>
+                        <span>
+                          {tr("loginId")}: {u.login}
+                        </span>
+                        {u.email && <span>{u.email}</span>}
+                      </div>
+                    </div>
+                    <div className="settings-account-state">
+                      <span className="badge">{tr(u.role)}</span>
+                      <span
+                        className={
+                          "settings-account-status" +
+                          (u.active ? " is-active" : "")
+                        }
+                      >
+                        <i aria-hidden="true" />
+                        {tr(u.active ? "active" : "inactive")}
+                      </span>
+                    </div>
+                    <div
+                      className="settings-account-actions"
+                      data-account-actions
                     >
-                      {tr("editProfile")}
-                    </button>
-                    <button
-                      className="text-button"
-                      onClick={() =>
-                        open({
-                          title: "role",
-                          path: "/users/" + u.id,
-                          method: "PATCH",
-                          fields: [
-                            {
-                              key: "role",
-                              options: ["OWNER", "STAFF"],
-                              required: true,
-                            },
-                          ],
-                          initial: { role: u.role },
-                        })
-                      }
-                    >
-                      {tr("role")}
-                    </button>
-                    <button
-                      className="text-button"
-                      onClick={() =>
-                        void mutate("/users/" + u.id, { active: !u.active })
-                      }
-                    >
-                      {tr(u.active ? "deactivate" : "activate")}
-                    </button>
-                    <button
-                      className="text-button"
-                      onClick={() =>
-                        open({
-                          title: "resetPassword",
-                          path: "/users/" + u.id,
-                          method: "PATCH",
-                          fields: [
-                            {
-                              key: "password",
-                              type: "password",
-                              required: true,
-                            },
-                          ],
-                        })
-                      }
-                    >
-                      {tr("resetPassword")}
-                    </button>
-                  </div>
-                </div>
-              ))}
+                      <button
+                        type="button"
+                        className="button"
+                        aria-expanded={managedAccount === u.id}
+                        aria-controls={"account-actions-" + u.id}
+                        aria-label={tr("manageAccount") + ": " + u.name}
+                        onClick={(event) => {
+                          manageTrigger.current = event.currentTarget;
+                          setManagedAccount(
+                            managedAccount === u.id ? null : u.id,
+                          );
+                        }}
+                      >
+                        {tr("manageAccount")}
+                        <ChevronDown size={17} aria-hidden="true" />
+                      </button>
+                      {managedAccount === u.id && (
+                        <div
+                          className="settings-account-popover"
+                          id={"account-actions-" + u.id}
+                          role="group"
+                          aria-label={tr("actions") + ": " + u.name}
+                        >
+                          <button
+                            type="button"
+                            onClick={() => editProfile(u, u.id === user.id)}
+                          >
+                            <Pencil size={17} aria-hidden="true" />
+                            {tr("editProfile")}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              open({
+                                title: "role",
+                                path: "/users/" + u.id,
+                                method: "PATCH",
+                                fields: [
+                                  {
+                                    key: "role",
+                                    options: ["OWNER", "STAFF"],
+                                    required: true,
+                                  },
+                                ],
+                                initial: { role: u.role },
+                              })
+                            }
+                          >
+                            <ShieldCheck size={17} aria-hidden="true" />
+                            {tr("changeRole")}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              open({
+                                title: "resetPassword",
+                                path: "/users/" + u.id,
+                                method: "PATCH",
+                                fields: [
+                                  {
+                                    key: "password",
+                                    type: "password",
+                                    required: true,
+                                  },
+                                ],
+                              })
+                            }
+                          >
+                            <KeyRound size={17} aria-hidden="true" />
+                            {tr("resetPassword")}
+                          </button>
+                          <button
+                            type="button"
+                            className={u.active ? "settings-deactivate" : ""}
+                            onClick={() =>
+                              void mutate("/users/" + u.id, {
+                                active: !u.active,
+                              })
+                            }
+                          >
+                            {u.active ? (
+                              <UserRoundX size={17} aria-hidden="true" />
+                            ) : (
+                              <UserRoundPen size={17} aria-hidden="true" />
+                            )}
+                            {tr(u.active ? "deactivate" : "activate")}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+              <p className="settings-team-help">{tr("usersOwnerHelp")}</p>
             </section>
           )}
-        </>
+        </div>
       )}
       {mode === "categories" && (
         <section className="panel expense-category-list">

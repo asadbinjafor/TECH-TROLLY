@@ -592,6 +592,44 @@ const words: Record<string, [string, string]> = {
   createUser: ["Create account", "অ্যাকাউন্ট তৈরি"],
   users: ["User management", "ইউজার ব্যবস্থাপনা"],
   myProfile: ["My profile", "আমার প্রোফাইল"],
+  settingsSummary: [
+    "Manage your profile, shop and team.",
+    "আপনার প্রোফাইল, দোকান ও টিম পরিচালনা করুন।",
+  ],
+  settingsSummaryStaff: [
+    "Manage your profile and view shop details.",
+    "আপনার প্রোফাইল পরিচালনা ও দোকানের তথ্য দেখুন।",
+  ],
+  profileSummary: [
+    "Manage your name and sign-in details.",
+    "আপনার নাম ও লগইনের তথ্য পরিচালনা করুন।",
+  ],
+  shopDetails: ["Shop details", "দোকানের তথ্য"],
+  shopDetailsSummary: [
+    "Manage the details shown on your documents.",
+    "ক্রয়পত্র ও বিক্রির মেমোতে দেখানো দোকানের তথ্য পরিচালনা করুন।",
+  ],
+  editShopDetails: ["Edit shop details", "দোকানের তথ্য সম্পাদনা"],
+  usersSummary: [
+    "Manage Owner and Staff accounts.",
+    "মালিক ও কর্মীর অ্যাকাউন্ট পরিচালনা করুন।",
+  ],
+  usersOwnerHelp: [
+    "Account actions are available to Owners.",
+    "অ্যাকাউন্ট পরিচালনার কাজ শুধু মালিক করতে পারবেন।",
+  ],
+  accountLabel: ["Account", "অ্যাকাউন্ট"],
+  emailLabel: ["Email", "ইমেইল"],
+  phoneLabel: ["Phone", "ফোন"],
+  addressLabel: ["Address", "ঠিকানা"],
+  actions: ["Actions", "করণীয়"],
+  manageAccount: ["Manage", "পরিচালনা"],
+  changeRole: ["Change role", "ভূমিকা পরিবর্তন"],
+  inactive: ["Inactive", "নিষ্ক্রিয়"],
+  historySetupSummary: [
+    "Opening balances and earlier records.",
+    "শুরুর ব্যালেন্স ও আগের হিসাবের রেকর্ড।",
+  ],
   editProfile: ["Edit profile", "প্রোফাইল সম্পাদনা"],
   profileHelp: [
     "Edit your name, User ID and email. Changing User ID or email requires your current password and signs you out of all sessions. Use the updated User ID or email to sign in again. Previous invoices keep their original seller name.",
@@ -679,7 +717,10 @@ const words: Record<string, [string, string]> = {
   person: ["Person", "ব্যক্তি"],
   categories: ["Expense categories", "খরচের ধরন"],
   manageCategories: ["Manage categories", "খরচের ধরন পরিচালনা"],
-  manageExpenseCategories: ["Add / manage categories", "খরচের ধরন যোগ / পরিচালনা"],
+  manageExpenseCategories: [
+    "Add / manage categories",
+    "খরচের ধরন যোগ / পরিচালনা",
+  ],
   addCategory: ["Add category", "নতুন ধরন"],
   bn: ["Bengali label", "বাংলা নাম"],
   en: ["English label", "ইংরেজি নাম"],

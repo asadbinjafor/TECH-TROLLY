@@ -572,7 +572,15 @@ export function Workspace({ section }: { section: string }) {
               )}
               <div>
                 <h1>{tr(section)}</h1>
-                <p>{dateLabel(state.today, lang)}</p>
+                <p>
+                  {section === "settings"
+                    ? tr(
+                        user.role === "OWNER"
+                          ? "settingsSummary"
+                          : "settingsSummaryStaff",
+                      )
+                    : dateLabel(state.today, lang)}
+                </p>
               </div>
             </div>
             {section === "overview" && (
@@ -1349,6 +1357,7 @@ export function Workspace({ section }: { section: string }) {
           )}
           {section === "settings" && (
             <>
+              <Administration mode="settings" />
               <HistoricalSetup
                 onAction={(kind, id) => {
                   action(kind);
@@ -1356,7 +1365,6 @@ export function Workspace({ section }: { section: string }) {
                   if (kind === "reversal") setSelectedDocument(id);
                 }}
               />
-              <Administration mode="settings" />
             </>
           )}
           <footer className="page-footer">

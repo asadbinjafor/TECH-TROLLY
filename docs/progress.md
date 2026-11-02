@@ -1,5 +1,9 @@
 # Progress and release handover
 
+## Responsive Settings concept — 2026-11-02
+
+The Owner approved the generated Settings layout and requested desktop, iOS and Android quality checks after every implementation; the recurring preference is recorded in AGENTS.md. Existing profile, shop and Owner-only user actions are arranged as two balanced cards and a responsive account list. A Manage action group contains the same profile/role/reset/activate commands. Historical onboarding is a compact disclosure; an active setup starts expanded. The lengthy profile identity warning remains in the edit dialog. Shop and account edit APIs, roles, password rules and business records are unchanged. Bengali/English labels and light/dark styles are scoped to Settings. Local build, workspace typechecks and 45 hosting checks pass; a synthetic Owner/Staff browser fixture verifies profile and shop edits, Owner-only controls, Back/menu/dialog behavior, and 1440–320px responsive geometry. Physical iOS/Android devices are unavailable; viewport checks do not prove installed-device behavior. Release and live verification follow.
+
 ## Expense categories in the expense workflow — 2026-11-02
 
 The approved Web update removes the category list from Settings and adds an Expenses tool panel on Profit & expenses, with Record expense / Manage categories actions. Expense forms include Add / manage categories below the selector while editing. Both entry points reuse the existing category CRUD/editor and server permissions (Owner and Staff already have category access); Staff monthly reports remain forbidden. Creating a category refreshes and selects it without discarding the expense draft. Pending/review commands cannot open this shortcut. Shared labels, 48px controls, 16px text and mobile action wrapping retain the established form system.
